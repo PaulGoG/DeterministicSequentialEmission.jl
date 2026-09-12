@@ -2,3 +2,6 @@
 
 *.pdf binary
 *.png binary
+
+# Reference outputs are kept byte-faithful to the run that produced them.
+test/references/*.dat -text
