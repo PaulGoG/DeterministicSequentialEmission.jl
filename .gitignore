@@ -1,0 +1,17 @@
+# Generated results
+*_output_data/
+*_plots/
+
+# Julia artifacts
+*.jl.cov
+*.jl.*.cov
+*.jl.mem
+/docs/build/
+/docs/site/
+LocalPreferences.toml
+
+# Editor and OS
+.vscode/
+.idea/
+*~
+.DS_Store
