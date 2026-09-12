@@ -3,6 +3,7 @@ Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
 DeterministicSequentialEmission = "156d68c7-7ead-4df0-b5ab-777b14fcce37"
 ExplicitImports = "7d51a73a-1435-4ff3-83d9-f097790105c7"
 JET = "c3a54625-cd67-489e-a8e7-0a5a0ff4e31b"
+Measurements = "eff96d63-e80a-5855-80a2-b1b0885c5ab7"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [sources]
