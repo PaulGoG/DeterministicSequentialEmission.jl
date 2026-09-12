@@ -1,13 +1,17 @@
 # Generated results
 *_output_data/
 *_plots/
+/plots/
+/data/sims/
+
+# Libraries do not pin a manifest; each environment resolves against [compat].
+Manifest.toml
 
 # Julia artifacts
-*.jl.cov
-*.jl.*.cov
-*.jl.mem
 /docs/build/
 /docs/site/
+*.cov
+*.jl.mem
 LocalPreferences.toml
 
 # Editor and OS
