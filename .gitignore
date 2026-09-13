@@ -12,9 +12,6 @@
 /data/mass_excess/*
 !/data/mass_excess/ame2020.dat
 
-# The prototype's own flat input layout, superseded by data/ and kept only for cross-checking.
-/input_data/
-
 # Pipeline output. Each run writes its tables and metadata under its own system directory; the
 # two figures the README shows are tracked, and everything else a run draws is not.
 /results/
