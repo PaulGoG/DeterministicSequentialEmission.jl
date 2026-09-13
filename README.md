@@ -83,6 +83,7 @@ wait for the port. The entry point will be a thin script over a validated TOML c
 | TXE partition — scission modelling, `E*_H/TXE (A_H)`, `R_T (A_H)` | done |
 | Sequential equations — constant and variable evaporation cross section | done |
 | Fragment yields `Y(A,Z,TKE)` and its projections | done |
+| Yield averaging — contractions of `q(A,Z,TKE)`, with uncertainty | done |
 | Prompt fission neutron spectrum — centre-of-mass and laboratory, in closed form | done |
 | Post-emission distributions | to port |
 | Figures (CairoMakie) | to port |
@@ -99,6 +100,10 @@ and 9788 configurations, and every one of the 44 679 and 45 070 emission sequenc
 each quantity to 5 × 10⁻⁹ MeV — exact agreement at the eight decimals the archive was written
 with. Both sequence counts match at every configuration. The fragment yield matrix is reproduced
 cell for cell, 48 985 of them, and its projections to double precision.
+
+The averaged observables close the chain: `ν(A)`, `T(A)`, `E*(A)` and `E*(TKE)` are reproduced
+over every mass and kinetic energy of the archived run to between 4 × 10⁻¹⁵ and 7 × 10⁻¹⁴, and
+the total averages to every digit the archive's summary file prints.
 
 The prompt neutron spectrum has no archived counterpart to pin against, so it is validated
 instead against the identities its derivation implies — unit area, `⟨E⟩ = E_f + ⟨ε⟩`, and the
