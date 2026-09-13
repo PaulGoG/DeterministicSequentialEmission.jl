@@ -43,6 +43,8 @@ DeterministicSequentialEmission.jl/
 ├── data/                 input data — see data/README.md; only the mass evaluation ships
 ├── figures/              the two figures above
 ├── results/              written by a run, one directory per system — not tracked
+├── formatter/            pinned JuliaFormatter, so the gate cannot drift
+├── check.jl              the gate CI applies: format, then test
 ├── activate.jl           activates and instantiates the root environment
 └── Project.toml
 ```
@@ -83,6 +85,14 @@ julia --project=docs docs/make.jl
 
 `Pkg.test()` resolves `test/Project.toml` itself, so it is run from the root environment, not
 from the test one.
+
+Before committing, apply the gate CI applies — format against `.JuliaFormatter.toml` with the
+pinned formatter, then run the tests:
+
+```
+julia check.jl            # format in place, then test
+julia check.jl --check    # report differences without rewriting
+```
 
 ## Configuration
 

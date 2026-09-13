@@ -1,0 +1,25 @@
+cff-version: 1.2.0
+message: If you use this software, please cite it as below.
+title: DeterministicSequentialEmission.jl
+abstract: >-
+  The deterministic sequential emission treatment of prompt neutron emission from fission
+  fragments: the energy conservation equation of every emission sequence is solved separately,
+  with Weisskopf-Ewing evaporation spectra in the centre-of-mass system and fragment level
+  densities in the Fermi-gas regime. Because the number of sequences is an integer at every
+  fragment configuration, the post-neutron fragment mass is an integer without rounding.
+  Multiplicities, residual quantities and the laboratory prompt neutron spectrum are contracted
+  against measured fragment yields.
+type: software
+authors:
+  - family-names: Gogîță
+    given-names: Paul-Adrian
+license: MIT
+repository-code: https://github.com/PaulGoG/DeterministicSequentialEmission.jl
+keywords:
+  - nuclear fission
+  - fission fragments
+  - prompt neutron emission
+  - prompt fission neutron spectrum
+  - level density
+  - excitation energy partition
+  - Julia

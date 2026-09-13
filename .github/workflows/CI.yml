@@ -54,18 +54,12 @@ jobs:
         with:
           version: '1'
       - uses: julia-actions/cache@v2
-      - name: Check formatting against .JuliaFormatter.toml
-        shell: julia --color=yes {0}
-        run: |
-          using Pkg
-          Pkg.add(; name = "JuliaFormatter", version = "2")
-          using JuliaFormatter
-          targets = ["src", "test", "docs", "scripts", "plotting"]
-          formatted = all(t -> format(t, verbose = true, overwrite = false), targets)
-          if !formatted
-              @error "Some files are not formatted. Run JuliaFormatter.format.($targets) locally."
-              exit(1)
-          end
+      # check.jl holds the directory list and the formatter version bound, so the gate applied
+      # here and the gate a contributor applies locally cannot drift apart. `--check` reports
+      # differences rather than rewriting; the tests it then runs are the same ones the test job
+      # runs, which is cheap enough to be worth the redundancy on one Julia version.
+      - name: Apply the same gate as check.jl
+        run: julia check.jl --check
   config:
     name: Configuration
     runs-on: ubuntu-latest
