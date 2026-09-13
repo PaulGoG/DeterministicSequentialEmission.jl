@@ -44,6 +44,21 @@ const CHARGE_POLARIZATION_SPEC = TableSpec([:A, :polarization, :width]; skip = 1
 const DEFAULT_POLARIZATION = -0.5
 const DEFAULT_WIDTH = 0.6
 
+# `p(Z,A)` is stored as the analytic Gaussian and is deliberately NOT renormalized over the
+# charges a domain retains. Summed over five charges at the tabulated Wahl widths it runs 0.984
+# to 1.076 across mass rows — the discrete-lattice ripple at small `rms`, not truncation, since
+# the tails beyond the retained charges are under 0.01 %.
+#
+# Renormalizing would hide a real cost. Retaining too few charge numbers per mass should show up
+# as lost weight, and it does; dividing it away would make a three-charge domain look as complete
+# as a seven-charge one. Where it must not survive — `Y(A,Z,TKE) = p(Z,A) Y(A,TKE)`, where `p`
+# is an absolute weight and the yields are then re-binned into `A_p` — the yield construction
+# normalizes exactly, so nothing downstream inherits the spread.
+#
+# `FissionTemperatureRatio.jl` renormalizes within each mass number instead. The two therefore
+# differ at the percent level by construction, which is expected rather than a discrepancy to
+# chase.
+
 """
     read_charge_polarization(path; spec, default_polarization, default_width) -> ChargePolarization
 

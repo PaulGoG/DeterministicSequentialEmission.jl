@@ -91,11 +91,27 @@ end
 """
     neutron_multiplicity(chain) -> Float64
 
-The prompt neutron multiplicity `ν = (n+1)/2`, zero for a chain that emits nothing.
+The prompt neutron multiplicity `ν`, zero for a chain that emits nothing.
 
-`ν` is a measurable quantity, averaged over the emission sequences of the configuration. It is
-not the same as `n`, the number of sequences, and the two are not interchangeable even though
-both describe emission from the same fragment.
+`ν` is the sequence average of the emission index. The model reduces every per-sequence
+quantity `q_k` the same way — Tudora, *EPJA* 54, 87 (2018) eq. (12); *EPJA* 56, 84 (2020)
+eq. (4); the 2021 review eq. (20) —
+
+```
+⟨q⟩ = (1/n) Σ_{k=1}^{n} q_k
+```
+
+and `ν` is that operator evaluated at `q_k = k`, so `ν = (1 + 2 + … + n)/n = (n+1)/2`. It is
+the multiplicity of the averaged emission sequence, and it is the quantity with an experimental
+counterpart to compare against.
+
+It is **deliberately not** `n`, and the two are not interchangeable. `n` counts the sequences
+of one configuration; `ν` is a sequence average, obtained exactly as `⟨T⟩`, `⟨ε⟩` and `⟨Ē_r⟩`
+are. [`post_neutron_mass`](@ref) takes `n`, not `ν`, and the reason is stated there.
+
+Yield-weighted over the archived ²⁵²Cf(SF) run the two come out at `⟨ν⟩_pair = 3.48` against
+`⟨n⟩_pair = 5.01`, with the measured multiplicity at 3.757. Both conventions are settled and
+preserved; see the note in `post_neutron_mass` for what follows from holding both.
 """
 neutron_multiplicity(chain::EmissionChain) =
     chain.possible == 0 ? 0.0 : (chain.possible + 1) / 2
@@ -104,6 +120,19 @@ neutron_multiplicity(chain::EmissionChain) =
     post_neutron_mass(chain) -> Int
 
 The mass number of the last residual fragment, `A_p = A − n`. An integer by construction.
+
+`n`, not `ν`. This is a property of the chain rather than an average over it: the model steps
+the cascade to exhaustion and `A − n` is the nucleus it ends on. Integer `A_p` without rounding
+is the reason for treating emission sequentially at all — a global treatment yields only an
+averaged `ν(A,Z,TKE)`, so its `A − ν` must be rounded, which obstructs independent fission
+product yields (Tudora, *EPJA* 58, 126 (2022), §2.4).
+
+The two conventions are held together deliberately and are not reconciled. Stated plainly so
+nobody has to rediscover it: over the archived ²⁵²Cf(SF) run the chain removes 5.01 nucleons per
+fission while `ν` reports 3.48, so a naive `⟨A⟩ − ⟨A_p⟩ = ⟨ν⟩` identity does not hold here and
+should not be asserted anywhere downstream. `A_p` answers "which nucleus is left", `ν` answers
+"how many neutrons does the averaged sequence carry"; they are different questions and the
+model does not claim they have the same answer.
 """
 post_neutron_mass(chain::EmissionChain) = chain.fragment.A - chain.possible
 
