@@ -25,6 +25,42 @@
     @test_throws ArgumentError JointedSegments([(126, 0.5), (126, 0.1)])
 end
 
+@testset "reading a tabulated parameterization" begin
+    # The layout FissionTemperatureRatio.jl writes: a header line, then A_H, value and an
+    # uncertainty column that the partition discards because it carries none downstream.
+    mktempdir() do dir
+        path = joinpath(dir, "R_T_parameterized.csv")
+        write(
+            path,
+            """
+            A_H,value,uncertainty
+            126,1.0,0.0
+            127,1.205662,0.007435
+            128,1.471892,0.02157
+            129,1.932797,0.061908
+            """,
+        )
+        segments = read_segments(path)
+        @test length(segments) == 4
+
+        # Tabulated at every integer mass, so evaluation reproduces each value exactly rather
+        # than interpolating across it.
+        @test segments(126) == 1.0
+        @test segments(127) == 1.205662
+        @test segments(128) == 1.471892
+        @test segments(129) == 1.932797
+
+        # The range is the fit's, not the configured domain's: a set that stops short leaves
+        # the partition undefined above its last point instead of extrapolating.
+        @test segments(130) === nothing
+
+        # The uncertainty column is optional, as it is for every other reader here.
+        bare = joinpath(dir, "bare.csv")
+        write(bare, "A_H,value\n126,1.0\n127,1.2\n")
+        @test read_segments(bare)(127) == 1.2
+    end
+end
+
 @testset "excitation energy ratio against the archived run" begin
     table = mass_table()
     domain = cf252_domain()
@@ -133,12 +169,65 @@ end
     @test sum(split) ≈ TXE
 end
 
+@testset "temperature ratio against the archived run" begin
+    table = mass_table()
+    domain = cf252_domain()
+    model = BackShiftedFermiGas(table)
+
+    # The second archived run, whose R_T pivots come from its own provenance header. The
+    # instructions file shipped with the prototype lists a different tail — (167, 0.69),
+    # (174, 0.6) — which is not what produced the published figures.
+    method = TemperatureRatio(
+        JointedSegments([
+            (126, 1.0),
+            (130, 1.734),
+            (134, 1.28),
+            (138, 1.28),
+            (150, 0.9),
+            (167, 0.68),
+            (174, 0.59),
+        ]),
+        model,
+    )
+
+    reference = read_table(
+        joinpath(REFERENCE, "CF52_excitation_RT.dat"),
+        TableSpec([:A_H, :Z_H, :TKE, :E_excit_L, :E_excit_H]; skip = 1),
+    )
+    masses = column(reference, :A_H, Int)
+    charges = column(reference, :Z_H, Int)
+    energies = column(reference, :TKE, Float64)
+    expected_light = column(reference, :E_excit_L, Float64)
+    expected_heavy = column(reference, :E_excit_H, Float64)
+    @test length(reference) == 1200
+
+    by_fragmentation =
+        Dict((entry.heavy.A, entry.heavy.Z) => entry for entry in domain.entries)
+
+    worst = 0.0
+    checked = 0
+    for row in eachindex(masses)
+        fragmentation = by_fragmentation[(masses[row], charges[row])]
+        balance = energetics(table, CF252, fragmentation, energies[row])
+        @test balance !== nothing
+        balance === nothing && continue
+        split = partition(method, fragmentation, value(balance.TXE))
+        @test split !== nothing
+        split === nothing && continue
+        worst = max(worst, abs(split.light - expected_light[row]))
+        worst = max(worst, abs(split.heavy - expected_heavy[row]))
+        checked += 1
+    end
+    @test checked == 1200
+    # The reference is rounded to eight decimals on write, so 5e-9 is exact agreement.
+    @test worst < 1e-8
+end
+
 @testset "temperature ratio partition" begin
     table = mass_table()
     domain = cf252_domain()
     model = BackShiftedFermiGas(table)
 
-    # The parameterization of the second archived run, from its provenance header.
     method = TemperatureRatio(
         JointedSegments([
             (126, 1.0),

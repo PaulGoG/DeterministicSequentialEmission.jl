@@ -163,6 +163,52 @@ struct ScissionModelling{M <: LevelDensityModel} <: PartitionMethod
 end
 
 """
+    SEGMENT_SPEC
+
+Layout of a tabulated partition parameterization: one header row, then `A_H, value` and an
+optional uncertainty column, comma-delimited.
+
+This is what `FissionTemperatureRatio.jl` writes as `R_T_parameterized_<set>_<run>.csv`. The
+uncertainty is read past and discarded: the partition carries none downstream, for the reason
+[`PartitionMethod`](@ref) gives.
+"""
+const SEGMENT_SPEC = TableSpec(
+    [:A_H, :value, :uncertainty];
+    delimiter = ',',
+    skip = 1,
+    optional = (:uncertainty,),
+)
+
+"""
+    read_segments(path; spec = SEGMENT_SPEC) -> JointedSegments
+
+Read a partition parameterization tabulated against heavy-fragment mass.
+
+Written for the output of `FissionTemperatureRatio.jl`, which extracts `R_T = T_L/T_H` from
+experimental `ν(A)` and writes it at **every integer `A_H`** of its fit range. Fed whole to
+[`JointedSegments`](@ref) that is exact rather than an approximation: every abscissa the model
+evaluates is itself a tabulated point, so no interpolation happens. Handing over only the
+breakpoints of that package's own piecewise-linear fit would not be equivalent — it fits the
+multiplicity ratio `r_ν`, and `R_T = √[(1−r_ν)/(R_a r_ν)]` is not piecewise linear where `r_ν`
+is, because the level density parameter ratio `R_a(A_H)` carries the shell structure.
+
+Two things to expect rather than diagnose later. Each curve spans its own fit range, not the
+configured `A_H` range, so a set that stops short leaves [`partition`](@ref) returning `nothing`
+above its last point — correct, since the alternative is extrapolating a fit past its last
+datum. And the ratio averaging must match: `R_T` produced for this consumer should come from a
+run with `ratio_averaging = "mean_of_ratios"`, because the partition re-expands it with
+per-`(A_H, Z_H)` level density parameters and reduces over `Z` afterwards, which inverts a
+`Z`-averaged multiplicity ratio with `⟨a_L/a_H⟩` rather than `⟨a_L⟩/⟨a_H⟩`. That setting is
+recorded in the file name.
+"""
+function read_segments(path::AbstractString; spec::TableSpec = SEGMENT_SPEC)
+    table = read_table(path, spec)
+    masses = integer_column(table, :A_H)
+    values = column(table, :value, Float64)
+    return JointedSegments(masses, values)
+end
+
+"""
     EXTRA_DEFORMATION_SPEC
 
 Layout of the extra-deformation energy files: one header row, then `A Z ΔE_def`.

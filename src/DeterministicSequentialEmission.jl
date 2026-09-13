@@ -55,6 +55,8 @@ export LevelDensityModel,
     shell_correction,
     liquid_drop_energy
 export JointedSegments,
+    SEGMENT_SPEC,
+    read_segments,
     PartitionMethod,
     ExcitationEnergyRatio,
     TemperatureRatio,

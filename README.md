@@ -47,8 +47,11 @@ julia docs/activate.jl                 # documentation environment
 Run the test suite:
 
 ```
-julia --project=test -e 'using Pkg; Pkg.test()'
+julia --project -e 'using Pkg; Pkg.test()'
 ```
+
+`Pkg.test()` resolves `test/Project.toml` itself, so it is run from the root environment, not
+from the test one.
 
 Build the documentation:
 
@@ -77,12 +80,36 @@ wait for the port. The entry point will be a thin script over a validated TOML c
 
 Everything marked done is pinned against the archived thesis run: `Q(A_H, Z_H)` over all 245
 fragmentations, the level density parameter over all 244 where it is defined, `E*_L` and `E*_H`
-over 1200 configurations, and 233 emission sequences with their separation energies,
-temperatures, residual energies and mean neutron energies.
+over 1200 configurations under each of the two archived partitions, and 233 emission sequences
+with their separation energies, temperatures, residual energies and mean neutron energies.
+
+Beyond the pinned sample, both partitions have been swept over every record of their archived
+run — 9819 under `E*_H/TXE (A_H)` and 9788 under `R_T (A_H)` — and reproduce each one to
+5 × 10⁻⁹ MeV, which is exact agreement at the eight decimals the archive was written with.
 
 The rewrite is pinned against the thesis run archived outside this repository: ²⁵²Cf(SF),
 `A_H ∈ [126, 174]`, `TKE = 130:2:230` MeV, 5 charge numbers per `A`, AME2020, variable
 evaporation cross section, under both the `E*_H/TXE (A_H)` and `R_T (A_H)` partitions.
+
+## Companion packages
+
+`R_T (A_H)` need not be supplied by hand. [`FissionTemperatureRatio.jl`][ftr] extracts it from
+experimental prompt neutron multiplicity data and tabulates it at every integer `A_H`;
+[`ExforFissionData.jl`][exfor] retrieves that data from the IAEA EXFOR archive. `read_segments`
+reads what the first of those writes, so a temperature ratio can come from measurement rather
+than from a fitted curve typed into a configuration:
+
+```julia
+segments = read_segments("R_T_parameterized_<set>_<run>.csv")
+method = TemperatureRatio(segments, BackShiftedFermiGas(masses))
+```
+
+Produce that file from a run with `ratio_averaging = "mean_of_ratios"`: this partition re-expands
+`R_T` with per-`(A_H, Z_H)` level density parameters and reduces over `Z` afterwards, so it
+inverts a `Z`-averaged multiplicity ratio with `⟨a_L/a_H⟩` rather than `⟨a_L⟩/⟨a_H⟩`.
+
+[ftr]: https://github.com/PaulGoG/FissionTemperatureRatio.jl
+[exfor]: https://github.com/PaulGoG/ExforFissionData.jl
 
 ## Licence
 
