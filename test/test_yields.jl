@@ -26,6 +26,15 @@
         write(bare, "A TKE Value\n140 170.0 1.5\n")
         @test length(read_experimental_yield(bare)) == 1
 
+        # A repeat carrying the same yield is the symmetric mass written from both sides of
+        # the split, which the 235-U distribution does at every kinetic energy. One measurement,
+        # counted once.
+        mirrored = joinpath(dir, "mirrored.dat")
+        write(mirrored, "A TKE Value\n118 170.0 1.5\n118 170.0 1.5\n119 170.0 2.0\n")
+        @test length(read_experimental_yield(mirrored)) == 2
+        @test read_experimental_yield(mirrored).values[(118, 170.0)] == 1.5
+
+        # A repeat that disagrees is a real inconsistency in the file.
         repeated = joinpath(dir, "repeated.dat")
         write(repeated, "A TKE Value\n140 170.0 1.5\n140 170.0 2.0\n")
         @test_throws ArgumentError read_experimental_yield(repeated)

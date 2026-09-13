@@ -53,6 +53,12 @@ Read a measured `Y(A, TKE)` distribution.
 
 Cells whose yield is not finite are dropped rather than carried: the legacy tables mark an
 unmeasured `(A, TKE)` with `NaN`, and a missing measurement is not a yield of zero.
+
+A repeated `(A, TKE)` is accepted when both rows carry the same yield and rejected when they do
+not. The ²³⁵U(n,f) distribution lists `A = A₀/2` twice at every kinetic energy, with identical
+values — the symmetric mass written from each side of the split — and it is one measurement, so
+it is counted once. The prototype reaches the same result by iterating `unique(A)` and taking
+the first match. A repeat that disagrees is a real inconsistency in the file and says so.
 """
 function read_experimental_yield(
     path::AbstractString;
@@ -67,8 +73,15 @@ function read_experimental_yield(
     for row in eachindex(masses)
         isfinite(measured[row]) || continue
         key = (masses[row], energies[row])
-        haskey(values, key) &&
-            throw(ArgumentError("$(table.path) row $row: $(key) appears more than once"))
+        if haskey(values, key)
+            values[key] == measured[row] || throw(
+                ArgumentError(
+                    "$(table.path) row $row: $(key) appears more than once with different " *
+                    "yields, $(values[key]) and $(measured[row])",
+                ),
+            )
+            continue
+        end
         values[key] = measured[row]
     end
     isempty(values) && throw(ArgumentError("$(table.path) holds no finite yields"))
