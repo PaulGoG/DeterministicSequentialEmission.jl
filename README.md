@@ -82,19 +82,27 @@ wait for the port. The entry point will be a thin script over a validated TOML c
 | Level density parameter — Gilbert-Cameron, Egidy-Bucurescu BSFG | done |
 | TXE partition — scission modelling, `E*_H/TXE (A_H)`, `R_T (A_H)` | done |
 | Sequential equations — constant and variable evaporation cross section | done |
-| Yield averaging, post-emission distributions | to port |
-| Prompt fission neutron spectrum | to port |
+| Fragment yields `Y(A,Z,TKE)` and its projections | done |
+| Prompt fission neutron spectrum — centre-of-mass and laboratory, in closed form | done |
+| Post-emission distributions | to port |
 | Figures (CairoMakie) | to port |
 | Configuration, provenance, entry point | to port |
 
 Everything marked done is pinned against the archived thesis run: `Q(A_H, Z_H)` over all 245
 fragmentations, the level density parameter over all 244 where it is defined, `E*_L` and `E*_H`
-over 1200 configurations under each of the two archived partitions, and 233 emission sequences
-with their separation energies, temperatures, residual energies and mean neutron energies.
+over 1200 configurations under each of the two archived partitions, 662 and 683 emission
+sequences spanning the domain under each, and the fragment yield projections over 97 masses,
+41 charges and 101 kinetic energies.
 
-Beyond the pinned sample, both partitions have been swept over every record of their archived
-run — 9819 under `E*_H/TXE (A_H)` and 9788 under `R_T (A_H)` — and reproduce each one to
-5 × 10⁻⁹ MeV, which is exact agreement at the eight decimals the archive was written with.
+Beyond the pinned sample, **both archived runs have been reproduced in their entirety**: 9819
+and 9788 configurations, and every one of the 44 679 and 45 070 emission sequences they contain,
+each quantity to 5 × 10⁻⁹ MeV — exact agreement at the eight decimals the archive was written
+with. Both sequence counts match at every configuration. The fragment yield matrix is reproduced
+cell for cell, 48 985 of them, and its projections to double precision.
+
+The prompt neutron spectrum has no archived counterpart to pin against, so it is validated
+instead against the identities its derivation implies — unit area, `⟨E⟩ = E_f + ⟨ε⟩`, and the
+second moment — over the whole domain.
 
 The rewrite is pinned against the thesis run archived outside this repository: ²⁵²Cf(SF),
 `A_H ∈ [126, 174]`, `TKE = 130:2:230` MeV, 5 charge numbers per `A`, AME2020, variable
