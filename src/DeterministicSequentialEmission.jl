@@ -40,7 +40,12 @@ export ChargePolarization,
     charge_probability,
     charge_numbers
 export Fragmentation,
-    FragmentationDomain, fragmentation_domain, fragments, mass_range, is_symmetric
+    FragmentationDomain,
+    fragmentation_domain,
+    fragments,
+    distinct_splits,
+    mass_range,
+    is_symmetric
 export Energetics,
     ExcludedConfiguration,
     energetics,
@@ -65,6 +70,7 @@ export JointedSegments,
     ExcitationEnergyRatio,
     TemperatureRatio,
     ScissionModelling,
+    segment_coverage,
     read_extra_deformation,
     ExcitationEnergies,
     partition

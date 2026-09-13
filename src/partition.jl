@@ -114,6 +114,18 @@ the prompt-emission calculation as a parameterization.
 """
 struct ExcitationEnergyRatio <: PartitionMethod
     segments::JointedSegments
+
+    function ExcitationEnergyRatio(segments::JointedSegments)
+        for (index, value) in pairs(segments.values)
+            0 < value < 1 || throw(
+                ArgumentError(
+                    "E*_H/TXE is a fraction of the total excitation energy and must lie in " *
+                    "(0, 1); point $index, at A_H = $(segments.masses[index]), is $value",
+                ),
+            )
+        end
+        return new(segments)
+    end
 end
 
 """
@@ -134,6 +146,21 @@ input parameter by which several prompt-emission codes partition `TXE` directly.
 struct TemperatureRatio{M <: LevelDensityModel} <: PartitionMethod
     segments::JointedSegments
     model::M
+
+    function TemperatureRatio(
+        segments::JointedSegments,
+        model::M,
+    ) where {M <: LevelDensityModel}
+        for (index, value) in pairs(segments.values)
+            value > 0 || throw(
+                ArgumentError(
+                    "R_T = T_L/T_H is a ratio of temperatures and must be positive; point " *
+                    "$index, at A_H = $(segments.masses[index]), is $value",
+                ),
+            )
+        end
+        return new{M}(segments, model)
+    end
 end
 
 """
@@ -206,6 +233,47 @@ function read_segments(path::AbstractString; spec::TableSpec = SEGMENT_SPEC)
     masses = integer_column(table, :A_H)
     values = column(table, :value, Float64)
     return JointedSegments(masses, values)
+end
+
+"""
+    segment_coverage(method, heavy_masses) -> NamedTuple
+
+Which heavy masses of a sweep the parameterization actually covers.
+
+Returns the masses it does not reach and the fraction it does. A parameterization is a fit over
+the range its data supported, and nothing ties that range to the domain being swept: the
+prototype anchors its last segment point at `A_H_max` by construction, but a curve read from a
+file carries its own range and may stop short.
+
+Worth checking rather than discovering, because [`partition`](@ref) returns `nothing` above the
+last point and that exclusion is indistinguishable from a physical one — a fragmentation the
+model could not solve and a fragmentation nobody parameterized look identical downstream.
+
+# Examples
+
+```jldoctest
+julia> method = ExcitationEnergyRatio(JointedSegments([(126, 0.5), (150, 0.6)]));
+
+julia> report = segment_coverage(method, 126:174);
+
+julia> report.covered
+0.5102040816326531
+
+julia> first(report.uncovered), last(report.uncovered)
+(151, 174)
+```
+"""
+function segment_coverage(method::PartitionMethod, heavy_masses)
+    uncovered = Int[]
+    total = 0
+    for A in heavy_masses
+        total += 1
+        method.segments(A) === nothing && push!(uncovered, A)
+    end
+    return (
+        covered = total == 0 ? 0.0 : (total - length(uncovered)) / total,
+        uncovered = uncovered,
+    )
 end
 
 """

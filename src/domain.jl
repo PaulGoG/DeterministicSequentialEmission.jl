@@ -125,6 +125,12 @@ function fragmentation_domain(
             "got A_H_max = $upper",
         ),
     )
+    lower < upper || throw(
+        ArgumentError(
+            "the heavy fragment range must span more than one mass; got A_H_min = $lower and " *
+            "A_H_max = $upper",
+        ),
+    )
 
     entries = Fragmentation[]
     sizehint!(entries, length(heavy_masses) * charges_per_mass)
@@ -133,6 +139,16 @@ function fragmentation_domain(
         rms = width_at(polarization, A_heavy)
         Zₚ = most_probable_charge(system, A_heavy, ΔZ)
         for Z_heavy in charge_numbers(Zₚ, charges_per_mass)
+            # Both fragments have to be nuclei. Too many charge numbers per mass, or a Zₚ near
+            # the edge of the range, walks the window off one end and asks for a fragment with
+            # no protons or with all of them.
+            0 < Z_heavy < system.compound.Z || throw(
+                ArgumentError(
+                    "charge number $Z_heavy at A_H = $A_heavy leaves no protons for one " *
+                    "fragment of $(system.compound); $charges_per_mass charge numbers about " *
+                    "Zₚ = $(round(Zₚ; digits = 3)) is too many",
+                ),
+            )
             heavy = Nuclide(Z_heavy, A_heavy)
             light = complementary_fragment(system, heavy)
             push!(
@@ -152,39 +168,77 @@ function fragmentation_domain(
 end
 
 """
-    fragments(domain) -> Vector{Tuple{Nuclide,Float64}}
+    fragments(domain) -> Vector{Nuclide}
 
-Every distinct nuclide the domain produces as a fragment, with the total weight it is produced
-with — the sum of the probabilities of every fragmentation it appears in, on either side.
+Every distinct nuclide the domain produces as a fragment, light and heavy, each once, in
+ascending `(A, Z)`.
 
-Summing rather than taking one value matters only at mass symmetry, and there it is the whole
-question. Away from `A₀/2` a nuclide reaches the domain through exactly one fragmentation, and
-the pair's probability `p(Z_H, A_H)` is also its own Gaussian weight: the complement's most
-probable charge is `Z₀ − Zₚ(A_H)`, so `p(Z_L, A_L)` evaluates to the same number by mirror
-symmetry. At `A_H == A_L == A₀/2` that stops holding. The nuclide `(Z, A₀/2)` is then the heavy
-member of one fragmentation and the light member of another — two different splits, reached with
-two different probabilities — and neither one alone is "its" weight. For ²⁵²Cf at `A = 126`,
-`Z = 50`, the two are `0.4058` and `0.0143`, a factor of 28 apart.
+The set, not a weighting. It exists so per-nuclide quantities — `Sₙ(A,Z)`, `a(A,Z)` — can be
+evaluated once each rather than recomputed at every configuration and every emission sequence,
+which is what makes the prototype's averaging routines quadratic.
 
-Taking the first, as a `get!` does, silently assigned each symmetric nuclide the probability of
-its charge mirror and lost 40 % of the weight of that mass row. The sum, `0.4201` here, is the
-expected number of times the nuclide is produced per fission over the domain, which is what a
-fragment-indexed sum wants. A nuclide that is its own complement, `Z == Z₀/2`, is counted twice
-for one fragmentation, correctly: that split really does make two of it.
+**It carries no probability, deliberately.** A nuclide's weight depends on what is being asked:
+the isobaric charge distribution `p(Z,A)` for building yields, which is
+[`fragment_charge_probabilities`](@ref); the yield `Y(A,Z,TKE)` for averaging a model quantity;
+neither of which is a property of the domain. An earlier version returned a summed probability
+here, which was well defined and answered a question nothing asks.
 
-This is a fragment census, not the isobaric charge distribution. Anything needing `p(Z,A)`
-itself — the yield construction `Y(A,Z,TKE) = p(Z,A) Y(A,TKE)` above all — must take it from
-[`charge_probability`](@ref) against that mass's own `Zₚ`, not from here.
+See [`distinct_splits`](@ref) for the pair-level view, which is not the same collection.
 """
 function fragments(domain::FragmentationDomain)
-    seen = Dict{Nuclide, Float64}()
+    seen = Set{Nuclide}()
     for entry in domain.entries
-        seen[entry.heavy] = get(seen, entry.heavy, 0.0) + entry.probability
-        seen[entry.light] = get(seen, entry.light, 0.0) + entry.probability
+        push!(seen, entry.heavy)
+        push!(seen, entry.light)
     end
-    ordered = collect(seen)
-    sort!(ordered; by = pair -> (pair.first.A, pair.first.Z))
-    return [(nuclide, probability) for (nuclide, probability) in ordered]
+    return sort!(collect(seen); by = nuclide -> (nuclide.A, nuclide.Z))
+end
+
+"""
+    distinct_splits(domain) -> Vector{Fragmentation}
+
+Every physical split the domain contains, each once.
+
+Away from mass symmetry this is just `domain.entries`. At `A_H == A_L == A₀/2` it is not: the
+domain enumerates `(H=Z, L=Z₀−Z)` and `(H=Z₀−Z, L=Z)`, which label the **same** split from the
+two sides. They are kept apart in `entries` because each labels a different heavy fragment and
+carries that fragment's own `p(Z,A)` — correct for a fragment-indexed sweep, and what the
+archived run writes. Counted as splits, they are one.
+
+So anything summing a *pair* quantity — `ν_pair`, `TKE_p`, the pair spectrum — must iterate this
+rather than `entries`, or it counts the symmetric splits twice.
+
+The prototype guards the same case with the three-way branch in its partitioning routines: push
+both fragments when `A_L != A_H`; push both once, skipping a repeat, when the masses match but
+the charges do not; and push a single cell when the fragments are the same nuclide. The rule
+here is the same, with the survivor chosen as the `Z_H >= Z_L` labelling so it does not depend
+on iteration order.
+
+# Examples
+
+```jldoctest
+julia> system = spontaneous_fission(Nuclide(98, 252));
+
+julia> domain = fragmentation_domain(system, mean_charge_polarization(), 126:174);
+
+julia> length(domain), length(distinct_splits(domain))
+(245, 244)
+```
+"""
+function distinct_splits(domain::FragmentationDomain)
+    labelled = Set((entry.heavy.A, entry.heavy.Z) for entry in domain.entries)
+    kept = Fragmentation[]
+    for entry in domain.entries
+        entry.heavy.A == entry.light.A || (push!(kept, entry); continue)
+        # Mass-symmetric. Drop this labelling only if the mirror is itself in the domain —
+        # the retained charge window is centred on Zₚ, which at A₀/2 need not be symmetric
+        # about Z₀/2, so a split can have no mirror and must be kept whichever side labels it.
+        mirror = (entry.heavy.A, entry.light.Z)
+        if entry.heavy.Z >= entry.light.Z || !(mirror in labelled)
+            push!(kept, entry)
+        end
+    end
+    return kept
 end
 
 """

@@ -25,6 +25,43 @@
     @test_throws ArgumentError JointedSegments([(126, 0.5), (126, 0.1)])
 end
 
+@testset "parameterization values are checked against their meaning" begin
+    # E*_H/TXE is a fraction of the total excitation energy.
+    @test_throws ArgumentError ExcitationEnergyRatio(
+        JointedSegments([(126, 0.5), (150, 1.4)]),
+    )
+    @test_throws ArgumentError ExcitationEnergyRatio(
+        JointedSegments([(126, -0.1), (150, 0.6)]),
+    )
+    @test ExcitationEnergyRatio(JointedSegments([(126, 0.5), (150, 0.6)])) isa
+          ExcitationEnergyRatio
+
+    # R_T is a ratio of temperatures, so positive, but it may exceed one.
+    model = BackShiftedFermiGas(mass_table())
+    @test_throws ArgumentError TemperatureRatio(
+        JointedSegments([(126, 1.0), (150, -0.3)]),
+        model,
+    )
+    @test TemperatureRatio(JointedSegments([(126, 1.0), (150, 1.7)]), model) isa
+          TemperatureRatio
+end
+
+@testset "segment coverage against a sweep" begin
+    # A parameterization fitted over part of the domain leaves the rest unpartitioned, and that
+    # exclusion is indistinguishable downstream from one the physics made.
+    short = ExcitationEnergyRatio(JointedSegments([(126, 0.5), (150, 0.6)]))
+    report = segment_coverage(short, 126:174)
+    @test report.uncovered == collect(151:174)
+    @test report.covered ≈ 25 / 49
+
+    whole = ExcitationEnergyRatio(
+        JointedSegments([(126, 0.5), (130, 0.14), (150, 0.607), (174, 0.865)]),
+    )
+    full = segment_coverage(whole, 126:174)
+    @test isempty(full.uncovered)
+    @test full.covered == 1.0
+end
+
 @testset "reading a tabulated parameterization" begin
     # The layout FissionTemperatureRatio.jl writes: a header line, then A_H, value and an
     # uncertainty column that the partition discards because it carries none downstream.

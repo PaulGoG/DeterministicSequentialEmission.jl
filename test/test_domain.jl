@@ -44,29 +44,42 @@ POLARIZATION_AVAILABLE && @testset "symmetric splits" begin
         @test entry.heavy.A == entry.light.A == 126
     end
 
+    # The fragment view is the nuclide set, each once — what per-nuclide quantities are
+    # memoised over. No probability: a nuclide's weight depends on the question being asked.
     listed = fragments(domain)
-    @test allunique(first.(listed))
-    @test issorted([(nuclide.A, nuclide.Z) for (nuclide, _) in listed])
+    @test allunique(listed)
+    @test issorted([(nuclide.A, nuclide.Z) for nuclide in listed])
+    @test length(listed) == 485
+    @test Nuclide(50, 126) in listed
+    @test eltype(listed) == Nuclide
 
-    # At the symmetric mass a nuclide is reached by two different fragmentations — once as the
-    # heavy fragment, once as the light complement of its charge mirror — with two different
-    # probabilities. The fragment view carries their sum, so the census is complete.
-    weights = Dict(nuclide => weight for (nuclide, weight) in listed)
-    at_126 = Dict(entry.heavy.Z => entry.probability for entry in symmetric)
-    for Z in 47:51
-        @test weights[Nuclide(Z, 126)] ≈ at_126[Z] + at_126[98 - Z]
-    end
+    # It agrees with the charge-probability table, the other per-nuclide view.
+    @test Set(listed) ==
+          Set(keys(fragment_charge_probabilities(domain, cf252_polarization())))
+end
 
-    # Concretely: Z = 50 is produced with 0.4058 as a heavy fragment and 0.0143 as the light
-    # complement of Z = 48. Keeping only the first, as the previous implementation did, gave it
-    # its mirror's weight — a factor of 28 — and lost 40 % of the mass row.
-    @test weights[Nuclide(50, 126)] ≈ 0.4201 atol = 1e-4
-    @test sum(weights[Nuclide(Z, 126)] for Z in 47:51) ≈ 2 * sum(values(at_126))
+POLARIZATION_AVAILABLE && @testset "distinct splits" begin
+    domain = cf252_domain()
+    splits = distinct_splits(domain)
 
-    # Away from symmetry each nuclide belongs to exactly one fragmentation, so nothing is
-    # summed and the weight is that fragmentation's own.
-    @test weights[Nuclide(52, 134)] ≈
-          only(e.probability for e in domain.entries if e.heavy == Nuclide(52, 134))
+    # Away from mass symmetry a split is labelled once, so only A₀/2 loses entries. The five
+    # charge labels at A = 126 describe three physical splits: {47,51}, {48,50} and {49,49}.
+    @test length(splits) == length(domain) - 2
+    symmetric = [entry for entry in splits if entry.heavy.A == 126]
+    @test length(symmetric) == 3
+    @test sort([entry.heavy.Z for entry in symmetric]) == [49, 50, 51]
+
+    # Every physical pair appears exactly once, in one labelling or the other.
+    pairs = Set(Set([entry.heavy.Z, entry.light.Z]) for entry in symmetric)
+    @test length(pairs) == 3
+
+    # A split whose mirror charge falls outside the retained window has no second labelling and
+    # must survive whichever side names it. With the mean polarization Zₚ(126) = 48.5, so the
+    # window 46:50 is not symmetric about Z₀/2 = 49 — exactly that case.
+    offset = fragmentation_domain(CF252, mean_charge_polarization(), 126:174)
+    offset_splits = distinct_splits(offset)
+    @test length(offset_splits) == length(offset) - 1
+    @test sort([e.heavy.Z for e in offset_splits if e.heavy.A == 126]) == [46, 47, 49, 50]
 end
 
 @testset "domain validation" begin
@@ -86,5 +99,17 @@ end
         polarization,
         126:174;
         charges_per_mass = 4,
+    )
+
+    # A degenerate single-mass range. The prototype rejects A_H_min >= A_H_max outright.
+    @test_throws ArgumentError fragmentation_domain(CF252, polarization, 130:130)
+
+    # Enough charge numbers per mass and the window walks off the end of the charge range,
+    # asking for a fragment with no protons or with all of them.
+    @test_throws ArgumentError fragmentation_domain(
+        CF252,
+        polarization,
+        126:174;
+        charges_per_mass = 199,
     )
 end
