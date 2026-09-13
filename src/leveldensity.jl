@@ -120,13 +120,34 @@ Preferred over Gilbert-Cameron for fission fragments: across the fragment range 
 to the superfluid model at the excitation energies fragments actually have, departing mainly
 near `A ≈ 130` where the `N = 82`, `Z = 50` shells close.
 
-!!! note "Coefficient form to verify against the source"
-    This reproduces the prototype, which is what produced the reference results:
-    `a = (p₁ + p₂ δW) A^p₃`. A form `a = p₁ (1 + p₂ δW) A^p₃` also circulates, and the two are
-    not the same function — they differ in the weight given to `δW` by a factor `p₁`. The
-    reference run cannot distinguish them, since it used only this one. Resolving it needs
-    von Egidy & Bucurescu, PRC 72 044311 (2005) and the 2009 update, which are not among the
-    references held here.
+Verified against the source. The systematics is that of the 2009 update, eq. (19):
+
+```
+a = (p₁ + p₂ S′) A^p₃,   p₁ = 0.199(7), p₂ = 0.0096(4), p₃ = 0.869(7)
+```
+
+The form is additive in `S′`. A variant `p₁(1 + p₂ S′) A^p₃` circulates and is **not** what the
+paper gives; the two differ by a factor `p₁` in the weight on `S′`.
+
+The pieces, each read from the papers rather than inferred:
+
+- `S(Z,N) = M_exp − M_LD` (2005, eq. 7), which in binding energies is `E_b^LD − E_b^exp`.
+- `M_LD` from Pearson's Weizsäcker-type formula (2005, eq. 9), with `a_vol = −15.65`,
+  `a_sf = 17.63`, `a_sym = 27.72`, `a_ss = −25.60` MeV and `r₀ = 1.233` fm, so the Coulomb
+  coefficient is `3e²/5r₀ = 0.864/1.233` MeV with `e² = 1.44` MeV fm.
+- `S′ = S + 0.5 P_a′` (2009, eq. 19) with
+  `P_a′ = ½[M(A+2,Z+1) − 2M(A,Z) + M(A−2,Z−1)]` (2009, eq. 12), so the pairing enters as
+  `¼[M(A+2,Z+1) − 2M(A,Z) + M(A−2,Z−1)]`.
+
+Two traps avoided. `P_a′` carries no `(−1)^Z` alternation: it differs by `(−1)^(Z+1)` from the
+`P_a` of the 2005 paper and of Audi's tables, as the 2009 paper states where it defines it, and
+it is `P_a′` that enters eq. (19). And the 2005 paper uses a different functional form
+altogether, `a/A = p₁ + p₂ S′ + p₃ A`, with a parity-branched pairing correction; this follows
+the 2009 update throughout rather than mixing the two.
+
+References held in the workspace: von Egidy & Bucurescu, Phys. Rev. C 72, 044311 (2005);
+erratum Phys. Rev. C 73, 049901 (2006); Phys. Rev. C 80, 054310 (2009).
+
 """
 struct BackShiftedFermiGas <: LevelDensityModel
     table::MassTable

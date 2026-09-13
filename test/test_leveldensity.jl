@@ -40,6 +40,52 @@ end
     @test worst < 1e-8
 end
 
+@testset "BSFG pinned to von Egidy & Bucurescu" begin
+    table = mass_table()
+    model = BackShiftedFermiGas(table)
+
+    # Eq. (19) of the 2009 paper, coefficients and all. Reconstructing a from S′ by hand must
+    # reproduce what the implementation returns, which pins the additive form: the variant
+    # p₁(1 + p₂ S′)A^p₃ would differ by a factor p₁ on the S′ term.
+    for nuclide in (Nuclide(52, 134), Nuclide(42, 104), Nuclide(50, 132))
+        S = shell_correction(model, nuclide)
+        @test S !== nothing
+        @test level_density_parameter(model, nuclide) ≈
+              (0.199 + 0.0096 * S) * nuclide.A^0.869
+        @test !isapprox(
+            level_density_parameter(model, nuclide),
+            0.199 * (1 + 0.0096 * S) * nuclide.A^0.869,
+        )
+    end
+
+    # Eq. (12) of the 2009 paper: the pairing term enters as 0.5 P_a′ with
+    # P_a′ = ½[M(A+2,Z+1) − 2M(A,Z) + M(A−2,Z−1)], i.e. a quarter of the second difference,
+    # and with no (−1)^Z alternation — that factor distinguishes P_a′ from the P_a of the
+    # 2005 paper and of Audi's tables, and it is P_a′ that enters eq. (19).
+    nuclide = Nuclide(52, 134)
+    Δ = value(mass_excess(table, nuclide))
+    Δ_up = value(mass_excess(table, Nuclide(53, 136)))
+    Δ_down = value(mass_excess(table, Nuclide(51, 132)))
+    pairing = (Δ_up - 2Δ + Δ_down) / 4
+    δW₀ =
+        liquid_drop_energy(model, nuclide) - (
+            nuclide.Z * value(mass_excess(table, Nuclide(1, 1))) +
+            neutron_number(nuclide) * value(mass_excess(table, NEUTRON)) - Δ
+        )
+    @test shell_correction(model, nuclide) ≈ δW₀ + pairing
+
+    # S = M_exp − M_LD (2005, eq. 7), so a nucleus more bound than the liquid drop has S < 0.
+    # Shell closures are exactly those nuclei, and the suppressed a is what puts the sawtooth
+    # into E*(A) and hence into ν(A).
+    @test shell_correction(model, Nuclide(50, 132)) < -8.0      # doubly magic
+    @test shell_correction(model, Nuclide(42, 104)) > 0.0       # mid-shell
+    @test abs(shell_correction(model, Nuclide(50, 120))) < 1.0  # magic Z, mid-shell N
+
+    # a/A ≈ 1/8 away from closures, and well below it at one.
+    @test level_density_parameter(model, Nuclide(42, 104)) / 104 > 0.11
+    @test level_density_parameter(model, Nuclide(50, 132)) / 132 < 0.06
+end
+
 @testset "level density parameter behaviour" begin
     table = mass_table()
     model = BackShiftedFermiGas(table)
