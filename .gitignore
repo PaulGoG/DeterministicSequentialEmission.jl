@@ -12,13 +12,17 @@
 /data/mass_excess/*
 !/data/mass_excess/ame2020.dat
 
-# The prototype's own flat input layout, retained locally while the port finishes.
+# The prototype's own flat input layout, superseded by data/ and kept only for cross-checking.
 /input_data/
 
-# Generated results
-*_output_data/
-*_plots/
-/plots/
+# Pipeline output. Each run writes its tables and metadata under its own system directory; the
+# two figures the README shows are tracked, and everything else a run draws is not.
+/results/
+/figures/*
+!/figures/multiplicity_vs_experiment.png
+!/figures/multiplicity_vs_experiment.pdf
+!/figures/prompt_neutron_spectrum.png
+!/figures/prompt_neutron_spectrum.pdf
 
 # Libraries do not pin a manifest; each environment resolves against [compat].
 Manifest.toml
