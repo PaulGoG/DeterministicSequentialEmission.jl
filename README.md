@@ -160,12 +160,19 @@ corrected intermediate expression in the appendix proof of root uniqueness — v
 affect that proof's conclusion. The argument, structure, figures and numerical results are as
 submitted.
 
-A typographic pass follows: margin kerning and font expansion, vertical spacing left ragged
-rather than stretched, the one side-by-side figure pair that overran the text block brought back
-to the 8 cm the document uses everywhere else, and the two moment integrals of the appendix
-broken after their substitution annotation. The submitted source carried 8 overfull lines, the
-worst nearly a centimetre into the margin, and 6 pages padded to justify their height; the
-rebuild carries none. The document is still 48 pages and no wording changed.
+Two typographic passes follow. The first: margin kerning and font expansion, vertical spacing
+left ragged rather than stretched, the one side-by-side figure pair that overran the text block
+brought back to the 8 cm the document uses everywhere else, and the two moment integrals of the
+appendix broken after their substitution annotation. The submitted source carried 8 overfull
+lines, the worst nearly a centimetre into the margin, and 6 pages padded to justify their
+height; the rebuild carries none.
+
+The second indents the first line of each paragraph. The submitted source sets no indentation
+and no vertical separation between paragraphs, so they run together — three consecutive
+paragraphs read as one block in the chapter on code structure. Indenting restores the separator
+without changing vertical spacing.
+
+The document is still 48 pages and no wording changed.
 
 ## Licence
 
