@@ -85,19 +85,52 @@ end
     end
 end
 
-@testset "symmetric splits divide evenly" begin
+@testset "a split into two copies of one nuclide divides evenly" begin
     table = mass_table()
     domain = cf252_domain()
-    # At A_H = 126 the ratio parameterization is exactly 0.5, so a symmetric fragmentation
-    # divides TXE evenly without any special case in the partition.
-    method = ExcitationEnergyRatio(
-        JointedSegments([(126, 0.5), (130, 0.14), (150, 0.607), (174, 0.865)]),
+    model = BackShiftedFermiGas(table)
+
+    # A_H = A_L = 126 with Z_H = Z_L = 49: the two fragments are the same nuclide, so they have
+    # the same level density parameter and the same temperature identically. E*_L = E*_H is a
+    # symmetry, and no parameterization of A_H can be relied on to produce it.
+    identical = only(
+        entry for entry in domain.entries if entry.heavy == entry.light == Nuclide(49, 126)
     )
-    symmetric = first(filter(is_symmetric, domain.entries))
-    balance = energetics(table, CF252, symmetric, 160.0)
-    split = partition(method, symmetric, value(balance.TXE))
+    balance = energetics(table, CF252, identical, 160.0)
+    TXE = value(balance.TXE)
+
+    # Values chosen to be wrong at symmetry on purpose: R_T = 1.2 is the literature value for
+    # 252-Cf and gives E*_H/TXE = 0.41 here, and 0.42 is a plausible ratio parameterization.
+    # Both archived thesis runs happen to pin their first segment at R_T = 1 and 0.5, so
+    # neither exercises this.
+    methods = [
+        TemperatureRatio(JointedSegments([(126, 1.2), (174, 1.2)]), model),
+        ExcitationEnergyRatio(JointedSegments([(126, 0.42), (174, 0.42)])),
+    ]
+    for method in methods
+        split = partition(method, identical, TXE)
+        @test split.light ≈ split.heavy
+        @test sum(split) ≈ TXE
+    end
+
+    # Scission modelling needs no guard: identical fragments give a_L/a_H = 1 and equal
+    # extra-deformation energies, so it divides evenly on its own arithmetic.
+    scission = ScissionModelling(Dict(Nuclide(49, 126) => 3.0), model)
+    split = partition(scission, identical, TXE)
     @test split.light ≈ split.heavy
-    @test sum(split) ≈ value(balance.TXE)
+    @test sum(split) ≈ TXE
+
+    # A mass-symmetric split with unequal charges is a different matter: the fragments are
+    # distinct nuclides, a_L ≠ a_H, and the prescription must be applied as given.
+    unequal = only(entry for entry in domain.entries if entry.heavy == Nuclide(50, 126))
+    @test unequal.light == Nuclide(48, 126)
+    split = partition(
+        TemperatureRatio(JointedSegments([(126, 1.2), (174, 1.2)]), model),
+        unequal,
+        TXE,
+    )
+    @test !(split.light ≈ split.heavy)
+    @test sum(split) ≈ TXE
 end
 
 @testset "temperature ratio partition" begin

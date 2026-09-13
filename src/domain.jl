@@ -151,16 +151,33 @@ end
 """
     fragments(domain) -> Vector{Tuple{Nuclide,Float64}}
 
-Every distinct fragment in the domain, light and heavy, with its charge probability.
+Every distinct nuclide the domain produces as a fragment, with the total weight it is produced
+with — the sum of the probabilities of every fragmentation it appears in, on either side.
 
-A mass-symmetric split contributes its nuclide once even though both of its fragments carry
-that mass, so a sum over this collection counts each initial fragment exactly once.
+Summing rather than taking one value matters only at mass symmetry, and there it is the whole
+question. Away from `A₀/2` a nuclide reaches the domain through exactly one fragmentation, and
+the pair's probability `p(Z_H, A_H)` is also its own Gaussian weight: the complement's most
+probable charge is `Z₀ − Zₚ(A_H)`, so `p(Z_L, A_L)` evaluates to the same number by mirror
+symmetry. At `A_H == A_L == A₀/2` that stops holding. The nuclide `(Z, A₀/2)` is then the heavy
+member of one fragmentation and the light member of another — two different splits, reached with
+two different probabilities — and neither one alone is "its" weight. For ²⁵²Cf at `A = 126`,
+`Z = 50`, the two are `0.4058` and `0.0143`, a factor of 28 apart.
+
+Taking the first, as a `get!` does, silently assigned each symmetric nuclide the probability of
+its charge mirror and lost 40 % of the weight of that mass row. The sum, `0.4201` here, is the
+expected number of times the nuclide is produced per fission over the domain, which is what a
+fragment-indexed sum wants. A nuclide that is its own complement, `Z == Z₀/2`, is counted twice
+for one fragmentation, correctly: that split really does make two of it.
+
+This is a fragment census, not the isobaric charge distribution. Anything needing `p(Z,A)`
+itself — the yield construction `Y(A,Z,TKE) = p(Z,A) Y(A,TKE)` above all — must take it from
+[`charge_probability`](@ref) against that mass's own `Zₚ`, not from here.
 """
 function fragments(domain::FragmentationDomain)
     seen = Dict{Nuclide, Float64}()
     for entry in domain.entries
-        get!(seen, entry.heavy, entry.probability)
-        get!(seen, entry.light, entry.probability)
+        seen[entry.heavy] = get(seen, entry.heavy, 0.0) + entry.probability
+        seen[entry.light] = get(seen, entry.light, 0.0) + entry.probability
     end
     ordered = collect(seen)
     sort!(ordered; by = pair -> (pair.first.A, pair.first.Z))

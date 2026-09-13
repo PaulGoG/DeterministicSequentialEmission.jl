@@ -19,7 +19,7 @@ using Measurements: Measurement, measurement, value
 
 export Nuclide, NEUTRON, neutron_number, element_symbol
 export FissioningSystem, spontaneous_fission, neutron_induced_fission, symmetric_mass
-export TableSpec, DataTable, read_table, column, column_or, has_column
+export TableSpec, DataTable, read_table, column, column_or, integer_column, has_column
 export MassTable,
     read_mass_table,
     mass_excess,

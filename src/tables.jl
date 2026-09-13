@@ -198,6 +198,40 @@ end
 column(table::DataTable, name::Symbol) = table.columns[name]
 
 """
+    integer_column(table, name) -> Vector{Int}
+
+Parse a nucleon-number column, accepting an integral value written as a float.
+
+Nucleon numbers are integers, but the files that carry them are not all written by hand:
+`input_data/U-235/DeltaZ_rms_A.U5` tabulates its mass column as `118.0`, `119.0`, …, because a
+generator wrote it out in floating point. Read strictly as `Int` that file cannot be loaded at
+all. A value with a fractional part is still an error, and says so.
+"""
+function integer_column(table::DataTable, name::Symbol)
+    has_column(table, name) || throw(
+        ArgumentError(
+            "$(table.path) has no column $name; it supplied $(join(table.present, ", "))",
+        ),
+    )
+    values = Vector{Int}(undef, table.rows)
+    for (row, text) in enumerate(table.columns[name])
+        parsed = tryparse(Int, text)
+        if parsed === nothing
+            approximate = tryparse(Float64, text)
+            (approximate === nothing || !isinteger(approximate)) && throw(
+                ArgumentError(
+                    "$(table.path) row $row, column $name: cannot read $(repr(text)) as a " *
+                    "nucleon number",
+                ),
+            )
+            parsed = Int(approximate)
+        end
+        values[row] = parsed
+    end
+    return values
+end
+
+"""
     column_or(table, name, T, fallback) -> Vector{T}
 
 Parse an optional column, or return a vector of `fallback` when the file omitted it.

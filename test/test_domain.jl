@@ -44,11 +44,29 @@ end
         @test entry.heavy.A == entry.light.A == 126
     end
 
-    # Every initial fragment appears once in the fragment view, including the symmetric mass,
-    # whose two fragments share a nuclide only when their charges also coincide.
     listed = fragments(domain)
     @test allunique(first.(listed))
     @test issorted([(nuclide.A, nuclide.Z) for (nuclide, _) in listed])
+
+    # At the symmetric mass a nuclide is reached by two different fragmentations — once as the
+    # heavy fragment, once as the light complement of its charge mirror — with two different
+    # probabilities. The fragment view carries their sum, so the census is complete.
+    weights = Dict(nuclide => weight for (nuclide, weight) in listed)
+    at_126 = Dict(entry.heavy.Z => entry.probability for entry in symmetric)
+    for Z in 47:51
+        @test weights[Nuclide(Z, 126)] ≈ at_126[Z] + at_126[98 - Z]
+    end
+
+    # Concretely: Z = 50 is produced with 0.4058 as a heavy fragment and 0.0143 as the light
+    # complement of Z = 48. Keeping only the first, as the previous implementation did, gave it
+    # its mirror's weight — a factor of 28 — and lost 40 % of the mass row.
+    @test weights[Nuclide(50, 126)] ≈ 0.4201 atol = 1e-4
+    @test sum(weights[Nuclide(Z, 126)] for Z in 47:51) ≈ 2 * sum(values(at_126))
+
+    # Away from symmetry each nuclide belongs to exactly one fragmentation, so nothing is
+    # summed and the weight is that fragmentation's own.
+    @test weights[Nuclide(52, 134)] ≈
+          only(e.probability for e in domain.entries if e.heavy == Nuclide(52, 134))
 end
 
 @testset "domain validation" begin

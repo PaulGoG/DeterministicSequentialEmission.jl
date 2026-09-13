@@ -53,9 +53,26 @@ positive root: `f(0) = −(Ē_r − Sₙ) < 0`, `f → +∞`, and `f′ > 0` thr
 """
 struct VariableCrossSection <: EvaporationCrossSection end
 
-# Constants of the α term. The nuclear radius parameter is in fm; the 0.1 scaling and the
-# factor 10 on α together carry σ₀ from fm² to barn and back, which is the unit convention the
-# tabulated strength function S₀ is quoted in.
+# Constants of the α term.
+#
+# Read the scaling before changing anything here. `α` multiplies `1/√ε`, so it carries units of
+# √energy, but `π ħ² S₀ / (m r₀² A^(2/3))` as the papers print it evaluates to MeV: ħ²/m is
+# 41.44 MeV fm², S₀ is dimensionless, r₀²A^(2/3) is fm². The missing half power is the
+# strength function's own reference energy. S₀ is defined through the reduced neutron width
+# Γ_n⁰ = Γ_n √(E₀/E) with E₀ = 1 eV, so the transmission coefficient is 2πS₀√(ε/E₀) rather than
+# 2πS₀√ε, and the honest expression is
+#
+#     α = π ħ² S₀ / (m r₀² A^(2/3) √E₀),   1/√E₀ = 1/√(10⁻⁶ MeV) = 10³ MeV^(-1/2)
+#
+# The `0.1` on the radius and the `10` in `alpha_parameter` are how that 10³ is spelled here:
+# (1/0.1²)·10 = 10³ = √(1 MeV / 1 eV) exactly, for every A. They are NOT a fm²-to-barn
+# conversion — a genuine round trip would be a net factor of 1, and S₀ has no area units to
+# convert. Closed form: α(A) = 9.041 (S₀/10⁻⁴) / A^(2/3) MeV^(1/2).
+#
+# Making the units "consistent" as a cleanup would divide α by a thousand and collapse the
+# variable cross section onto the constant one, silently. The magnitude is checked by the
+# paper's own figure: the deviation of 2T from ⟨ε⟩ must run 13-14 % at T ≈ 0.2 MeV and 7-8 %
+# near T = 2 MeV, which α ~ 0.2-0.8 reproduces and α ~ 4×10⁻⁴ would miss by three orders.
 const REDUCED_PLANCK_TIMES_C = 197.3268601   # MeV fm
 const ATOMIC_MASS_UNIT = 931.50176           # MeV
 const NEUTRON_MASS_NUMBER = 1.008665         # u
@@ -69,8 +86,20 @@ const ALPHA_COEFFICIENT =
 The s-wave neutron strength function `S₀(A)`, a jointed-segment parameterization of the RIPL-3
 resonance data.
 
+Returned bare, not in the customary units of `10⁻⁴`: `S₀(140)` is `2.33e-4`, not `2.33`. That
+is what [`alpha_parameter`](@ref) expects.
+
 Piecewise linear in `A` with plateaux where the data support one. Distinct from the
 parameterization used in earlier work, and one of the two elements the thesis presents as new.
+
+Not verified against a source: RIPL-3 is not held in the workspace, so the segments are pinned
+by the archived run alone. Two things to check if it ever is. The values here are not the ones
+the 2018 paper's own figure lists for its validation nuclei — `S₀(150)` is `3.8e-4` here
+against `1.0e-4` there — which matters because that paper's claim that `⟨ε⟩(T)` is within 4 %
+of an optical-model calculation was established for `S₀` between `0.7e-4` and `1.1e-4`, i.e.
+`α` between 0.21 and 0.55, whereas this parameterization runs `α` from 0.071 at `A = 118` to
+1.22 at `A = 146`–`152`, outside that band at both ends. And the 4s maximum sits at
+`A = 146`–`152`, roughly ten mass units below where standard systematics place it.
 """
 function neutron_strength_function(A::Integer)
     A <= 23 && return 2.5e-5
@@ -161,9 +190,16 @@ end
 
 Lower bound on an acceptable residual temperature, in MeV.
 
-Below roughly this value the level density is described by the constant-temperature form
-rather than the Fermi gas, so `Ē_r = a T²` no longer holds and the root is not a nuclear
-temperature. Unconditional, unlike the optional upper bound.
+A numerical floor, not a physical threshold, and the distinction is worth keeping straight. The
+Fermi gas really does give way to the constant-temperature regime as a fragment cools, but that
+crossover sits near `T ≈ 0.5`–`0.8` MeV for these nuclei, fifty times higher than this bound —
+so this value cannot be justified as marking it, and a chain that stops here has already spent
+several sequences outside the regime the closure assumes. What it does do is reject roots
+returned where there is essentially nothing left to share: it bites only when `Ē_r − Sₙ` has
+fallen below about 17 keV, so it truncates a chain that was ending anyway.
+
+Unconditional, unlike the optional upper bound. Inherited from the prototype, where it is the
+`ΔT` of the input options; no paper in the reference set states either bound.
 """
 const MINIMUM_TEMPERATURE = 1.0e-2
 

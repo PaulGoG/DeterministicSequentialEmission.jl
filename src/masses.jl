@@ -53,8 +53,8 @@ order.
 """
 function read_mass_table(path::AbstractString; spec::TableSpec = MASS_EXCESS_SPEC)
     table = read_table(path, spec)
-    protons = column(table, :Z, Int)
-    masses = column(table, :A, Int)
+    protons = integer_column(table, :Z)
+    masses = integer_column(table, :A)
     excess = column(table, :excess, Float64)
     uncertainty = column(table, :uncertainty, Float64)
 

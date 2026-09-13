@@ -179,8 +179,8 @@ function read_extra_deformation(
     spec::TableSpec = EXTRA_DEFORMATION_SPEC,
 )
     table = read_table(path, spec)
-    masses = column(table, :A, Int)
-    charges = column(table, :Z, Int)
+    masses = integer_column(table, :A)
+    charges = integer_column(table, :Z)
     energies = column(table, :energy, Float64)
     deformation = Dict{Nuclide, Float64}()
     for row in eachindex(masses)
@@ -226,16 +226,18 @@ evaluated for this fragmentation — a mass outside the parameterization, a miss
 density parameter, an absent deformation energy, or a division that leaves either fragment
 with negative excitation energy.
 
-A mass-symmetric split with equal charges divides `TXE` evenly, which every method agrees on
-and none needs a special case to produce.
+A split into two copies of the same nuclide divides `TXE` evenly, and does so before the
+prescription is consulted — see [`_self_complementary`](@ref).
 """
 function partition(method::ExcitationEnergyRatio, fragmentation::Fragmentation, TXE::Real)
+    _self_complementary(fragmentation) && return _split(TXE, 0.5)
     ratio = method.segments(fragmentation.heavy.A)
     (ratio === nothing || ratio > 1) && return nothing
     return _split(TXE, ratio)
 end
 
 function partition(method::TemperatureRatio, fragmentation::Fragmentation, TXE::Real)
+    _self_complementary(fragmentation) && return _split(TXE, 0.5)
     R_T = method.segments(fragmentation.heavy.A)
     R_T === nothing && return nothing
     a_light = level_density_parameter(method.model, fragmentation.light)
@@ -261,6 +263,32 @@ function partition(method::ScissionModelling, fragmentation::Fragmentation, TXE:
     (light >= 0 && heavy >= 0) || return nothing
     return ExcitationEnergies(light, heavy)
 end
+
+"""
+    _self_complementary(fragmentation) -> Bool
+
+Whether the two fragments are the same nuclide, `A_H == A_L` **and** `Z_H == Z_L`.
+
+Such a split must divide `TXE` evenly, and the reason is a symmetry rather than a convention:
+the fragments are indistinguishable, so `a_L == a_H` and `T_L == T_H` identically, hence
+`E*_L == E*_H` and `R_T == 1`. No parameterization of `A_H` can know this — `R_T(A_H)` and
+`E*_H/TXE (A_H)` are fitted curves, and nothing makes them pass through `1` and `0.5` at
+`A₀/2`. Evaluated there with the ²⁵²Cf literature value `R_T = 1.2` the temperature-ratio
+prescription returns `E*_H/TXE = 0.41`, dividing energy unequally between two copies of the
+same nucleus.
+
+Guarding on it restores the behaviour of the prototype, which special-cased
+`A_L == A_H && Z_L == Z_H` in all three prescriptions. `ScissionModelling` needs no guard and
+does not carry one: identical fragments give `a_L/a_H == 1` and `ΔE_def^L == ΔE_def^H`, so it
+divides evenly on its own arithmetic, and short-circuiting it would skip its check that the
+energy remaining at scission is non-negative.
+
+Both archived thesis parameterizations happen to satisfy the constraint through their first
+pivot — `R_T(126) = 1.0` and `E*_H/TXE (126) = 0.5` — which is why the reference runs are
+unaffected either way.
+"""
+_self_complementary(fragmentation::Fragmentation) =
+    fragmentation.heavy == fragmentation.light
 
 function _split(TXE::Real, ratio::Real)
     heavy = TXE * ratio

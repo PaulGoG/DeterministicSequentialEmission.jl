@@ -13,6 +13,23 @@
     @test width_at(mean, 126) == 0.6
 end
 
+@testset "a mass column written in floating point still reads" begin
+    # DeltaZ_rms_A.U5 tabulates its mass column as 118.0, 119.0, … because a generator wrote
+    # it out in floating point. Read strictly as Int the file cannot be loaded at all, which
+    # blocked 235-U entirely.
+    path = joinpath(@__DIR__, "..", "input_data", "U-235", "DeltaZ_rms_A.U5")
+    polarization = read_charge_polarization(path)
+    @test polarization_at(polarization, 118) ≈ 0.00137468
+    @test width_at(polarization, 118) ≈ 0.62081
+
+    # A genuinely fractional nucleon number is still an error, and says what it could not read.
+    mktempdir() do dir
+        bad = joinpath(dir, "fractional.dat")
+        write(bad, "A ΔZ rms\n118.5 0.1 0.6\n")
+        @test_throws ArgumentError read_charge_polarization(bad)
+    end
+end
+
 @testset "most probable charge" begin
     # Z_UCD(A) = A Z₀/A₀, exact at the symmetric split.
     @test unchanged_charge_distribution(CF252, 126) ≈ 49.0

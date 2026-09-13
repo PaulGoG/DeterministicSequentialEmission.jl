@@ -56,7 +56,7 @@ function read_charge_polarization(
     default_width::Real = DEFAULT_WIDTH,
 )
     table = read_table(path, spec)
-    masses = column(table, :A, Int)
+    masses = integer_column(table, :A)
     polarization = column(table, :polarization, Float64)
     width = column(table, :width, Float64)
 
