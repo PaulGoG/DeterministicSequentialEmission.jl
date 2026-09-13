@@ -62,6 +62,22 @@ export JointedSegments,
     read_extra_deformation,
     ExcitationEnergies,
     partition
+export EvaporationCrossSection,
+    ConstantCrossSection,
+    VariableCrossSection,
+    neutron_strength_function,
+    alpha_parameter,
+    mean_neutron_energy,
+    fermi_gas_energy,
+    residual_temperature,
+    MINIMUM_TEMPERATURE
+export EmissionSequence,
+    EmissionChain,
+    emission_chain,
+    is_solved,
+    neutron_multiplicity,
+    post_neutron_mass,
+    sequence_average
 
 include("nuclides.jl")
 include("tables.jl")
@@ -71,5 +87,7 @@ include("domain.jl")
 include("leveldensity.jl")
 include("energetics.jl")
 include("partition.jl")
+include("evaporation.jl")
+include("sequences.jl")
 
 end

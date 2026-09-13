@@ -16,6 +16,7 @@ include("physics.jl")
     include("test_leveldensity.jl")
     include("test_energetics.jl")
     include("test_partition.jl")
+    include("test_sequences.jl")
 
     @testset "quality" begin
         using Aqua
