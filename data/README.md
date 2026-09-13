@@ -66,6 +66,16 @@ distribution, its `R_T(A_H)` trend and its yield are the thermal ones and are re
 
 ## Where to obtain it
 
+**Retrieved data is preferred wherever it can be had**, in this order:
+
+1. A retrieval from the EXFOR archive through `ExforFissionData.jl`, which writes this layout
+   directly and records what it kept and what it excluded.
+2. Where the retrieval's observable vocabulary has no joint `Y(A, TKE)` — it holds `Y_vs_A` and
+   `TKE_vs_A` but no product of the two — the joint distribution is reconstructed from those two
+   retrievable marginals by `factorized_yield`. Keeping the mass dependence of `⟨TKE⟩` is what
+   makes that worth doing; `U233_nth` takes this route already.
+3. A staged table, only where neither of the above is available for a system.
+
 Two of these collections come from companion packages, and that is the supported route: both
 write this layout directly, and both record the provenance of what they retrieved.
 
@@ -149,13 +159,18 @@ Data and Nuclear Data Tables* **59**, 185 (1995), via RIPL.
 deformations and the deformation energies at scission, and is the input the scission-modelling
 partition needs.
 
-**The fragment mass yields.** `U235_nth/Y_vs_A_H_TKE.dat` is the ²³⁵U(n_th,f) measurement of
-C. Straede *et al.* and `Pu239_nth/Y_vs_A_TKE_chiba.dat` the ²³⁹Pu(n_th,f) Chiba set, as each
-file's own header records. `Cf252_sf/Y_vs_A_TKE.dat` is the ²⁵²Cf(SF) distribution behind every
-chapter 4 result of the thesis. The two tables the ²³⁵U and ²³⁹Pu configurations actually read,
-`U235_nth/Y_vs_A_TKE.dat` and `Pu239_nth/Y_vs_A_TKE.dat`, are carried on the whole `A` domain with
-an uncertainty column; **they carry no attribution, in the files or in the archived record, and
-none is invented for them here.** Neither is a rescaling of the author-named table beside it.
+**The fragment mass yields.** `U235_nth/Y_vs_A_H_TKE.dat` is the ²³⁵U(nth,f) measurement of
+C. Straede *et al.* and `Pu239_nth/Y_vs_A_TKE_chiba.dat` the ²³⁹Pu(nth,f) Chiba set, as each
+file's own header records. `Cf252_sf/Y_vs_A_TKE.dat`, `U235_nth/Y_vs_A_TKE.dat` and
+`Pu239_nth/Y_vs_A_TKE.dat` are the joint distributions on the whole `A` domain with an uncertainty
+column, and are what those three configurations read. `Cf252_sf/Y_vs_A_TKE.dat` is the ²⁵²Cf(SF)
+distribution behind every chapter 4 result of the thesis.
+
+These three are staged tables under step 3 above. Moving them onto the retrieval route needs
+`Y_vs_A` and `TKE_vs_A` retrieved for each system, after which the configuration takes
+`mass_yield_file` and `mean_kinetic_energy_file` in place of `mass_energy_yield_file`, exactly as
+`U233_nth.toml` does. That changes the yield weights and so every averaged observable, so it is a
+run to compare rather than a substitution to make silently.
 
 ## Citing
 

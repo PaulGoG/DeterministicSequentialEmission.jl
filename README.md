@@ -143,6 +143,12 @@ evaluation is the exception and ships with the package — it is openly publishe
 and keeping it means the tests pinned against the archived reference run execute on a bare clone.
 Tests needing anything else announce themselves as skipped rather than passing vacuously.
 
+**Retrieved data is preferred wherever it can be had.** A measurement comes from EXFOR through
+`ExforFissionData.jl` if the archive holds it; where the retrieval has no joint `Y(A, TKE)`, the
+joint distribution is reconstructed by `factorized_yield` from the two marginals it does hold,
+`Y(A)` and `⟨TKE⟩(A)`, which is the route ²³³U takes; a staged table is the last resort.
+`data/README.md` says which systems sit where.
+
 ## Companion packages
 
 `R_T(A_H)` need not be supplied by hand. [`FissionTemperatureRatio.jl`][ftr] extracts it from
