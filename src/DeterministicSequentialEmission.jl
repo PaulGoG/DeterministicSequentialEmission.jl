@@ -83,6 +83,7 @@ export EvaporationCrossSection,
     fermi_gas_energy,
     residual_temperature,
     MINIMUM_TEMPERATURE
+export ConfigurationValues, average, total_average, weights_from
 export ExperimentalYield,
     EXPERIMENTAL_YIELD_SPEC,
     read_experimental_yield,
@@ -121,6 +122,7 @@ include("partition.jl")
 include("evaporation.jl")
 include("sequences.jl")
 include("yields.jl")
+include("averaging.jl")
 include("spectrum.jl")
 
 end

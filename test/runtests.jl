@@ -1,5 +1,5 @@
 using Test
-using Measurements: value, uncertainty
+using Measurements: Measurement, measurement, value, uncertainty
 using DeterministicSequentialEmission
 
 const DATA = joinpath(@__DIR__, "..", "data")
@@ -18,6 +18,7 @@ include("physics.jl")
     include("test_partition.jl")
     include("test_sequences.jl")
     include("test_yields.jl")
+    include("test_averaging.jl")
     include("test_spectrum.jl")
 
     @testset "quality" begin
