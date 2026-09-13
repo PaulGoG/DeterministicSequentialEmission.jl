@@ -54,6 +54,14 @@ export LevelDensityModel,
     level_density_parameter,
     shell_correction,
     liquid_drop_energy
+export JointedSegments,
+    PartitionMethod,
+    ExcitationEnergyRatio,
+    TemperatureRatio,
+    ScissionModelling,
+    read_extra_deformation,
+    ExcitationEnergies,
+    partition
 
 include("nuclides.jl")
 include("tables.jl")
@@ -62,5 +70,6 @@ include("charge.jl")
 include("domain.jl")
 include("leveldensity.jl")
 include("energetics.jl")
+include("partition.jl")
 
 end
