@@ -2,10 +2,10 @@
     MASS_ENERGY_YIELD_SPEC
 
 Layout of the measured pre-neutron mass yields: one header row, then `A TKE Y` and an optional
-uncertainty column.
+`Y_uncertainty`.
 """
 const MASS_ENERGY_YIELD_SPEC =
-    TableSpec([:A, :TKE, :yield, :uncertainty]; skip = 1, optional = (:uncertainty,))
+    TableSpec([:A, :TKE, :Y, :Y_uncertainty]; skip = 1, optional = (:Y_uncertainty,))
 
 """
     MassEnergyYield
@@ -51,8 +51,11 @@ end
 
 Read a measured `Y(A, TKE)` distribution.
 
-Cells whose yield is not finite are dropped rather than carried: the legacy tables mark an
-unmeasured `(A, TKE)` with `NaN`, and a missing measurement is not a yield of zero.
+**Columns are taken by position**, not by header text: mass, total kinetic energy, yield,
+uncertainty. Nothing here may be changed to a lookup by name.
+
+Cells whose yield is not finite are dropped rather than carried: an unmeasured `(A, TKE)` is
+marked `NaN` in these tables, and a missing measurement is not a yield of zero.
 
 A repeated `(A, TKE)` is accepted when both rows carry the same yield and rejected when they do
 not. The ²³⁵U(n,f) distribution lists `A = A₀/2` twice at every kinetic energy, with identical
@@ -64,10 +67,10 @@ function read_mass_energy_yield(
     path::AbstractString;
     spec::TableSpec = MASS_ENERGY_YIELD_SPEC,
 )
-    table = read_table(path, spec)
+    table = read_delimited_table(path, spec)
     masses = integer_column(table, :A)
     energies = column(table, :TKE, Float64)
-    measured = column(table, :yield, Float64)
+    measured = column(table, :Y, Float64)
 
     values = Dict{Tuple{Int, Float64}, Float64}()
     for row in eachindex(masses)
@@ -97,16 +100,16 @@ end
     MASS_YIELD_SPEC
     MEAN_KINETIC_ENERGY_SPEC
 
-Layouts of the two marginals a factorized yield is built from: `A Y [σY]` and `A TKE [σTKE]`,
-each with one header row. Both are what `ExforFissionData.jl` writes for the `yield`/`A` and
-`TKE`/`A` observables.
+Layouts of the two marginals a factorized yield is built from:
+`A Y [Y_uncertainty]` and `A TKE [TKE_uncertainty]`, each with one header row. Both are what a
+retrieval writes for the `Y_vs_A` and `TKE_vs_A` observables.
 """
 const MASS_YIELD_SPEC =
-    TableSpec([:A, :yield, :uncertainty]; skip = 1, optional = (:uncertainty,))
+    TableSpec([:A, :Y, :Y_uncertainty]; skip = 1, optional = (:Y_uncertainty,))
 
 @doc (@doc MASS_YIELD_SPEC)
 const MEAN_KINETIC_ENERGY_SPEC =
-    TableSpec([:A, :TKE, :uncertainty]; skip = 1, optional = (:uncertainty,))
+    TableSpec([:A, :TKE, :TKE_uncertainty]; skip = 1, optional = (:TKE_uncertainty,))
 
 """
     factorized_yield(mass_yield_path, kinetic_energy_path, energies; dispersion) -> MassEnergyYield
@@ -137,6 +140,9 @@ It is stated rather than fitted.
 A mass without a tabulated `⟨TKE⟩` is dropped: extrapolating the quantity whose mass dependence
 is the point of the exercise would defeat it. Complementary masses inherit the mean of their
 partner, since `TKE` is a property of the split rather than of one fragment.
+
+**Columns are taken by position** in both files, not by header text: mass and yield in the first,
+mass and mean kinetic energy in the second. Nothing here may be changed to a lookup by name.
 """
 function factorized_yield(
     mass_yield_path::AbstractString,
@@ -152,11 +158,11 @@ function factorized_yield(
     grid = sort(unique(Float64.(collect(energies))))
     isempty(grid) && throw(ArgumentError("the kinetic energy grid is empty"))
 
-    mass_table = read_table(mass_yield_path, MASS_YIELD_SPEC)
+    mass_table = read_delimited_table(mass_yield_path, MASS_YIELD_SPEC)
     masses = integer_column(mass_table, :A)
-    yields = column(mass_table, :yield, Float64)
+    yields = column(mass_table, :Y, Float64)
 
-    energy_table = read_table(kinetic_energy_path, MEAN_KINETIC_ENERGY_SPEC)
+    energy_table = read_delimited_table(kinetic_energy_path, MEAN_KINETIC_ENERGY_SPEC)
     energy_masses = integer_column(energy_table, :A)
     means = column(energy_table, :TKE, Float64)
 

@@ -73,7 +73,7 @@ Throws if the file repeats a nuclide, which would otherwise leave the winner dec
 order.
 """
 function read_mass_excess_table(path::AbstractString; spec::TableSpec = MASS_EXCESS_SPEC)
-    table = read_table(path, spec)
+    table = read_delimited_table(path, spec)
     protons = integer_column(table, :Z)
     masses = integer_column(table, :A)
     excess = column(table, :mass_excess, Float64)

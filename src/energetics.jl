@@ -31,7 +31,7 @@ not a measurement.
 
 **Uncertainty propagation stops here.** `TXE` carries the uncertainty of the mass excesses it
 was built from, but the TXE partition methods that consume it — modelling at scission,
-`E*_H/TXE (A_H)`, `R_T (A_H)` — are parameterizations with no quoted uncertainty, so `E*_L`
+`E*_H/TXE (A_H)`, `R_T (A_H)` — are fitted curves with no quoted uncertainty, so `E*_L`
 and `E*_H` inherit none. Carrying a `σ` past the partition would report the mass-excess
 contribution while silently omitting the dominant model term.
 """

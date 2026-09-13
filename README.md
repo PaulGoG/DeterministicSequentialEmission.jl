@@ -154,16 +154,30 @@ joint distribution is reconstructed by `factorized_yield` from the two marginals
 `R_T(A_H)` need not be supplied by hand. [`FissionTemperatureRatio.jl`][ftr] extracts it from
 experimental prompt neutron multiplicity data and tabulates it at every integer `A_H`;
 [`ExforFissionData.jl`][exfor] retrieves that data, and the yields and spectra, from the IAEA
-EXFOR archive. `read_segmented_curve` reads what the first of those writes:
+EXFOR archive. Clone either from the URL below and run it; neither is a dependency of this
+package, and this package reads only what they write.
 
-```julia
-segments = read_segmented_curve("R_T_parameterized_<set>_<run>.csv")
-method = TemperatureRatio(segments, BackShiftedFermiGas(masses))
+**A temperature-ratio curve is taken through the producing run's own record, never through a path
+typed into a configuration.** Copy that run's results directory — its `manifest_<run>.toml` and
+the tables beside it — under `data/<system>/`, and name it:
+
+```toml
+[partition]
+method = "temperature_ratio"
+subdirectory = "U235_nth"
+curve_label = "systematic_trend"
 ```
 
-Produce that file from a run with `ratio_averaging = "mean_of_ratios"`: this partition re-expands
-`R_T` with per-`(A_H, Z_H)` level density parameters and reduces over `Z` afterwards, so it
-inverts a `Z`-averaged multiplicity ratio with `⟨a_L/a_H⟩` rather than `⟨a_L⟩/⟨a_H⟩`.
+The manifest declares what its curves tabulate, and this package refuses one declaring anything
+but `R_T` against `A_H`. That is worth the indirection: the run writes `R_T(A_H)` and the
+multiplicity ratio `r_ν(A_H)` side by side, in the same column of two files, and `R_T ≈ 1.2` and
+`r_ν ≈ 0.5` are both plausible numbers. A curve picked by hand can be the wrong quantity, and the
+model will run to completion and report a result nobody can tell is wrong. Reading the record
+makes the quantity a matter of record too.
+
+Produce that run with `ratio_averaging = "mean_of_ratios"`: this partition re-expands `R_T` with
+per-`(A_H, Z_H)` level density parameters and reduces over `Z` afterwards, so it inverts a
+`Z`-averaged multiplicity ratio with `⟨a_L/a_H⟩` rather than `⟨a_L⟩/⟨a_H⟩`.
 
 The retrieval records which datasets it kept and which it rejected, with the reason, and that
 record is worth reading before using what it wrote. The archive is not uniformly reliable: sets

@@ -575,6 +575,10 @@ function _write_metadata(io::IO, result::RunResult)
     println(io, "cross_section = ", repr(sprint(show, configuration.cross_section)))
     println(io, "maximum_temperature_MeV = ", configuration.maximum_temperature)
     println(io, "partition = ", repr(sprint(show, configuration.method)))
+    # Which tabulation the partition actually used. A curve staged by hand used to leave no
+    # trace of the run that produced it; the file name a producing run writes carries its own
+    # run identifier, so recording the resolved path here closes that gap.
+    println(io, "partition_curve = ", repr(_curve_source(configuration.method)))
     println(io, "charge_distribution = ", repr(configuration.charge_distribution.source))
     println(io, "mass_excess = ", repr(configuration.mass_excess_table.source))
     println(io, "significant_digits = ", configuration.significant_digits)
@@ -611,6 +615,12 @@ function _write_metadata(io::IO, result::RunResult)
     println(io, "total_memory_gb = ", round(Sys.total_memory() / 2^30; digits = 2))
     return nothing
 end
+
+_curve_source(method::TemperatureRatio) =
+    isempty(method.curve.source) ? "supplied in memory" : method.curve.source
+_curve_source(method::ExcitationEnergyRatio) =
+    isempty(method.curve.source) ? "supplied in memory" : method.curve.source
+_curve_source(::ScissionModelling) = "none; the partition is modelled at scission"
 
 function _package_version()
     project = joinpath(PACKAGE_ROOT, "Project.toml")

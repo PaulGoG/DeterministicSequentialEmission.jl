@@ -145,7 +145,10 @@ CHARGE_DISTRIBUTION_AVAILABLE &&
             (excitation, "E_star_vs_A.dat", [:A, :E_star], (:charge, :kinetic_energy)),
             (excitation, "E_star_vs_TKE.dat", [:TKE, :E_star], (:mass, :charge)),
         )
-            reference = read_table(joinpath(REFERENCE, file), TableSpec(columns; skip = 1))
+            reference = read_delimited_table(
+                joinpath(REFERENCE, file),
+                TableSpec(columns; skip = 1),
+            )
             arguments = column(reference, columns[1], Float64)
             expected = column(reference, columns[2], Float64)
             got = Dict(average(quantity, weights; over = over))

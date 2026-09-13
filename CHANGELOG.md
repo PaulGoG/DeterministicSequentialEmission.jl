@@ -11,6 +11,45 @@ here. This changelog begins with the rewrite.
 
 ### Changed
 
+- A temperature-ratio curve is taken through the producing run's own record, not through a path
+  named in a configuration. `[partition] segmented_curve_file` is replaced, for
+  `method = "temperature_ratio"`, by `[partition] subdirectory` — the staged run, under the data
+  directory — and `[partition] curve_label`, which picks one of its manifest's
+  `[[segmented_curve]]` entries. `method = "excitation_ratio"` keeps a direct path under
+  `[partition] excitation_ratio_file`, because no package of this toolchain produces that curve
+  and so no run record describes one.
+  - The reason is physical rather than tidy. An extraction writes `R_T(A_H)` and the multiplicity
+    ratio `r_ν(A_H)` side by side, in the same column of two files; `R_T ≈ 1.2` and `r_ν ≈ 0.5`
+    are both plausible, so a curve staged by hand can be the wrong quantity and the model will run
+    to completion and report a result nobody can tell is wrong.
+  - `read_temperature_ratio_manifest` refuses a manifest that does not declare
+    `[run] ordinate = "R_T"` and `[run] abscissa = ["A_H"]`, that repeats a
+    `[[segmented_curve]]` label, that gives a curve a `kind` outside
+    `MANIFEST_CURVE_KINDS`, or that names one file as both `temperature_ratio_file` and
+    `multiplicity_ratio_pivots_file`. Each refusal names the key at fault.
+  - `temperature_ratio_path` is the only route from a manifest to a file and resolves
+    `temperature_ratio_file`. There is deliberately no counterpart for the pivots file.
+  - `[run] columns` is read and kept as documentation. It is never consulted to find a column:
+    every table in this package is read by position, and a header is discarded unexamined.
+  - A run of one system may still take its curve from another system's manifest, which is what
+    the resonance-channel case does with the thermal system's trend. That is recorded in the run
+    metadata, not refused.
+- `SegmentedCurve` carries the file it was read from, and a run records it as
+  `[model] partition_curve`, so which tabulation was partitioned with is answerable from the
+  result rather than from whoever staged it.
+- `TableSpec` column symbols name their quantity, like the headers they describe:
+  `[:A_H, :R_T, :R_T_uncertainty]` and `[:A_H, :excitation_ratio, :excitation_ratio_uncertainty]`
+  in place of one spec naming its ordinate `value`, and `Y`, `Y_uncertainty`, `TKE_uncertainty`,
+  `E_def` in place of bare `yield`, `uncertainty` and `energy`. No file on disk changed: these are
+  internal names, and the headers were already correct.
+- `DataTable` is `DelimitedTable` and `read_table` is `read_delimited_table`. `Data` as a prefix
+  carried nothing; `Delimited` says which kind of table it is, and so keeps it apart from the
+  `Table` suffix that `MassExcessTable` and `ShellCorrectionTable` carry, which asserts a lookup
+  keyed by nucleon number.
+- "Parameterization" is retired as the noun for a curve, as `SegmentedCurve` already was: a
+  curve is fitted, segmented, or tabulated, and which of those a reader is looking at is worth
+  saying.
+
 - One name per quantity, from configuration key to column header, applied across the package.
   The vocabulary is shared with `ExforFissionData.jl` and `FissionTemperatureRatio.jl` and is
   set out in `docs/src/naming.md`. This is a breaking change to the configuration schema, the
@@ -59,6 +98,10 @@ here. This changelog begins with the rewrite.
 
 ### Added
 
+- `TemperatureRatioManifest`, `ManifestCurve`, `ManifestSystem`,
+  `read_temperature_ratio_manifest`, `staged_manifest`, `curve_labels`, `manifest_curve` and
+  `temperature_ratio_path`: the run record of a temperature-ratio extraction, and the resolution
+  of one of its curves to the table that holds `R_T`.
 - The sequential emission model: the energy conservation equation
   `Ē_r^(k-1) − Sₙ^(k-1) − ⟨ε⟩_k = a_k T_k²` solved sequence by sequence at every fragment
   configuration `(A, Z, TKE)`, under a constant or a variable evaporation cross section.

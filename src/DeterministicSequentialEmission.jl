@@ -32,7 +32,8 @@ export FissioningSystem,
     symmetric_mass,
     system_label,
     system_notation
-export TableSpec, DataTable, read_table, column, column_or, integer_column, has_column
+export TableSpec,
+    DelimitedTable, read_delimited_table, column, column_or, integer_column, has_column
 export MassExcessTable,
     MASS_EXCESS_SPEC,
     HEADERLESS_MASS_EXCESS_SPEC,
@@ -85,8 +86,20 @@ export LevelDensityModel,
     level_density_parameter,
     shell_correction,
     liquid_drop_energy
+export ManifestCurve,
+    ManifestSystem,
+    TemperatureRatioManifest,
+    MANIFEST_CURVE_KINDS,
+    MANIFEST_ORDINATE,
+    MANIFEST_ABSCISSA,
+    read_temperature_ratio_manifest,
+    staged_manifest,
+    curve_labels,
+    manifest_curve,
+    temperature_ratio_path
 export SegmentedCurve,
-    SEGMENTED_CURVE_SPEC,
+    TEMPERATURE_RATIO_CURVE_SPEC,
+    EXCITATION_RATIO_CURVE_SPEC,
     read_segmented_curve,
     PartitionMethod,
     ExcitationEnergyRatio,
@@ -155,6 +168,7 @@ include("leveldensity.jl")
 include("energetics.jl")
 include("wahl.jl")
 include("partition.jl")
+include("manifest.jl")
 include("evaporation.jl")
 include("sequences.jl")
 include("yields.jl")

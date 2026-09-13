@@ -70,7 +70,7 @@ function read_shell_correction_table(
     path::AbstractString;
     spec::TableSpec = SHELL_CORRECTION_SPEC,
 )
-    table = read_table(path, spec)
+    table = read_delimited_table(path, spec)
     nucleons = integer_column(table, :n)
     neutron = column(table, :S_N, Float64)
     proton = column(table, :S_Z, Float64)

@@ -62,15 +62,15 @@ end
     @test full.covered == 1.0
 end
 
-@testset "reading a tabulated parameterization" begin
-    # The layout FissionTemperatureRatio.jl writes: a header line, then A_H, value and an
-    # uncertainty column that the partition discards because it carries none downstream.
+@testset "reading a tabulated curve" begin
+    # The layout a temperature-ratio run writes: a header line, then A_H, R_T and an uncertainty
+    # column that the partition discards because it carries none downstream.
     mktempdir() do dir
-        path = joinpath(dir, "R_T_parameterized.csv")
+        path = joinpath(dir, "R_T_vs_A_H_segmented_systematic_trend_run.csv")
         write(
             path,
             """
-            A_H,value,uncertainty
+            A_H,R_T,R_T_uncertainty
             126,1.0,0.0
             127,1.205662,0.007435
             128,1.471892,0.02157
@@ -79,6 +79,7 @@ end
         )
         segments = read_segmented_curve(path)
         @test length(segments) == 4
+        @test segments.source == path
 
         # Tabulated at every integer mass, so evaluation reproduces each value exactly rather
         # than interpolating across it.
@@ -93,8 +94,20 @@ end
 
         # The uncertainty column is optional, as it is for every other reader here.
         bare = joinpath(dir, "bare.csv")
-        write(bare, "A_H,value\n126,1.0\n127,1.2\n")
+        write(bare, "A_H,R_T\n126,1.0\n127,1.2\n")
         @test read_segmented_curve(bare)(127) == 1.2
+
+        # Columns are taken by position, so a header naming something else entirely reads the
+        # same. Nothing downstream may be coupled to the text of a header.
+        renamed = joinpath(dir, "renamed.csv")
+        write(renamed, "heavy_mass,ratio,sigma\n126,1.0,0.0\n127,1.2,0.0\n")
+        @test read_segmented_curve(renamed)(127) == 1.2
+
+        # The excitation-ratio spec reads the same shape under its own quantity name.
+        excitation = joinpath(dir, "excitation.csv")
+        write(excitation, "A_H,excitation_ratio\n126,0.5\n174,0.865\n")
+        @test read_segmented_curve(excitation; spec = EXCITATION_RATIO_CURVE_SPEC)(126) ==
+              0.5
     end
 end
 
@@ -106,7 +119,7 @@ end
         SegmentedCurve([(126, 0.5), (130, 0.14), (150, 0.607), (174, 0.865)]),
     )
 
-    reference = read_table(
+    reference = read_delimited_table(
         joinpath(REFERENCE, "E_star_vs_A_H_Z_H_TKE_excitation_ratio.dat"),
         TableSpec([:A_H, :Z_H, :TKE, :E_star_L, :E_star_H]; skip = 1),
     )
@@ -220,7 +233,7 @@ end
         model,
     )
 
-    reference = read_table(
+    reference = read_delimited_table(
         joinpath(REFERENCE, "E_star_vs_A_H_Z_H_TKE_temperature_ratio.dat"),
         TableSpec([:A_H, :Z_H, :TKE, :E_star_L, :E_star_H]; skip = 1),
     )
@@ -275,7 +288,7 @@ end
 
     # R_T > 1 means the light fragment is hotter, so with comparable level density
     # parameters it takes the larger share of TXE.
-    R_T = method.segments(134)
+    R_T = method.curve(134)
     @test R_T > 1
     @test split.light > split.heavy
 

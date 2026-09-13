@@ -8,15 +8,19 @@ is 1 for a file carrying a header row and 0 for one that does not. Names in `opt
 absent from the file: a table is accepted if it provides every required column, in order,
 followed by any leading prefix of the optional ones.
 
-That last rule is what lets one reader serve both the legacy data files and the output of
-`ExforFissionData.jl`, which emits an uncertainty column only when the underlying measurements
-carry uncertainties.
+That last rule is what lets one reader serve both a hand-staged table and the output of a
+retrieval, which emits an uncertainty column only when the underlying measurements carry
+uncertainties.
+
+Column names are the spec's own, for readability at the call site. **They are never matched
+against the file's header**: a table is read by position, and `skip` discards the header row
+unexamined.
 
 # Examples
 
 ```jldoctest
-julia> TableSpec([:A, :yield, :uncertainty]; skip = 1, optional = (:uncertainty,))
-TableSpec(A, yield, [uncertainty]; delimiter=' ', skip=1)
+julia> TableSpec([:A, :Y, :Y_uncertainty]; skip = 1, optional = (:Y_uncertainty,))
+TableSpec(A, Y, [Y_uncertainty]; delimiter=' ', skip=1)
 ```
 """
 struct TableSpec
@@ -71,12 +75,17 @@ required_columns(spec::TableSpec) =
     spec.columns[1:(length(spec.columns) - length(spec.optional))]
 
 """
-    DataTable
+    DelimitedTable
 
-A table read from disk: `columns` maps each column name to its parsed values, `path` records
-where it came from, and `present` lists the columns the file actually supplied.
+One delimited table read from disk: `columns` maps each column name to its still-unparsed text,
+`path` records where it came from, and `present` lists the columns the file actually supplied.
+
+`Table` here is the head noun of the thing itself — a delimited table is what the format is, and
+what [`TableSpec`](@ref) describes. It is not the `Table` suffix that
+[`MassExcessTable`](@ref) and [`ShellCorrectionTable`](@ref) carry, which asserts a lookup keyed
+by nucleon number; `Delimited` is the qualifier that keeps the two apart.
 """
-struct DataTable
+struct DelimitedTable
     columns::Dict{Symbol, Vector{String}}
     present::Vector{Symbol}
     path::String
@@ -84,7 +93,7 @@ struct DataTable
 
     # Explicit, so Julia generates no `Any`-accepting fallback whose conversion paths would
     # have to be reasoned about.
-    function DataTable(
+    function DelimitedTable(
         columns::Dict{Symbol, Vector{String}},
         present::Vector{Symbol},
         path::AbstractString,
@@ -94,13 +103,13 @@ struct DataTable
     end
 end
 
-Base.length(table::DataTable) = table.rows
-has_column(table::DataTable, name::Symbol) = name in table.present
+Base.length(table::DelimitedTable) = table.rows
+has_column(table::DelimitedTable, name::Symbol) = name in table.present
 
-function Base.show(io::IO, table::DataTable)
+function Base.show(io::IO, table::DelimitedTable)
     print(
         io,
-        "DataTable(",
+        "DelimitedTable(",
         table.rows,
         " rows, ",
         join(table.present, ", "),
@@ -112,15 +121,18 @@ function Base.show(io::IO, table::DataTable)
 end
 
 """
-    read_table(path, spec) -> DataTable
+    read_delimited_table(path, spec) -> DelimitedTable
 
 Read a delimited table according to `spec`, failing with a message that names the file and the
 offending line.
 
-Repeated delimiters are treated as one, so the space-padded fixed-width layouts of the legacy
-data files read correctly without a separate code path.
+**Columns are taken by position.** `spec.columns` names them in the order they appear; the header
+row is discarded by `skip` without being examined, and no name is ever matched against it.
+
+Repeated delimiters are treated as one, so space-padded fixed-width layouts read correctly
+without a separate code path.
 """
-function read_table(path::AbstractString, spec::TableSpec)
+function read_delimited_table(path::AbstractString, spec::TableSpec)
     isfile(path) || throw(ArgumentError("data file does not exist: $path"))
     lines = readlines(path)
     length(lines) > spec.skip || throw(
@@ -168,7 +180,7 @@ function read_table(path::AbstractString, spec::TableSpec)
     for (row, fields) in enumerate(raw), (index, name) in enumerate(present)
         columns[name][row] = String(fields[index])
     end
-    return DataTable(columns, collect(present), String(path), length(raw))
+    return DelimitedTable(columns, collect(present), String(path), length(raw))
 end
 
 """
@@ -176,7 +188,7 @@ end
 
 Parse one column as `T`, naming the file, the column and the row on failure.
 """
-function column(table::DataTable, name::Symbol, ::Type{T}) where {T}
+function column(table::DelimitedTable, name::Symbol, ::Type{T}) where {T}
     has_column(table, name) || throw(
         ArgumentError(
             "$(table.path) has no column $name; it supplied $(join(table.present, ", "))",
@@ -195,7 +207,7 @@ function column(table::DataTable, name::Symbol, ::Type{T}) where {T}
     return values
 end
 
-column(table::DataTable, name::Symbol) = table.columns[name]
+column(table::DelimitedTable, name::Symbol) = table.columns[name]
 
 """
     integer_column(table, name) -> Vector{Int}
@@ -207,7 +219,7 @@ Nucleon numbers are integers, but the files that carry them are not all written 
 generator wrote it out in floating point. Read strictly as `Int` that file cannot be loaded at
 all. A value with a fractional part is still an error, and says so.
 """
-function integer_column(table::DataTable, name::Symbol)
+function integer_column(table::DelimitedTable, name::Symbol)
     has_column(table, name) || throw(
         ArgumentError(
             "$(table.path) has no column $name; it supplied $(join(table.present, ", "))",
@@ -236,7 +248,7 @@ end
 
 Parse an optional column, or return a vector of `fallback` when the file omitted it.
 """
-function column_or(table::DataTable, name::Symbol, ::Type{T}, fallback::T) where {T}
+function column_or(table::DelimitedTable, name::Symbol, ::Type{T}, fallback::T) where {T}
     has_column(table, name) || return fill(fallback, table.rows)
     return column(table, name, T)
 end

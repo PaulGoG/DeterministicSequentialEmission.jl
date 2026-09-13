@@ -31,7 +31,7 @@ maximum_temperature = 2.0
 
 [partition]
 method = "excitation_ratio"
-segmented_curve_file = "SEGMENTS"
+excitation_ratio_file = "SEGMENTS"
 
 [output]
 significant_digits = 8
@@ -66,11 +66,12 @@ end
 
 @testset "run configuration" begin
     mktempdir() do directory
-        # The two files the fixture names. Segments are the comma-delimited form read_segmented_curve
-        # takes; the mass table is the shipped evaluation where it is present.
+        # The two files the fixture names. The curve is the comma-delimited form
+        # read_segmented_curve takes; the mass table is the shipped evaluation where present.
         write(
             joinpath(directory, "SEGMENTS"),
-            "A_H,R_T,R_T_uncertainty\n126,0.5,0.0\n150,0.607,0.0\n174,0.865,0.0\n",
+            "A_H,excitation_ratio,excitation_ratio_uncertainty\n126,0.5,0.0\n150,0.607,0.0\n\
+             174,0.865,0.0\n",
         )
         if isfile(MASS_EXCESS_FILE)
             cp(MASS_EXCESS_FILE, joinpath(directory, "MASSES"))
@@ -183,7 +184,7 @@ end
         @test _rejects(
             directory,
             "does not exist",
-            "segmented_curve_file = \"SEGMENTS\"" => "segmented_curve_file = \"ABSENT\"",
+            "excitation_ratio_file = \"SEGMENTS\"" => "excitation_ratio_file = \"ABSENT\"",
         )
 
         # A missing section, and a missing required key within one.
@@ -214,7 +215,10 @@ end
             load_configuration(file)
         catch err
             err isa ArgumentError || rethrow()
-            @test occursin("does not exist", err.msg)
+            # The one reason a bare clone permits: an input the licence does not let this
+            # package redistribute, whether that is a file or a staged run directory.
+            @test occursin("does not exist", err.msg) ||
+                  occursin("holds no manifest_<run>.toml", err.msg)
             nothing
         end
         outcome === nothing || @test outcome isa Configuration
@@ -247,7 +251,8 @@ end
     mktempdir() do directory
         write(
             joinpath(directory, "SEGMENTS"),
-            "A_H,R_T,R_T_uncertainty\n126,0.5,0.0\n150,0.607,0.0\n174,0.865,0.0\n",
+            "A_H,excitation_ratio,excitation_ratio_uncertainty\n126,0.5,0.0\n150,0.607,0.0\n\
+             174,0.865,0.0\n",
         )
         isfile(MASS_EXCESS_FILE) || return nothing
         cp(MASS_EXCESS_FILE, joinpath(directory, "MASSES"))

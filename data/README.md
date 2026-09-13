@@ -108,12 +108,35 @@ rather than naming the query they came from.
 
 **The temperature ratio `R_T(A_H)`** for the temperature-ratio TXE partition —
 [`FissionTemperatureRatio.jl`](https://github.com/PaulGoG/FissionTemperatureRatio.jl) extracts it
-from experimental `ν(A)` and tabulates it at every integer `A_H`. Read its `manifest_<run>.toml`
-first: it is the index, and it names the temperature-ratio file of each curve the run produced —
-not the multiplicity-ratio pivot file, which holds `r_ν` rather than `R_T`. Feed that file to
-`read_segmented_curve`, or stage it under `<system>/`. Run it with
-`ratio_averaging = "mean_of_ratios"` for this consumer; the reason is in that function's
-docstring.
+from experimental `ν(A)` and tabulates it at every integer `A_H`.
+
+**Stage the whole results directory of one run, not one table out of it.** A run writes
+
+```
+results/<system>/
+├── manifest_<run>.toml                          the run record; this package reads it first
+├── R_T_vs_A_H_segmented_<label>_<run>.csv       header: A_H,R_T,R_T_uncertainty
+├── r_nu_vs_A_H_pivots_<label>_<run>.csv         header: A_H,r_nu,r_nu_uncertainty
+├── total_average_R_T_<run>.csv
+├── dataset_diagnostics_<run>.csv
+└── metadata_<run>.toml
+```
+
+Copy that directory into `data/<system>/` and point `[partition] subdirectory` at it;
+`[partition] curve_label` then picks one of the manifest's `[[segmented_curve]]` entries by its
+`label`. Keep one staged run per system — two manifests in one directory is refused, because
+nothing would say which run to take.
+
+Copying one table by hand is what this replaces, and the reason is physical rather than tidy: the
+two CSVs above hold different quantities in the same column position, `R_T ≈ 1.2` against
+`r_ν ≈ 0.5`, and both are plausible. Staging the pivots file by mistake runs to completion and
+reports a number that looks like a result. The manifest is what makes the quantity checkable —
+this package refuses a manifest that does not declare `ordinate = "R_T"` and
+`abscissa = ["A_H"]`, and resolves every curve through `temperature_ratio_file` and through no
+other field. The `columns` the manifest states are documentation: tables are read by position.
+
+Run the extraction with `ratio_averaging = "mean_of_ratios"` for this consumer; the reason is in
+`read_segmented_curve`'s docstring.
 
 The remaining tables are one-off downloads:
 

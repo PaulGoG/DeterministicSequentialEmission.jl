@@ -85,8 +85,10 @@ CHARGE_DISTRIBUTION_AVAILABLE &&
             (:charge, "Y_vs_Z.dat", [:Z, :Y]),
             (:kinetic_energy, "Y_vs_TKE.dat", [:TKE, :Y]),
         )
-            reference =
-                read_table(joinpath(REFERENCE, file), TableSpec(column_names; skip = 1))
+            reference = read_delimited_table(
+                joinpath(REFERENCE, file),
+                TableSpec(column_names; skip = 1),
+            )
             arguments = column(reference, column_names[1], Float64)
             expected = column(reference, column_names[2], Float64)
             got = Dict(yield_over(yields, dimension))
@@ -106,7 +108,7 @@ CHARGE_DISTRIBUTION_AVAILABLE &&
         end
 
         # ⟨TKE⟩(A) against the archive.
-        reference = read_table(
+        reference = read_delimited_table(
             joinpath(REFERENCE, "TKE_vs_A_H.dat"),
             TableSpec([:A_H, :TKE]; skip = 1),
         )

@@ -221,9 +221,18 @@ A nu nu_uncertainty
 A_H,R_T,R_T_uncertainty
 ```
 
-**No column is named `value`.** Naming the column for its quantity is what frees the reader from
-having to know the file name to know what the file is holding, and it matters most for the files
-that cross a package boundary.
+**No column is named `value`, and no uncertainty column is named `uncertainty`.** Naming a column
+for its quantity is what frees the reader from having to know the file name to know what the file
+is holding, and it matters most for the files that cross a package boundary. This binds a
+`TableSpec`'s own column symbols as much as a header on disk: a spec reading `[:A_H, :value]`
+states nothing, which is why there are two curve specs — [`TEMPERATURE_RATIO_CURVE_SPEC`](@ref)
+and [`EXCITATION_RATIO_CURVE_SPEC`](@ref) — rather than one that could not name its ordinate.
+
+**A quantity that crosses a package boundary is taken through the producer's run record, not
+through a path.** `R_T(A_H)` and `r_ν(A_H)` are written side by side, in the same column of two
+files, and are both plausible floats; a configuration naming one of them by hand can select the
+wrong physics and finish without complaint. [`TemperatureRatioManifest`](@ref) is what makes the
+quantity checkable, and [`temperature_ratio_path`](@ref) is the only route from it to a file.
 
 Readers take columns **by position**, not by header text. That is what makes a header rename a
 no-op for code, upstream and downstream alike, and it must stay that way: every reader in this

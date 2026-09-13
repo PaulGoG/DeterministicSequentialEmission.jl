@@ -64,7 +64,7 @@ end
 Read a reference file into a dictionary keyed by its leading integer columns.
 """
 function read_reference(name::AbstractString, columns::Vector{Symbol}, keys::Int)
-    table = read_table(joinpath(REFERENCE, name), TableSpec(columns; skip = 1))
+    table = read_delimited_table(joinpath(REFERENCE, name), TableSpec(columns; skip = 1))
     key_columns = [column(table, columns[i], Int) for i in 1:keys]
     values = column(table, columns[end], Float64)
     reference = Dict{NTuple{keys, Int}, Float64}()

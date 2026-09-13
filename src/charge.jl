@@ -72,7 +72,7 @@ function read_charge_distribution(
     default_charge_polarization::Real = DEFAULT_CHARGE_POLARIZATION,
     default_charge_dispersion::Real = DEFAULT_CHARGE_DISPERSION,
 )
-    table = read_table(path, spec)
+    table = read_delimited_table(path, spec)
     masses = integer_column(table, :A)
     polarization = column(table, :dZ, Float64)
     dispersion = column(table, :sigma_Z, Float64)

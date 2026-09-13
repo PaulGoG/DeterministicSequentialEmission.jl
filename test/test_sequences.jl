@@ -85,7 +85,7 @@ end
     model = BackShiftedFermiGas(table)
     cross_section = VariableCrossSection()
 
-    reference = read_table(
+    reference = read_delimited_table(
         joinpath(REFERENCE, file),
         TableSpec([:A_H, :Z_H, :TKE, :side, :k, :S_n, :a, :T, :E_r, :eps]; skip = 1),
     )

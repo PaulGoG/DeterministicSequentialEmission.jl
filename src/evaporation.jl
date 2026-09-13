@@ -83,19 +83,19 @@ const ALPHA_COEFFICIENT =
 """
     neutron_strength_function(A) -> Float64
 
-The s-wave neutron strength function `S₀(A)`, a jointed-segment parameterization of the RIPL-3
-resonance data.
+The s-wave neutron strength function `S₀(A)`, a piecewise-linear fit of the RIPL-3 resonance
+data.
 
 Returned bare, not in the customary units of `10⁻⁴`: `S₀(140)` is `2.33e-4`, not `2.33`. That
 is what [`alpha_parameter`](@ref) expects.
 
-Piecewise linear in `A` with plateaux where the data support one. Distinct from the
-parameterization used in earlier work, and one of the two elements the thesis presents as new.
+Piecewise linear in `A` with plateaux where the data support one. Distinct from the fit used in
+earlier work, and one of the two elements the thesis presents as new.
 
 Verified against RIPL-3. The resonance table it was fitted to is byte-identical to
 `resonances0.dat` as the IAEA distributes it, and over the 266 nuclides carrying a measured
 `S₀` this reproduces them with a median ratio of 1.02 and 76 % of nuclides inside 2σ. It is a
-sixfold improvement on the parameterization it replaced, which is essentially flat at `1e-4`
+sixfold improvement on the fit it replaced, which is essentially flat at `1e-4`
 and biases `S₀` low by about 29 %: `χ²/N` of 5.4 against 31.3.
 
 Two caveats, both real and neither a defect of the fit.
@@ -109,7 +109,7 @@ rising edge to the 4s maximum, which runs straight through the `N = 82` closure.
 And the published validation of the variable cross section does not cover the range this
 implies. `⟨ε⟩(T)` was shown to be within 4 % of an optical-model calculation for `S₀` between
 `0.7e-4` and `1.1e-4`, i.e. `α` between 0.21 and 0.55 — a band containing only 14 % of the
-RIPL-3 nuclides in the fragment range. This parameterization runs `α` from 0.037 at `A = 120`
+RIPL-3 nuclides in the fragment range. This fit runs `α` from 0.037 at `A = 120`
 to 1.24 at `A = 147` because *the data run that far*, not because the fit strays. But the 4 %
 figure does not transfer, and it is weakest where it matters most: the heavy fragment group of
 ²⁵²Cf peaks near `A ≈ 140`–`145`, on that worst segment, where `α` swings from 0.31 at

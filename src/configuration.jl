@@ -87,7 +87,7 @@ function _choice(
     raw = _value(section, key, String, label, default)
     raw in allowed ||
         throw(ArgumentError("$label must be one of $(join(map(repr, allowed), ", ")), \
-                       got $(repr(raw))"))
+ got $(repr(raw))"))
     return raw
 end
 
@@ -102,7 +102,7 @@ function _bounded(
     lower_ok = exclusive_min ? value > min : value >= min
     lower_ok || throw(
         ArgumentError("$label must be $(exclusive_min ? "above" : "at least") $min, \
-                       got $value"),
+ got $value"),
     )
     value <= max || throw(ArgumentError("$label must be at most $max, got $value"))
     return value
@@ -218,7 +218,7 @@ function _load_system(document::AbstractDict)
     if channel == "sf"
         iszero(energy) || throw(
             ArgumentError("system.channel = \"sf\" is spontaneous fission and requires \
-                           system.incident_energy = 0, got $energy MeV"),
+ system.incident_energy = 0, got $energy MeV"),
         )
         return spontaneous_fission(target)
     end
@@ -243,24 +243,24 @@ function _load_fragmentation(
     isodd(charges) || throw(
         ArgumentError(
             "fragmentation.charges_per_mass must be odd so the charges are symmetric \
-                       about Zₚ, got $charges",
+ about Zₚ, got $charges",
         ),
     )
     lower = _value(section, "heavy_mass_min", Int, "fragmentation.heavy_mass_min")
     upper = _value(section, "heavy_mass_max", Int, "fragmentation.heavy_mass_max")
     lower < upper ||
         throw(ArgumentError("fragmentation.heavy_mass_min = $lower must be below \
-                       fragmentation.heavy_mass_max = $upper"))
+ fragmentation.heavy_mass_max = $upper"))
     2 * lower >= system.compound.A || throw(
         ArgumentError(
             "fragmentation.heavy_mass_min = $lower is below the symmetric split \
-                       A₀/2 = $(system.compound.A / 2) and would label light fragments heavy",
+ A₀/2 = $(system.compound.A / 2) and would label light fragments heavy",
         ),
     )
     upper < system.compound.A || throw(
         ArgumentError(
             "fragmentation.heavy_mass_max = $upper must be below the compound mass \
-                       A₀ = $(system.compound.A)",
+ A₀ = $(system.compound.A)",
         ),
     )
 
@@ -277,7 +277,7 @@ function _load_fragmentation(
         systematics === nothing && throw(
             ArgumentError(
                 "fragmentation.charge_distribution_file = \"wahl\" needs Sₙ of the \
-                           compound nucleus, which the mass table cannot form",
+ compound nucleus, which the mass table cannot form",
             ),
         )
         wahl_charge_distribution(systematics, lower:upper)
@@ -319,7 +319,7 @@ function _load_kinetic_energies(section::AbstractDict)
     )
     lower < upper ||
         throw(ArgumentError("energetics.kinetic_energy_min = $lower must be below \
-                       energetics.kinetic_energy_max = $upper"))
+ energetics.kinetic_energy_max = $upper"))
     return lower:step:upper
 end
 
@@ -403,20 +403,45 @@ function _load_partition(
         )
         return ScissionModelling(deformation, model)
     end
-    curve = read_segmented_curve(
-        _input(
-            data_directory,
-            _value(
-                section,
-                "segmented_curve_file",
-                String,
-                "partition.segmented_curve_file",
-            ),
-            "partition.segmented_curve_file",
+    if method == "excitation_ratio"
+        # No package of this toolchain produces `E*_H/TXE (A_H)`, so there is no run record to
+        # read and the file is named directly.
+        curve = read_segmented_curve(
+            _input(
+                data_directory,
+                _value(
+                    section,
+                    "excitation_ratio_file",
+                    String,
+                    "partition.excitation_ratio_file",
+                ),
+                "partition.excitation_ratio_file",
+            );
+            spec = EXCITATION_RATIO_CURVE_SPEC,
+        )
+        return ExcitationEnergyRatio(curve)
+    end
+
+    # `R_T(A_H)` is taken through the producing run's own record and never from a path typed into
+    # a configuration. The two tables that run writes side by side hold `R_T` and `r_ν`, both
+    # plausible floats in the same column, so a hand-named path can select the wrong quantity and
+    # the run will finish and report a number. The manifest is what makes the quantity checkable.
+    subdirectory = _value(section, "subdirectory", String, "partition.subdirectory")
+    isempty(subdirectory) &&
+        throw(ArgumentError("partition.subdirectory must not be empty"))
+    manifest = read_temperature_ratio_manifest(
+        staged_manifest(joinpath(data_directory, subdirectory)),
+    )
+    label = _value(section, "curve_label", String, "partition.curve_label")
+    labels = curve_labels(manifest)
+    label in labels || throw(
+        ArgumentError(
+            "partition.curve_label = $(repr(label)) is not in $(manifest.source), which \
+ lists $(join(map(repr, labels), ", "))",
         ),
     )
-    method == "temperature_ratio" && return TemperatureRatio(curve, model)
-    return ExcitationEnergyRatio(curve)
+    curve = read_segmented_curve(temperature_ratio_path(manifest, label))
+    return TemperatureRatio(curve, model)
 end
 
 function _load_yield(
@@ -446,8 +471,8 @@ function _load_yield(
         throw(
             ArgumentError(
                 "yield.mass_energy_yield_file and yield.mass_yield_file are alternatives: the \
-                       second reconstructs a joint distribution from its marginals and is for \
-                       systems where the first does not exist",
+ second reconstructs a joint distribution from its marginals and is for \
+ systems where the first does not exist",
             ),
         )
 
@@ -550,7 +575,7 @@ function _load_spectrum(document::AbstractDict)
         ),
     )
     lower < upper || throw(ArgumentError("spectrum.energy_min = $lower must be below \
-                       spectrum.energy_max = $upper"))
+ spectrum.energy_max = $upper"))
     points = Int(
         _bounded(
             _value(section, "points", Int, "spectrum.points", 240),

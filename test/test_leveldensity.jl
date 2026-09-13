@@ -15,7 +15,7 @@ end
 @testset "back-shifted Fermi gas against the archived run" begin
     table = mass_table()
     model = BackShiftedFermiGas(table)
-    reference = read_table(
+    reference = read_delimited_table(
         joinpath(REFERENCE, "a_vs_A_H_Z_H.dat"),
         TableSpec([:A_H, :Z_H, :a_L, :a_H]; skip = 1),
     )
