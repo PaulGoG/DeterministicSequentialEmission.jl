@@ -160,6 +160,16 @@ SHELL_CORRECTIONS_AVAILABLE && @testset "the two Gilbert-Cameron branches" begin
     # Roughly a fifth: the size of the correction on the heavy fragment peak.
     @test 0.15 < (undeformed_value - a) / a < 0.35
 
+    # Selecting eq. (20) alone reverts to the single-branch behaviour, which is what the
+    # published results of this method used and what the companion package implements.
+    undeformed = GilbertCameron(
+        read_shell_corrections(SHELL_CORRECTION_FILE);
+        deformed_branch = false,
+    )
+    @test level_density_parameter(undeformed, deformed) ≈ undeformed_value
+    @test level_density_parameter(undeformed, Nuclide(40, 100)) ≈
+          level_density_parameter(gilbert, Nuclide(40, 100))
+
     # Z ≥ 99 has no tabulated S(Z). The file pads it with zeros; the reader must not store
     # them, or the systematics silently answers where the paper says nothing.
     # Both have a tabulated S(N); they differ only in whether S(Z) exists.

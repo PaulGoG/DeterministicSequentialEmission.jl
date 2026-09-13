@@ -109,22 +109,38 @@ eq. (20), `a/A = 0.00917S + 0.142` for undeformed nuclei, and eq. (21), `a/A = 0
 for deformed ones (p. 1457, restated p. 1475) — together with the regions each covers
 (p. 1459). The shell weight `0.00917` is identical in both; only the intercept moves.
 
-Applying `0.142` everywhere, as this did until the paper was read, is the undeformed branch
-used as though it were universal. That is wrong for about a quarter of the yield-weighted
-fragment population, which lies inside the first deformed region — see
-[`is_deformed_gilbert_cameron`](@ref) for the size of it.
+`deformed_branch` selects between the two, and **there is a real argument on each side**, so it
+is a choice rather than a default with an obvious answer.
 
-Note that the model's own literature describes its Gilbert-Cameron comparison as being for
-spherical nuclei (Tudora, *EPJA* 54, 87 (2018), fig. 2 legend and p. 5), and reports those
-parameters sitting above both the superfluid model and Egidy-Bucurescu. That is consistent with
-a single undeformed branch, so a calculation reproducing those figures should be expected to
-differ from this one on the deformed heavy fragments. Nothing archived is affected: both
-reference runs used the back-shifted Fermi gas.
+Taking both branches, as this does unless told otherwise, is what the paper prescribes, and it
+matters: about a third of the yield-weighted ²⁵²Cf fragment population lies inside the first
+deformed region, where the undeformed constant overestimates `a` by some 22 % — see
+[`is_deformed_gilbert_cameron`](@ref). On those fragments the deformed branch also moves
+Gilbert-Cameron towards the back-shifted Fermi gas rather than away from it.
+
+Setting `deformed_branch = false` applies eq. (20) everywhere. That is the convention the
+published results of this method were obtained under — Tudora, *EPJA* 54, 87 (2018) labels its
+comparison "G-C systm. (spherical nuclei)" — and it is defensible on its own terms: the data
+behind eq. (21) is thin, so the deformation boundary is poorly determined, which is part of why
+the systematics was superseded by the back-shifted Fermi gas, which needs no such division. It is
+also the setting that matches `FissionTemperatureRatio.jl`, which implements eq. (20) alone.
+
+**Use `deformed_branch = false` when the level density parameter has to agree with that package**
+— when an `R_T(A_H)` it produced is being inverted here, both sides must form `a_L/a_H` the same
+way. In practice both default to the back-shifted Fermi gas, so the interface is unaffected
+unless Gilbert-Cameron is selected on both sides.
+
+Nothing archived is affected either way: both reference runs used the back-shifted Fermi gas.
 
 Source: Gilbert & Cameron, *Can. J. Phys.* **43**, 1446 (1965), held in the workspace.
 """
 struct GilbertCameron <: LevelDensityModel
     corrections::ShellCorrections
+    deformed_branch::Bool
+
+    function GilbertCameron(corrections::ShellCorrections; deformed_branch::Bool = true)
+        return new(corrections, deformed_branch)
+    end
 end
 
 const GILBERT_CAMERON_SHELL_WEIGHT = 0.00917
@@ -341,8 +357,8 @@ function level_density_parameter(model::GilbertCameron, nuclide::Nuclide)
     S_neutron = get(model.corrections.neutron, neutron_number(nuclide), nothing)
     S_neutron === nothing && return nothing
     offset =
-        is_deformed_gilbert_cameron(nuclide) ? GILBERT_CAMERON_OFFSET_DEFORMED :
-        GILBERT_CAMERON_OFFSET_UNDEFORMED
+        model.deformed_branch && is_deformed_gilbert_cameron(nuclide) ?
+        GILBERT_CAMERON_OFFSET_DEFORMED : GILBERT_CAMERON_OFFSET_UNDEFORMED
     a = nuclide.A * (GILBERT_CAMERON_SHELL_WEIGHT * (S_proton + S_neutron) + offset)
     return a > 0 ? a : nothing
 end
