@@ -90,7 +90,9 @@ that, which the reader discards rather than storing as a correction of zero.
 
 **`level_density/resonances_s_wave.dat`** — s-wave average resonance parameters.
 RIPL-3: R. Capote *et al.*, *Nuclear Data Sheets* **110**, 3107 (2009). The file is byte-identical
-to <https://www-nds.iaea.org/RIPL-3/resonances/resonances0.dat>.
+to <https://www-nds.iaea.org/RIPL-3/resonances/resonances0.dat>. The IAEA also publishes the
+library as JSON at <https://github.com/IAEA-NDS/ripl3_json>, and RIPL-4 is in preparation at
+<https://github.com/IAEA-NDS/RIPL-4>; neither changes the numbers this file holds.
 
 **`charge_distribution/*.dat`** — charge polarization `ΔZ(A)` and the dispersion `rms(A)` of the
 isobaric charge distribution. A. C. Wahl, *Atomic Data and Nuclear Data Tables* **38**, 1 (1988);
