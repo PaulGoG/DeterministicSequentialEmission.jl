@@ -27,10 +27,19 @@ DeterministicSequentialEmission.jl/
 ├── src/                  library code behind the public interface
 ├── test/                 test suite, own environment (Aqua, JET, ExplicitImports)
 ├── docs/                 Documenter site, own environment
-├── input_data/           mass excesses, charge polarization, level density and yield data
+├── data/                 input data — see data/README.md; only the mass evaluation ships
 ├── activate.jl           activates and instantiates the root environment
 └── Project.toml
 ```
+
+## Input data
+
+Almost none of it is version-controlled: it is third-party scientific data that the licence on
+this code does not extend to. `data/README.md` records every file, its format and its source,
+and points at the two companion packages that write this layout directly. The 2020 atomic mass
+evaluation is the exception and ships with the package — it is openly published, it is small,
+and keeping it means the tests pinned against the archived reference run execute on a bare
+clone. Tests needing anything else announce themselves as skipped rather than passing vacuously.
 
 Files still at the repository root — `main_DSE.jl`, `aux_func.jl`, `dse_eq_solvers.jl` and the
 rest, plus `Data conversion/` — are the prototype, retained for the duration of the port and
