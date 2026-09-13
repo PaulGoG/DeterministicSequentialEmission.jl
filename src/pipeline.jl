@@ -1,15 +1,21 @@
 """
+    Curve
+
+A tabulated one-dimensional result, `Vector{Tuple{Float64,Float64}}`. Abscissa and value, which
+is what every written table holds and what reads back without either side having to know the
+abscissa in advance.
+"""
+const Curve = Vector{Tuple{Float64, Float64}}
+
+"""
     RunResult
 
 What one run produced: the domain it swept, the averaged observables against fragment mass and
 against total kinetic energy, the totals, and the prompt neutron spectrum where one was asked
 for. [`write_results`](@ref) writes it; [`run_pipeline`](@ref) does both.
 
-Curves are `Vector{Tuple{Float64,Float64}}` so they write and read back as two columns without
-either side having to know the abscissa in advance.
+Curves are [`Curve`](@ref)s.
 """
-const Curve = Vector{Tuple{Float64, Float64}}
-
 struct RunResult
     configuration::Configuration
     configurations_solved::Int
