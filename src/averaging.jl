@@ -166,14 +166,20 @@ Use a fragment yield distribution as the weight of a contraction.
 weights_from(yields::FragmentYields) = ConfigurationValues(copy(yields.values))
 
 """
-    weights_from(domain, polarization) -> ConfigurationValues
+    weights_from(domain, polarization, kinetic_energies) -> ConfigurationValues
 
 Use the isobaric charge distribution as the weight, for a run with no experimental yield.
 
-`p(Z,A)` alone, broadcast over every kinetic energy the quantity is tabulated at — which is
-what the prototype falls back on when no `Y(A,TKE)` is supplied, and what its `main_DSE.out`
-writes in place of a yield. Reducing over charge gives the same answer either way: `Y = p·Y(A,TKE)`
-and `Y(A,TKE)` does not depend on `Z`, so it cancels between numerator and denominator.
+`p(Z,A)` alone, broadcast over every kinetic energy the quantity is tabulated at — which is what
+the prototype falls back on when no `Y(A,TKE)` is supplied, and what its `main_DSE.out` writes in
+place of a yield. Reducing over charge gives the same answer either way: `Y = p·Y(A,TKE)` and
+`Y(A,TKE)` does not depend on `Z`, so it cancels between numerator and denominator.
+
+Reducing over kinetic energy does **not**. A flat weight makes every `TKE` on the grid equally
+likely, so the contraction sits at the midpoint of the grid rather than where the measurement
+does, and every quantity built on `TXE` moves with it. Where no joint `Y(A,TKE)` was measured,
+[`factorized_yield`](@ref) reconstructs one from the two marginals that were, which is a far
+better weight than this.
 """
 function weights_from(
     domain::FragmentationDomain,

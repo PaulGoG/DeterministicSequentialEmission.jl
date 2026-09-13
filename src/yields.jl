@@ -94,6 +94,122 @@ function read_experimental_yield(
 end
 
 """
+    MASS_YIELD_SPEC
+    MEAN_KINETIC_ENERGY_SPEC
+
+Layouts of the two marginals a factorized yield is built from: `A Y [σY]` and `A TKE [σTKE]`,
+each with one header row. Both are what `ExforFissionData.jl` writes for the `yield`/`A` and
+`TKE`/`A` observables.
+"""
+const MASS_YIELD_SPEC =
+    TableSpec([:A, :yield, :uncertainty]; skip = 1, optional = (:uncertainty,))
+
+@doc (@doc MASS_YIELD_SPEC)
+const MEAN_KINETIC_ENERGY_SPEC =
+    TableSpec([:A, :TKE, :uncertainty]; skip = 1, optional = (:uncertainty,))
+
+"""
+    factorized_yield(mass_yield_path, kinetic_energy_path, energies; width, spread) -> ExperimentalYield
+
+Reconstruct `Y(A, TKE)` from the two marginals that were measured, where the joint distribution
+was not:
+
+```
+Y(A, TKE) = Y(A) · G(TKE; ⟨TKE⟩(A), σ)
+```
+
+with `G` a Gaussian normalized over `energies`. `Y(A)` is a measured pre-neutron mass yield and
+`⟨TKE⟩(A)` a measured mean total kinetic energy against the same mass number — for 233-U(n,f),
+for instance, both come from the same experiment.
+
+**This is a reconstruction, not a measurement, and it is the mass dependence of `⟨TKE⟩` that
+makes it worth doing.** A single mean kinetic energy applied at every mass over-subtracts at the
+asymmetric splits, where `⟨TKE⟩` is 20 MeV lower than in the peaks, starves the heavy fragment of
+excitation, and turns the rising heavy branch of `ν(A)` into a falling one. Checked directly:
+replacing the measured `Y(A,TKE)` of 235-U(n_th,f) with a mass-independent Gaussian at its own
+`⟨TKE⟩ = 170.5 MeV` takes `ν(160)` from 2.02 down to 0.73 and `⟨ν⟩` from 2.524 to 2.280. Keeping
+the mass dependence is what the factorization is for.
+
+What it cannot recover is the correlation the joint distribution carries: the width of `P(TKE|A)`
+varies with mass and is taken here as the constant `width`, 10 MeV by default, with `spread` mass
+units of Gaussian smearing applied to `⟨TKE⟩(A)` where the table is sparse. Both are stated
+rather than fitted.
+
+A mass without a tabulated `⟨TKE⟩` is dropped: extrapolating the quantity whose mass dependence
+is the point of the exercise would defeat it. Complementary masses inherit the mean of their
+partner, since `TKE` is a property of the split rather than of one fragment.
+"""
+function factorized_yield(
+    mass_yield_path::AbstractString,
+    kinetic_energy_path::AbstractString,
+    energies,
+    compound_mass::Integer;
+    width::Real = 10.0,
+    total::Real = DEFAULT_YIELD_TOTAL,
+)
+    width > 0 ||
+        throw(ArgumentError("the kinetic energy width must be positive, got $width"))
+    grid = sort(unique(Float64.(collect(energies))))
+    isempty(grid) && throw(ArgumentError("the kinetic energy grid is empty"))
+
+    mass_table = read_table(mass_yield_path, MASS_YIELD_SPEC)
+    masses = integer_column(mass_table, :A)
+    yields = column(mass_table, :yield, Float64)
+
+    energy_table = read_table(kinetic_energy_path, MEAN_KINETIC_ENERGY_SPEC)
+    energy_masses = integer_column(energy_table, :A)
+    means = column(energy_table, :TKE, Float64)
+
+    # TKE belongs to the split, so a mean tabulated against the heavy mass serves the light
+    # partner too.
+    mean_by_mass = Dict{Int, Float64}()
+    for row in eachindex(energy_masses)
+        isfinite(means[row]) && means[row] > 0 || continue
+        mean_by_mass[energy_masses[row]] = means[row]
+        complement = Int(compound_mass) - energy_masses[row]
+        haskey(mean_by_mass, complement) || (mean_by_mass[complement] = means[row])
+    end
+    isempty(mean_by_mass) &&
+        throw(ArgumentError("$(energy_table.path) holds no positive mean kinetic energies"))
+
+    values = Dict{Tuple{Int, Float64}, Float64}()
+    kept = Int[]
+    running = 0.0
+    for row in eachindex(masses)
+        A = masses[row]
+        Y = yields[row]
+        isfinite(Y) && Y > 0 || continue
+        mean = get(mean_by_mass, A, nothing)
+        mean === nothing && continue
+        shape = [exp(-(TKE - mean)^2 / (2 * width^2)) for TKE in grid]
+        norm = sum(shape)
+        norm > 0 || continue
+        push!(kept, A)
+        for (index, TKE) in pairs(grid)
+            cell = Y * shape[index] / norm
+            values[(A, TKE)] = cell
+            running += cell
+        end
+    end
+    isempty(values) &&
+        throw(ArgumentError("no mass carries both a yield and a mean kinetic energy; \
+                       $(mass_table.path) and $(energy_table.path) do not overlap"))
+
+    # Renormalized to the same 200 % a measured two-fragment distribution carries, so a run on a
+    # factorized yield and a run on a measured one are weighted alike.
+    scale = total / running
+    for key in keys(values)
+        values[key] *= scale
+    end
+    return ExperimentalYield(
+        values,
+        sort(kept),
+        grid,
+        string(basename(mass_yield_path), " × ", basename(kinetic_energy_path)),
+    )
+end
+
+"""
     fragment_charge_probabilities(domain, polarization) -> Dict{Nuclide,Float64}
 
 The isobaric charge probability `p(Z,A)` of every fragment the domain produces.

@@ -15,8 +15,10 @@ configuration, the post-neutron fragment mass `A_p = A − n` is an integer with
 """
 module DeterministicSequentialEmission
 
+using Dates: Dates
 using Measurements: Measurement, measurement, value
 using SpecialFunctions: gamma_inc
+using TOML: TOML
 
 export Nuclide, NEUTRON, neutron_number, element_symbol
 export FissioningSystem, spontaneous_fission, neutron_induced_fission, symmetric_mass
@@ -39,6 +41,8 @@ export ChargePolarization,
     most_probable_charge,
     charge_probability,
     charge_numbers
+export WahlSystematics,
+    WAHL_LOW_ENERGY, WAHL_VALIDITY, wahl_polarization, wahl_width, wahl_charge_polarization
 export Fragmentation,
     FragmentationDomain,
     fragmentation_domain,
@@ -86,7 +90,10 @@ export EvaporationCrossSection,
 export ConfigurationValues, average, total_average, weights_from
 export ExperimentalYield,
     EXPERIMENTAL_YIELD_SPEC,
+    MASS_YIELD_SPEC,
+    MEAN_KINETIC_ENERGY_SPEC,
     read_experimental_yield,
+    factorized_yield,
     fragment_charge_probabilities,
     FragmentYields,
     DEFAULT_YIELD_TOTAL,
@@ -110,6 +117,16 @@ export EmissionSequence,
     neutron_multiplicity,
     post_neutron_mass,
     sequence_average
+export Configuration, load_configuration
+export RunResult, run_pipeline, write_results
+
+"""
+    PACKAGE_ROOT
+
+The directory the package was loaded from. Default input and output locations are taken relative
+to it, so a pipeline runs unchanged from any working directory and on any machine.
+"""
+const PACKAGE_ROOT = dirname(@__DIR__)
 
 include("nuclides.jl")
 include("tables.jl")
@@ -118,11 +135,14 @@ include("charge.jl")
 include("domain.jl")
 include("leveldensity.jl")
 include("energetics.jl")
+include("wahl.jl")
 include("partition.jl")
 include("evaporation.jl")
 include("sequences.jl")
 include("yields.jl")
 include("averaging.jl")
 include("spectrum.jl")
+include("configuration.jl")
+include("pipeline.jl")
 
 end

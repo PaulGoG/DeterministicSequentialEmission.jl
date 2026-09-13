@@ -1,83 +1,52 @@
 # Validation figures: the model against measurement.
 #
-#   julia --project=plotting plotting/figures.jl [experimental directory]
+#   julia --project=plotting plotting/figures.jl [results directory] [experimental directory]
 #
-# The model side needs the input data described in data/README.md, including the temperature
-# ratios under data/partition. The measured side needs fission observables retrieved from EXFOR
-# with ExforFissionData.jl, laid out as
+# Nothing is solved here. The model side is read from what scripts/run.jl wrote under results/,
+# so a figure is redrawn from tables rather than by running the model again, and the numbers on
+# the page are the numbers in the files. Run the pipeline first:
+#
+#   julia --project scripts/run.jl config/Cf252_0f.toml
+#
+# The measured side is retrieved from EXFOR with ExforFissionData.jl and laid out as
 #
 #   <experimental>/multiplicity/<system>/*.dat     A ν [σν]
 #   <experimental>/spectrum_ratio/<system>/*.dat   E N(E)/M(E,T_M) [σ]
 #
-# which is the layout that package writes. The directory defaults to data/experimental and is
-# not version-controlled; nothing here knows where yours lives.
+# which is the layout that package writes. Both directories default to beside the project and
+# neither is version-controlled; nothing here knows where yours lives.
 
 include(joinpath(@__DIR__, "activate.jl"))
 
-using DeterministicSequentialEmission
 using CairoMakie, MathTeXEngine
-using Measurements: value
-using QuadGK: quadgk
 using Printf
 
 const ROOT = dirname(@__DIR__)
-const DATA = joinpath(ROOT, "data")
 const FIGURES = joinpath(ROOT, "figures")
-const EXPERIMENTAL =
-    length(ARGS) >= 1 ? ARGS[1] : joinpath(DATA, "experimental")
+const RESULTS = length(ARGS) >= 1 ? ARGS[1] : joinpath(ROOT, "results")
+const EXPERIMENTAL = length(ARGS) >= 2 ? ARGS[2] : joinpath(ROOT, "data", "experimental")
 
 """
-One fissioning system, with everything needed to run it and everything to compare it against.
-`sweep` matches the kinetic energy grid of the measured yield, so the whole distribution is
-reached rather than every other point of it. `measured` is the evaluated total multiplicity per
-fission, ENDF/B-VIII.0 for the induced systems and the Axton standard for 252-Cf.
+One fissioning system: the label it is drawn under, the results directory it is read from, and
+the evaluated total multiplicity it is compared against — ENDF/B-VIII.0 for the induced systems
+and the Axton standard for 252-Cf.
 """
 struct Case
     label::Any
-    system::FissioningSystem
-    polarization::String
-    yield::String
-    heavy_masses::UnitRange{Int}
-    sweep::StepRangeLen{Float64}
     identifier::String
+    compound_mass::Int
     measured::Float64
 end
 
 const CASES = [
-    Case(
-        L"$^{252}$Cf(sf)",
-        spontaneous_fission(Nuclide(98, 252)),
-        "Cf252.dat",
-        joinpath("Cf252", "vespa_Y_A_TKE.dat"),
-        126:174,
-        130.0:1.0:230.0,
-        "Cf252_0f",
-        3.7573,
-    ),
-    Case(
-        L"$^{235}$U(n$_\mathrm{th}$,f)",
-        neutron_induced_fission(Nuclide(92, 235), 2.53e-8),
-        "U235.dat",
-        joinpath("U235", "Y_A_TKE.dat"),
-        118:160,
-        100.0:1.0:200.0,
-        "U235_nf",
-        2.4140,
-    ),
-    Case(
-        L"$^{239}$Pu(n$_\mathrm{th}$,f)",
-        neutron_induced_fission(Nuclide(94, 239), 2.53e-8),
-        "Pu239.dat",
-        joinpath("Pu239", "Y_A_TKE.dat"),
-        120:159,
-        130.0:1.0:210.0,
-        "Pu239_nf",
-        2.8750,
-    ),
+    Case(L"$^{252}$Cf(sf)", "Cf252_0f", 252, 3.7573),
+    Case(L"$^{235}$U(n$_\mathrm{th}$,f)", "U235_nf", 236, 2.4140),
+    Case(L"$^{239}$Pu(n$_\mathrm{th}$,f)", "Pu239_nf", 240, 2.8750),
+    Case(L"$^{233}$U(n$_\mathrm{th}$,f)", "U233_nf", 234, 2.4968),
 ]
 
-# One common abscissa, so the three panels can be read against each other and the inner tick
-# labels dropped. Nothing is plotted outside it.
+# One common abscissa, so the panels can be read against each other and the inner tick labels
+# dropped. Nothing is plotted outside it.
 const MASS_RANGE = (76.0, 176.0)
 
 const THEME = Theme(
@@ -108,8 +77,8 @@ const PALETTE = [
 ]
 const MARKERS = [:circle, :rect, :utriangle, :diamond, :star5, :cross]
 
-"Read a two- or three-column measured file: abscissa, value, optional uncertainty."
-function read_measured(path)
+"Read a two- or three-column file: abscissa, value, optional uncertainty."
+function read_columns(path)
     x = Float64[]
     y = Float64[]
     σ = Float64[]
@@ -124,11 +93,27 @@ function read_measured(path)
     return x, y, σ
 end
 
-measured_sets(kind, system) = begin
+"The totals a run wrote, by name."
+function read_totals(case::Case)
+    path = joinpath(RESULTS, case.identifier, "totals.dat")
+    totals = Dict{String, Float64}()
+    isfile(path) || return totals
+    for (index, line) in enumerate(eachline(path))
+        index == 1 && continue
+        fields = split(strip(line))
+        length(fields) >= 2 || continue
+        totals[fields[1]] = parse(Float64, fields[2])
+    end
+    return totals
+end
+
+curve(case::Case, name) = read_columns(joinpath(RESULTS, case.identifier, name))
+
+function measured_sets(kind, system)
     directory = joinpath(EXPERIMENTAL, kind, system)
     isdir(directory) || return Tuple{String, String}[]
     files = sort(filter(name -> endswith(name, ".dat"), readdir(directory)))
-    [(_author(name), joinpath(directory, name)) for name in files]
+    return [(_author(name), joinpath(directory, name)) for name in files]
 end
 
 # Files are named <accession>_<author>_<year>.dat by the retrieval.
@@ -140,113 +125,64 @@ function _author(name)
     return strip(last(split(author, ". "))) * " " * parts[3]
 end
 
-"""
-Everything one case needs, assembled once: the mass table, the fragmentation domain, the yield
-weights, and the TXE partition. Assembling it separately from the runs keeps the two figures on
-identical inputs.
-"""
-function setup(case::Case)
-    table = read_mass_table(joinpath(DATA, "mass_excess", "ame2020.dat"))
-    polarization =
-        read_charge_polarization(joinpath(DATA, "charge_distribution", case.polarization))
-    domain = fragmentation_domain(case.system, polarization, case.heavy_masses)
-    model = BackShiftedFermiGas(table)
-    yields = build_fragment_yields(
-        domain,
-        polarization,
-        read_experimental_yield(joinpath(DATA, "yield", case.yield)),
-    )
-    # The TXE partition is the one FissionTemperatureRatio.jl extracts for this system from its
-    # own measured ν(A): a temperature ratio R_T against heavy fragment mass. Each system is
-    # therefore partitioned by its own data rather than by a ratio carried over from another.
-    segments = read_segments(
-        joinpath(DATA, "partition", case.identifier, "R_T_systematic_trend.csv"),
-    )
-    method = TemperatureRatio(segments, model)
-    return (
-        table = table,
-        domain = domain,
-        model = model,
-        cross_section = VariableCrossSection(),
-        yields = yields,
-        weights = weights_from(yields),
-        method = method,
-        segments = segment_coverage(method, case.heavy_masses),
-        reached = coverage(yields, case.sweep).reached,
-    )
-end
-
-"Run one case and return ν(A) together with the multiplicity per fragment."
-function multiplicity(case::Case, context = setup(case))
-    ν = ConfigurationValues{Float64}()
-    for entry in context.domain.entries, TKE in case.sweep
-        balance = energetics(context.table, case.system, entry, TKE)
-        balance === nothing && continue
-        split = partition(context.method, entry, value(balance.TXE))
-        split === nothing && continue
-        for (fragment, E) in ((entry.light, split.light), (entry.heavy, split.heavy))
-            chain = emission_chain(
-                context.table,
-                context.model,
-                context.cross_section,
-                fragment,
-                E,
-            )
-            ν[(fragment.A, fragment.Z, TKE)] = neutron_multiplicity(chain)
-        end
-    end
-    return average(ν, context.weights; over = (:charge, :kinetic_energy)),
-    total_average(ν, context.weights)
+function _available(case::Case)
+    path = joinpath(RESULTS, case.identifier, "multiplicity_A.dat")
+    isfile(path) && return true
+    @warn """
+        no run to draw; solve it first with `julia --project scripts/run.jl \
+        config/$(case.identifier).toml`.""" expected = path
+    return false
 end
 
 function figure_multiplicity()
     set_theme!(THEME)
-    figure = Figure(size = (510, 560))
+    drawable = filter(_available, CASES)
+    isempty(drawable) && return nothing
+
+    figure = Figure(size = (510, 30 + 140 * length(drawable)))
     summary = String[]
 
-    for (row, case) in pairs(CASES)
-        context = setup(case)
-        curve, total = multiplicity(case, context)
+    for (row, case) in pairs(drawable)
+        A, ν, _ = curve(case, "multiplicity_A.dat")
+        totals = read_totals(case)
+        modelled = get(totals, "multiplicity_per_fission", NaN)
         push!(
             summary,
             @sprintf(
-                "%-22s ⟨ν⟩_pair = %.3f   measured %.3f   %+.1f %%   R_T covers %.0f %%   \
-                 yield reached %.0f %%",
+                "%-24s ⟨ν⟩ = %.4f   evaluated %.4f   %+.1f %%",
                 string(case.label),
-                2 * total,
+                modelled,
                 case.measured,
-                100 * (2 * total - case.measured) / case.measured,
-                100 * context.segments.covered,
-                100 * context.reached
+                100 * (modelled - case.measured) / case.measured
             )
         )
 
         axis = Axis(
             figure[2 * row, 1];
             ylabel = L"\nu(A)",
-            xlabel = row == length(CASES) ? L"Fragment mass $A$" : "",
+            xlabel = row == length(drawable) ? L"Fragment mass $A$" : "",
             xticks = 80:10:170,
-            xticklabelsvisible = row == length(CASES),
+            xticklabelsvisible = row == length(drawable),
         )
 
         handles = []
         labels = Any[]
         for (index, (author, path)) in pairs(measured_sets("multiplicity", case.identifier))
             index > length(PALETTE) && break
-            A, ν, σ = read_measured(path)
-            keep = first(MASS_RANGE) .<= A .<= last(MASS_RANGE)
+            A_measured, ν_measured, σ = read_columns(path)
+            keep = first(MASS_RANGE) .<= A_measured .<= last(MASS_RANGE)
             handle = scatter!(
                 axis,
-                A[keep],
-                ν[keep];
+                A_measured[keep],
+                ν_measured[keep];
                 color = (PALETTE[index], 0.7),
                 marker = MARKERS[index],
                 markersize = 4,
             )
             any(>(0), σ[keep]) && errorbars!(
                 axis,
-                A[keep],
-                ν[keep],
+                A_measured[keep],
+                ν_measured[keep],
                 σ[keep];
                 color = (PALETTE[index], 0.3),
                 linewidth = 0.5,
@@ -254,11 +190,11 @@ function figure_multiplicity()
             push!(handles, handle)
             push!(labels, author)
         end
-        model = lines!(axis, first.(curve), last.(curve); color = :black, linewidth = 1.6)
+        model = lines!(axis, A, ν; color = :black, linewidth = 1.6)
         push!(handles, model)
         push!(labels, "This model")
 
-        symmetric = case.system.compound.A / 2
+        symmetric = case.compound_mass / 2
         vlines!(axis, [symmetric]; color = (:grey, 0.55), linestyle = :dot, linewidth = 0.8)
         text!(
             axis,
@@ -295,10 +231,10 @@ function figure_multiplicity()
     end
 
     # Gaps are set once the layout is complete: a legend row tight against its panel, and a
-    # wider separation between the three systems.
-    for row in 1:length(CASES)
+    # wider separation between systems.
+    for row in 1:length(drawable)
         rowgap!(figure.layout, 2 * row - 1, 2)
-        row < length(CASES) && rowgap!(figure.layout, 2 * row, 8)
+        row < length(drawable) && rowgap!(figure.layout, 2 * row, 8)
     end
 
     path = joinpath(FIGURES, "multiplicity_vs_experiment")
@@ -315,55 +251,26 @@ maxwellian(E, T) = 2 / sqrt(π) * T^(-3 / 2) * sqrt(E) * exp(-E / T)
 # thresholds, above it by counting statistics in the tail.
 const LOW = 0.08
 const HIGH = 11.0
+const T_M = 1.42     # the Maxwellian temperature every retrieved set is reported against
 
 function figure_spectrum()
     set_theme!(THEME)
     case = first(CASES)
-    context = setup(case)
-    cross_section = context.cross_section
-
-    records = []
-    total_weight = 0.0
-    for entry in context.domain.entries, TKE in 130.0:2.0:230.0
-        y = get(context.yields.values, (entry.heavy.A, entry.heavy.Z, TKE), nothing)
-        (y === nothing || y <= 0) && continue
-        balance = energetics(context.table, case.system, entry, TKE)
-        balance === nothing && continue
-        split = partition(context.method, entry, value(balance.TXE))
-        split === nothing && continue
-        light =
-            emission_chain(context.table, context.model, cross_section, entry.light, split.light)
-        heavy =
-            emission_chain(context.table, context.model, cross_section, entry.heavy, split.heavy)
-        w = pair_weights(MultiplicityWeighting(), light, heavy, split)
-        w === nothing && continue
-        E_light, E_heavy = fragment_energy_per_nucleon(entry, TKE)
-        push!(records, (y, light, heavy, w, E_light, E_heavy))
-        total_weight += y
+    path = joinpath(RESULTS, case.identifier, "spectrum_E.dat")
+    if !isfile(path)
+        @warn "no spectrum to draw" expected = path
+        return nothing
     end
-
-    spectrum(E) =
-        sum(
-            y * (
-                w[1] * chain_spectrum(l, cross_section, El, E) +
-                w[2] * chain_spectrum(h, cross_section, Eh, E)
-            ) for (y, l, h, w, El, Eh) in records
-        ) / total_weight
-
-    # The normalisation is the model's own: the spectrum integrates to one neutron, so the ratio
-    # is an absolute statement and nothing is fitted to the data below.
-    norm, _ = quadgk(spectrum, 0, Inf; rtol = 1e-8)
-    moment, _ = quadgk(E -> E * spectrum(E), 0, Inf; rtol = 1e-8)
-    T_M = 1.42     # the Maxwellian temperature every retrieved set is reported against
+    E, N, _ = read_columns(path)
+    totals = read_totals(case)
     @printf(
-        "⟨E⟩ = %.4f MeV against a Maxwellian at T_M = %.2f MeV; spectrum integrates to %.6f\n",
-        moment / norm,
-        T_M,
-        norm
+        "⟨E⟩ = %.4f MeV against a Maxwellian at T_M = %.2f MeV\n",
+        get(totals, "mean_neutron_laboratory_energy", NaN),
+        T_M
     )
 
-    grid = 10 .^ range(log10(LOW), log10(HIGH); length = 260)
-    ratio = [spectrum(E) / (norm * maxwellian(E, T_M)) for E in grid]
+    inside = LOW .<= E .<= HIGH
+    ratio = N[inside] ./ maxwellian.(E[inside], T_M)
 
     figure = Figure(size = (510, 300))
     axis = Axis(
@@ -375,23 +282,23 @@ function figure_spectrum()
 
     handles = []
     labels = Any[]
-    for (index, (author, path)) in pairs(measured_sets("spectrum_ratio", case.identifier))
+    for (index, (author, file)) in pairs(measured_sets("spectrum_ratio", case.identifier))
         index > length(PALETTE) && break
-        E, R, σ = read_measured(path)
-        keep = LOW .<= E .<= HIGH
+        energies, observed, σ = read_columns(file)
+        keep = LOW .<= energies .<= HIGH
         any(keep) || continue
         handle = scatter!(
             axis,
-            E[keep],
-            R[keep];
+            energies[keep],
+            observed[keep];
             color = (PALETTE[index], 0.6),
             marker = MARKERS[index],
             markersize = 3.5,
         )
         any(>(0), σ[keep]) && errorbars!(
             axis,
-            E[keep],
-            R[keep],
+            energies[keep],
+            observed[keep],
             σ[keep];
             color = (PALETTE[index], 0.25),
             linewidth = 0.5,
@@ -400,8 +307,8 @@ function figure_spectrum()
         push!(labels, author)
     end
 
-    model_line = lines!(axis, grid, ratio; color = :black, linewidth = 1.8)
-    push!(handles, model_line)
+    model = lines!(axis, E[inside], ratio; color = :black, linewidth = 1.8)
+    push!(handles, model)
     push!(labels, "This model")
     hlines!(axis, [1.0]; color = (:grey, 0.6), linestyle = :dot, linewidth = 0.8)
 
@@ -450,6 +357,9 @@ end
 
 function main()
     mkpath(FIGURES)
+    isdir(RESULTS) || @warn """
+        no results directory; solve the systems first with \
+        `julia --project scripts/run.jl config/<case>.toml`.""" directory = RESULTS
     isdir(EXPERIMENTAL) || @warn """
         no experimental directory; the figures will carry the model curves alone. Retrieve the \
         measurements with ExforFissionData.jl and lay them out as described at the top of this \

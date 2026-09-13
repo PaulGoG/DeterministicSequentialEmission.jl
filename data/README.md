@@ -19,10 +19,16 @@ naming the file.
 | `mass_excess/ame2020.dat` | mass excesses, 3558 nuclides — **shipped** | header, then `Z A element Δ σΔ`, keV |
 | `level_density/shell_corrections_gilbert_cameron.dat` | `S(N)`, `S(Z)` against nucleon number, 11 … 150 | header, then `n S(N) S(Z)`, MeV |
 | `level_density/resonances_s_wave.dat` | s-wave average resonance parameters, the source of `S₀(A)` | commented header; `S₀` in units of 10⁻⁴ |
-| `charge_distribution/{Cf252,U235,Pu239}.dat` | charge polarization and Gaussian dispersion | header, then `A ΔZ rms` |
+| `charge_distribution/{Cf252,U235,Pu239}.dat` | charge polarization and Gaussian dispersion, evaluated per reaction | header, then `A ΔZ rms` |
+| `charge_distribution/U233_wahl_systematics.dat` | the same, from the `Zₚ` systematics rather than a fit — **generated, not a source table** | header, then `A ΔZ rms` |
+| `partition/<system>/R_T_systematic_trend.csv` | temperature ratio `R_T(A_H)` for the TXE partition | comma-delimited; header, then `A_H,value,uncertainty` |
+| `experimental/multiplicity/<system>/*.dat` | measured `ν(A)` per fragment | header, then `A ν [σν]` |
+| `experimental/spectrum_ratio/<system>/*.dat` | measured prompt neutron spectrum as a ratio to a Maxwellian | header, then `E N(E)/M(E,T_M) [σ]` |
 | `deformation/ground_state_beta2_moller.dat` | ground-state quadrupole deformations | header, then `Z A β₂` |
 | `deformation/extra_deformation_U235.dat` | `ΔE_def` for the scission-modelling partition | header, then `A Z ΔE_def`, MeV |
 | `yield/<nucleus>/*.dat` | pre-neutron fragment mass yields `Y(A,TKE)` | header, then `A TKE Y [σY]` |
+| `yield/U233/geltenbort_Y_A.dat` | pre-neutron mass yield `Y(A)`, a marginal | header, then `A Y [σY]` |
+| `yield/U233/geltenbort_TKE_A.dat` | mean total kinetic energy `⟨TKE⟩(A)`, the other marginal | header, then `A TKE [σ]` |
 
 All files are whitespace-separated with a single header line. Readers take columns by position,
 not by header text, and the uncertainty column may be omitted rather than zero-filled.
@@ -48,12 +54,26 @@ cd ExforFissionData.jl
 julia --project scripts/retrieve.jl config/Cf252_0f_yield_A.toml
 ```
 
+```bash
+julia --project scripts/retrieve.jl config/Cf252_0f_nu_A.toml              # ν(A) per fragment
+julia --project scripts/retrieve.jl config/Cf252_0f_spectrumRatioMXW_E.toml  # spectrum ratio
+```
+
+Read the `retrieval.toml` it writes before using what it retrieved. It records, per dataset, the
+reaction code, the units and the qualifiers the archive attached, and those qualifiers matter:
+`DERIV` marks a dataset derived from other data rather than measured, `SPA` one averaged over a
+fission spectrum rather than the thermal one it is filed under. The sets staged under
+`experimental/` here exclude both. A handful of `252-Cf` multiplicity subentries are miscoded in
+the archive — `MASS,PR,NU` without the `/FRG` that would mark them per fragment — and are
+included deliberately, having been established as per fragment from the complement invariance
+`ν(A) + ν(A₀−A) ≈ ν̄` in the data itself.
+
 **The temperature ratio `R_T(A_H)`** for the temperature-ratio TXE partition —
 [`FissionTemperatureRatio.jl`](https://github.com/PaulGoG/FissionTemperatureRatio.jl) extracts it
 from experimental `ν(A)` and tabulates it at every integer `A_H`. Feed the resulting
-`R_T_parameterized_<set>_<run>.csv` to `read_segments`. Run it with
-`ratio_averaging = "mean_of_ratios"` for this consumer; the reason is in that function's
-docstring.
+`R_T_parameterized_<set>_<run>.csv` to `read_segments`, or stage it under
+`partition/<system>/`. Run it with `ratio_averaging = "mean_of_ratios"` for this consumer; the
+reason is in that function's docstring.
 
 The remaining tables are one-off downloads:
 
@@ -74,7 +94,16 @@ to <https://www-nds.iaea.org/RIPL-3/resonances/resonances0.dat>.
 
 **`charge_distribution/*.dat`** — charge polarization `ΔZ(A)` and the dispersion `rms(A)` of the
 isobaric charge distribution. A. C. Wahl, *Atomic Data and Nuclear Data Tables* **38**, 1 (1988);
-also tabulated in Wahl, *Systematics of Fission-Product Yields*, LA-13928 (2002).
+the model is set out in full in Wahl, *Systematics of Fission-Product Yields*, LA-13928 (2002).
+
+Two different objects share that format and must not be confused. The `Cf252`, `U235` and
+`Pu239` files are **per-reaction least-squares fits** of the `Zₚ` model to the data of each
+reaction — Fig. 18 of LA-13928 quotes a reduced `χ²` of 2.9 for that against 7.9 for the
+systematics — and they are authoritative wherever they exist. `U233_wahl_systematics.dat` is
+**the systematics**, eq. (17) and Table 2 of the report evaluated by this package for a system
+that has no fit of its own; its header row says so, and `wahl_charge_polarization` produces it
+without a file. It replaces a single mean `ΔZ = −0.5`, `rms = 0.6` applied at every mass; it does
+not replace an evaluation.
 
 **`deformation/ground_state_beta2_moller.dat`** — ground-state quadrupole deformations from the
 finite-range liquid-drop model. P. Möller, J. R. Nix, W. D. Myers, W. J. Swiatecki, *Atomic Data
