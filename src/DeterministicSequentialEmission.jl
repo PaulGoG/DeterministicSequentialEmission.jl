@@ -16,6 +16,7 @@ configuration, the post-neutron fragment mass `A_p = A − n` is an integer with
 module DeterministicSequentialEmission
 
 using Measurements: Measurement, measurement, value
+using SpecialFunctions: gamma_inc
 
 export Nuclide, NEUTRON, neutron_number, element_symbol
 export FissioningSystem, spontaneous_fission, neutron_induced_fission, symmetric_mass
@@ -76,6 +77,15 @@ export EvaporationCrossSection,
     fermi_gas_energy,
     residual_temperature,
     MINIMUM_TEMPERATURE
+export centre_of_mass_spectrum,
+    fragment_energy_per_nucleon,
+    laboratory_spectrum,
+    chain_spectrum,
+    chain_centre_of_mass_spectrum,
+    SpectrumWeighting,
+    MultiplicityWeighting,
+    ExcitationWeighting,
+    pair_weights
 export EmissionSequence,
     EmissionChain,
     emission_chain,
@@ -94,5 +104,6 @@ include("energetics.jl")
 include("partition.jl")
 include("evaporation.jl")
 include("sequences.jl")
+include("spectrum.jl")
 
 end
