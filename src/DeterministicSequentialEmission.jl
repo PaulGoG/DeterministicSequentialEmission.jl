@@ -77,6 +77,16 @@ export EvaporationCrossSection,
     fermi_gas_energy,
     residual_temperature,
     MINIMUM_TEMPERATURE
+export ExperimentalYield,
+    EXPERIMENTAL_YIELD_SPEC,
+    read_experimental_yield,
+    fragment_charge_probabilities,
+    FragmentYields,
+    DEFAULT_YIELD_TOTAL,
+    build_fragment_yields,
+    coverage,
+    yield_over,
+    mean_kinetic_energy_by_mass
 export centre_of_mass_spectrum,
     fragment_energy_per_nucleon,
     laboratory_spectrum,
@@ -104,6 +114,7 @@ include("energetics.jl")
 include("partition.jl")
 include("evaporation.jl")
 include("sequences.jl")
+include("yields.jl")
 include("spectrum.jl")
 
 end

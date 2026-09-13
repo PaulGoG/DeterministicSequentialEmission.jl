@@ -320,7 +320,7 @@ temperature through `Ē_r = a T²`, so it is reported as unavailable rather than
 # Examples
 
 ```jldoctest
-julia> table = read_mass_table(joinpath(pkgdir(DeterministicSequentialEmission), "input_data", "AME2020.ANA"));
+julia> table = read_mass_table(joinpath(pkgdir(DeterministicSequentialEmission), "data", "mass_excess", "ame2020.dat"));
 
 julia> a = level_density_parameter(BackShiftedFermiGas(table), Nuclide(52, 134));
 

@@ -17,6 +17,7 @@ include("physics.jl")
     include("test_energetics.jl")
     include("test_partition.jl")
     include("test_sequences.jl")
+    include("test_yields.jl")
     include("test_spectrum.jl")
 
     @testset "quality" begin

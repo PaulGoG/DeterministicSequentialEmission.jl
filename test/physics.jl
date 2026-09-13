@@ -21,6 +21,9 @@ const POLARIZATION_AVAILABLE = isfile(CF252_POLARIZATION_FILE)
 const U235_POLARIZATION_AVAILABLE = isfile(U235_POLARIZATION_FILE)
 const SHELL_CORRECTIONS_AVAILABLE = isfile(SHELL_CORRECTION_FILE)
 
+const CF252_YIELD_FILE = joinpath(DATA, "yield", "Cf252", "vespa_Y_A_TKE.dat")
+const YIELD_AVAILABLE = isfile(CF252_YIELD_FILE)
+
 POLARIZATION_AVAILABLE || @warn """
     charge distribution systematics not present; the tests that build a fragmentation domain \
     from it are skipped. The reference tests are unaffected — they take their fragmentations \

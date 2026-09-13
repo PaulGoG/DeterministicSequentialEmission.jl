@@ -203,7 +203,7 @@ column(table::DataTable, name::Symbol) = table.columns[name]
 Parse a nucleon-number column, accepting an integral value written as a float.
 
 Nucleon numbers are integers, but the files that carry them are not all written by hand:
-`input_data/U-235/DeltaZ_rms_A.U5` tabulates its mass column as `118.0`, `119.0`, …, because a
+`data/charge_distribution/U235.dat` tabulates its mass column as `118.0`, `119.0`, …, because a
 generator wrote it out in floating point. Read strictly as `Int` that file cannot be loaded at
 all. A value with a fractional part is still an error, and says so.
 """
