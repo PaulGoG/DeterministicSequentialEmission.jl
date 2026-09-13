@@ -132,7 +132,8 @@ unless Gilbert-Cameron is selected on both sides.
 
 Nothing archived is affected either way: both reference runs used the back-shifted Fermi gas.
 
-Source: Gilbert & Cameron, *Can. J. Phys.* **43**, 1446 (1965), held in the workspace.
+Source: A. Gilbert and A. G. W. Cameron, *Canadian Journal of Physics* **43**, 1446 (1965);
+eqs. (20) and (21) p. 1457, the deformation regions p. 1459, Table III pp. 1453-1455.
 """
 struct GilbertCameron <: LevelDensityModel
     corrections::ShellCorrections
@@ -242,8 +243,8 @@ one more neutron is emitted.
 The spin-cutoff parameter of the same papers has no consumer here, since `ρ(U, J, π)` is never
 evaluated — only the `a` of the energy closure is.
 
-References held in the workspace: von Egidy & Bucurescu, Phys. Rev. C 72, 044311 (2005);
-erratum Phys. Rev. C 73, 049901 (2006); Phys. Rev. C 80, 054310 (2009).
+References: T. von Egidy and D. Bucurescu, *Phys. Rev. C* **72**, 044311 (2005); erratum
+*Phys. Rev. C* **73**, 049901 (2006); *Phys. Rev. C* **80**, 054310 (2009).
 
 """
 struct BackShiftedFermiGas <: LevelDensityModel
