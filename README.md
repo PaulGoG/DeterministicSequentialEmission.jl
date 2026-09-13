@@ -59,12 +59,27 @@ Implemented:
 | `secondary_outputs.jl` | `Y(A,Z,TKE)`, all yield averaging, post-emission quantities, the `.dat` exports |
 | `neutron_spectrum.jl` | Laboratory and CM spectra, Maxwellian normalization |
 | `plots.jl` | Figures |
-| `input_data/` | AME2020 mass excesses, Wahl `ΔZ(A)` and `rms(A)`, Gilbert-Cameron shell corrections, Möller `β₂`, RIPL-3 resonances, and `Y(A,TKE)` for ²⁵²Cf, ²³⁵U and ²³⁹Pu |
+| `input_data/` | AME2020 mass excesses, Wahl `ΔZ(A)` and `rms(A)`, Gilbert-Cameron shell corrections, Möller `β₂`, RIPL-3 resonances, and `Y(A,TKE)` for ²⁵²Cf, ²³⁵U and ²³⁹Pu — documented in `input_data/README.md`, files not tracked |
 | `Data conversion/` | One-off scripts that built some of the input files |
+
+## Input data
+
+The data files under `input_data/` are third-party scientific data — mass evaluations, charge
+distribution and shell correction systematics, a resonance parameter library, and experimental
+fragment mass yields. None of it originates with this work and the MIT licence on the code does
+not extend to it, so the files are not tracked here. `input_data/README.md` lists every one of
+them with its source, and they remain in the import commit:
+
+```
+git checkout bdba1d9 -- input_data/
+```
+
+That restores the exact bytes the thesis calculations ran against.
 
 ## Running it
 
-Edit `input.jl` and `options.jl`, then `julia main_DSE.jl` from this directory.
+Restore `input_data/` as above, edit `input.jl` and `options.jl`, then `julia main_DSE.jl` from
+this directory.
 
 Expect friction. There is no `Project.toml`, so `DataFrames`, `CSV`, `Roots`, `QuadGK`,
 `Trapz`, `Plots` and `LaTeXStrings` must already be present. The code `cd`s into `input_data/`

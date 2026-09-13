@@ -1,3 +1,10 @@
+# Input data. Third-party scientific data — mass evaluations, systematics, resonance
+# parameters and experimental yields — not covered by the licence on this code and so not
+# shipped. Its provenance is documented in input_data/README.md, which is tracked, and the
+# files themselves remain in the import commit bdba1d9.
+/input_data/*
+!/input_data/README.md
+
 # Generated results
 *_output_data/
 *_plots/
