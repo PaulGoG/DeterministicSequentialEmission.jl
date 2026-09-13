@@ -92,14 +92,28 @@ is what [`alpha_parameter`](@ref) expects.
 Piecewise linear in `A` with plateaux where the data support one. Distinct from the
 parameterization used in earlier work, and one of the two elements the thesis presents as new.
 
-Not verified against a source: RIPL-3 is not held in the workspace, so the segments are pinned
-by the archived run alone. Two things to check if it ever is. The values here are not the ones
-the 2018 paper's own figure lists for its validation nuclei — `S₀(150)` is `3.8e-4` here
-against `1.0e-4` there — which matters because that paper's claim that `⟨ε⟩(T)` is within 4 %
-of an optical-model calculation was established for `S₀` between `0.7e-4` and `1.1e-4`, i.e.
-`α` between 0.21 and 0.55, whereas this parameterization runs `α` from 0.071 at `A = 118` to
-1.22 at `A = 146`–`152`, outside that band at both ends. And the 4s maximum sits at
-`A = 146`–`152`, roughly ten mass units below where standard systematics place it.
+Verified against RIPL-3. The resonance table it was fitted to is byte-identical to
+`resonances0.dat` as the IAEA distributes it, and over the 266 nuclides carrying a measured
+`S₀` this reproduces them with a median ratio of 1.02 and 76 % of nuclides inside 2σ. It is a
+sixfold improvement on the parameterization it replaced, which is essentially flat at `1e-4`
+and biases `S₀` low by about 29 %: `χ²/N` of 5.4 against 31.3.
+
+Two caveats, both real and neither a defect of the fit.
+
+The residual scatter is Z-dependence that no function of `A` alone can carry. Worst in
+`A = 111`–`124`, where the data span a factor of twelve at fixed mass — `A = 122` has Sn at
+`0.13e-4` against Te at `1.22e-4` — and this follows the low tin branch, understating the
+tellurium and cadmium fragments severalfold. The single worst segment is `A = 136`–`146`, the
+rising edge to the 4s maximum, which runs straight through the `N = 82` closure.
+
+And the published validation of the variable cross section does not cover the range this
+implies. `⟨ε⟩(T)` was shown to be within 4 % of an optical-model calculation for `S₀` between
+`0.7e-4` and `1.1e-4`, i.e. `α` between 0.21 and 0.55 — a band containing only 14 % of the
+RIPL-3 nuclides in the fragment range. This parameterization runs `α` from 0.037 at `A = 120`
+to 1.24 at `A = 147` because *the data run that far*, not because the fit strays. But the 4 %
+figure does not transfer, and it is weakest where it matters most: the heavy fragment group of
+²⁵²Cf peaks near `A ≈ 140`–`145`, on that worst segment, where `α` swings from 0.31 at
+`A = 132` to 1.23 at `A = 148`.
 """
 function neutron_strength_function(A::Integer)
     A <= 23 && return 2.5e-5

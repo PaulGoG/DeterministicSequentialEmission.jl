@@ -64,10 +64,16 @@ function read_shell_corrections(
     neutron = column(table, :neutron, Float64)
     proton = column(table, :proton, Float64)
 
+    # `S(Z)` is tabulated to Z = 98 and `S(N)` to N = 150, but the file is rectangular: the
+    # proton column is padded with an exact 0.00 from 99 on. No tabulated `S(Z)` is zero, so
+    # the padding is unambiguous — and storing it would silently hand `GilbertCameron` a
+    # correction of zero for Z ≥ 99 instead of letting it decline.
+    last_proton = something(findlast(!iszero, proton), 0)
+
     protons = Dict{Int, Float64}()
     neutrons = Dict{Int, Float64}()
     for row in eachindex(nucleons)
-        protons[nucleons[row]] = proton[row]
+        row <= last_proton && (protons[nucleons[row]] = proton[row])
         neutrons[nucleons[row]] = neutron[row]
     end
     return ShellCorrections(protons, neutrons, String(path))
@@ -91,32 +97,64 @@ end
 Gilbert-Cameron systematics with shell corrections,
 
 ```
-a(A,Z) = A [0.00917 (S(Z) + S(N)) + 0.142]
+a(A,Z) = A [0.00917 (S(Z) + S(N)) + c],   c = 0.142 undeformed, 0.120 deformed
 ```
 
-with `S(Z)` taken at the proton number and `S(N)` at the neutron number.
+with `S(Z)` taken at the proton number and `S(N)` at the neutron number, and the two shell
+corrections read from the paper's Table III.
 
-The offset is not a universal constant. The systematics is quoted with a region-dependent
-`Q(Z,N)` — `0.142` for spherical nuclei and `0.120` for the deformed regions — and this applies
-`0.142` unconditionally, which is the spherical branch. That is the branch the model's own
-literature uses: Tudora, *EPJA* 54, 87 (2018) labels its comparison figure "G-C systm.
-(spherical nuclei)" and its p. 5 reads "level density parameters given by the Gilbert-Cameron
-systematic for spherical nuclei". It is also the only branch consistent with what that paper
-reports — that the Gilbert-Cameron parameters sit *above* the superfluid model and the
-Egidy-Bucurescu ones. Evaluated over the fragment range, `0.142` exceeds the back-shifted
-Fermi gas by 10–34 %, while `0.120` would sit 20–50 % below it.
+**The offset is not a universal constant**, and which branch applies is decided by
+[`is_deformed_gilbert_cameron`](@ref). Gilbert & Cameron give two parallel correlation lines —
+eq. (20), `a/A = 0.00917S + 0.142` for undeformed nuclei, and eq. (21), `a/A = 0.00917S + 0.120`
+for deformed ones (p. 1457, restated p. 1475) — together with the regions each covers
+(p. 1459). The shell weight `0.00917` is identical in both; only the intercept moves.
 
-Fission fragments fall outside both quoted regions, so no branch strictly applies and the
-choice is the model's rather than the systematics'. Gilbert & Cameron, *Can. J. Phys.* 43, 1446
-(1965) is not held in the workspace; the coefficients here are pinned by the archived run and
-by the consistency argument above, not by a reading of the source.
+Applying `0.142` everywhere, as this did until the paper was read, is the undeformed branch
+used as though it were universal. That is wrong for about a quarter of the yield-weighted
+fragment population, which lies inside the first deformed region — see
+[`is_deformed_gilbert_cameron`](@ref) for the size of it.
+
+Note that the model's own literature describes its Gilbert-Cameron comparison as being for
+spherical nuclei (Tudora, *EPJA* 54, 87 (2018), fig. 2 legend and p. 5), and reports those
+parameters sitting above both the superfluid model and Egidy-Bucurescu. That is consistent with
+a single undeformed branch, so a calculation reproducing those figures should be expected to
+differ from this one on the deformed heavy fragments. Nothing archived is affected: both
+reference runs used the back-shifted Fermi gas.
+
+Source: Gilbert & Cameron, *Can. J. Phys.* **43**, 1446 (1965), held in the workspace.
 """
 struct GilbertCameron <: LevelDensityModel
     corrections::ShellCorrections
 end
 
 const GILBERT_CAMERON_SHELL_WEIGHT = 0.00917
-const GILBERT_CAMERON_OFFSET = 0.142
+const GILBERT_CAMERON_OFFSET_UNDEFORMED = 0.142
+const GILBERT_CAMERON_OFFSET_DEFORMED = 0.120
+
+"""
+    is_deformed_gilbert_cameron(nuclide) -> Bool
+
+Whether Gilbert-Cameron treats this nuclide as deformed, and so takes the `0.120` branch.
+
+The paper's own definition, p. 1459: "we shall consider the following to be regions of
+deformation: `54 ≤ Z ≤ 78, 86 ≤ N ≤ 122`" and "`86 ≤ Z ≤ 122, 130 ≤ N ≤ 182`", with both
+bounds of a pair required together. Its further prescription for light nuclei — `11 ≤ Z ≤ 19`
+follows the deformed line too, `20 ≤ Z ≤ 29` the undeformed one (p. 1464) — is included for
+completeness; it is outside the fragment range.
+
+This is not a corner case for fission. Roughly a quarter of the yield-weighted fragment
+population of ²³⁵U(n,f) falls inside the first region — the upper half of the heavy fragment
+peak, `A ≳ 141` — where the undeformed constant overestimates `a` by about 23 %. Since
+`Ē_r = a T²`, that is a ~10 % deficit in `T` and, through `⟨ε⟩ = 2T`, in the mean emitted
+neutron energy, concentrated entirely on the heavy fragment.
+"""
+function is_deformed_gilbert_cameron(nuclide::Nuclide)
+    Z = nuclide.Z
+    N = neutron_number(nuclide)
+    (54 <= Z <= 78 && 86 <= N <= 122) && return true
+    (86 <= Z <= 122 && 130 <= N <= 182) && return true
+    return 11 <= Z <= 19
+end
 
 """
     BackShiftedFermiGas(table)
@@ -302,8 +340,9 @@ function level_density_parameter(model::GilbertCameron, nuclide::Nuclide)
     S_proton === nothing && return nothing
     S_neutron = get(model.corrections.neutron, neutron_number(nuclide), nothing)
     S_neutron === nothing && return nothing
-    a =
-        nuclide.A *
-        (GILBERT_CAMERON_SHELL_WEIGHT * (S_proton + S_neutron) + GILBERT_CAMERON_OFFSET)
+    offset =
+        is_deformed_gilbert_cameron(nuclide) ? GILBERT_CAMERON_OFFSET_DEFORMED :
+        GILBERT_CAMERON_OFFSET_UNDEFORMED
+    a = nuclide.A * (GILBERT_CAMERON_SHELL_WEIGHT * (S_proton + S_neutron) + offset)
     return a > 0 ? a : nothing
 end

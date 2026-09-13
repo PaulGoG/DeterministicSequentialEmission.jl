@@ -21,6 +21,8 @@ export Nuclide, NEUTRON, neutron_number, element_symbol
 export FissioningSystem, spontaneous_fission, neutron_induced_fission, symmetric_mass
 export TableSpec, DataTable, read_table, column, column_or, integer_column, has_column
 export MassTable,
+    MASS_EXCESS_SPEC,
+    LEGACY_MASS_EXCESS_SPEC,
     read_mass_table,
     mass_excess,
     separation_energy,
@@ -50,6 +52,7 @@ export LevelDensityModel,
     ShellCorrections,
     read_shell_corrections,
     GilbertCameron,
+    is_deformed_gilbert_cameron,
     BackShiftedFermiGas,
     level_density_parameter,
     shell_correction,

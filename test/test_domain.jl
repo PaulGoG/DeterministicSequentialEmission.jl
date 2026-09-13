@@ -1,4 +1,4 @@
-@testset "fragmentation domain" begin
+POLARIZATION_AVAILABLE && @testset "fragmentation domain" begin
     domain = cf252_domain()
 
     # 49 heavy masses × 5 charge numbers, the configuration of the archived run.
@@ -34,7 +34,7 @@
     @test entry.probability ≈ charge_probability(entry.light.Z, 98 - Zₚ, rms)
 end
 
-@testset "symmetric splits" begin
+POLARIZATION_AVAILABLE && @testset "symmetric splits" begin
     domain = cf252_domain()
     symmetric = filter(is_symmetric, domain.entries)
 

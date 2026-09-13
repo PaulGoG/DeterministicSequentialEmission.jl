@@ -1,8 +1,24 @@
+# Input data. Third-party scientific data — an atomic mass evaluation, charge distribution and
+# shell correction systematics, a resonance parameter library, and experimental fragment mass
+# yields. None of it originates with this package and the licence on this code does not extend
+# to it, so it is held locally and documented rather than redistributed. data/README.md records
+# what each file is and where to obtain it, and is tracked.
+#
+# The one exception is the atomic mass evaluation, published openly and small enough to ship.
+# Keeping it means the reference tests run on a bare clone.
+/data/*
+!/data/README.md
+!/data/mass_excess/
+/data/mass_excess/*
+!/data/mass_excess/ame2020.dat
+
+# The prototype's own flat input layout, retained locally while the port finishes.
+/input_data/
+
 # Generated results
 *_output_data/
 *_plots/
 /plots/
-/data/sims/
 
 # Libraries do not pin a manifest; each environment resolves against [compat].
 Manifest.toml

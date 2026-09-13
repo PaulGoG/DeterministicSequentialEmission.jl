@@ -30,8 +30,7 @@ end
 
 @testset "energetics of one configuration" begin
     table = mass_table()
-    domain = cf252_domain()
-    entry = first(filter(e -> e.heavy == Nuclide(52, 134), domain.entries))
+    entry = fragmentation_at(134, 52)
 
     result = energetics(table, CF252, entry, 180.0)
     @test result isa Energetics
@@ -42,7 +41,7 @@ end
     @test energetics(table, CF252, entry, 400.0) === nothing
 end
 
-@testset "sweeping the domain" begin
+POLARIZATION_AVAILABLE && @testset "sweeping the domain" begin
     table = mass_table()
     domain = cf252_domain()
     accepted, excluded = sweep_energetics(table, CF252, domain, CF252_TKE)

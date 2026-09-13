@@ -1,10 +1,24 @@
-@testset "shell correction file layout" begin
-    corrections = read_shell_corrections(joinpath(INPUT, "Aux files", "SZSN.GC"))
+SHELL_CORRECTIONS_AVAILABLE && @testset "shell correction file layout" begin
+    corrections = read_shell_corrections(
+        joinpath(DATA, "level_density", "shell_corrections_gilbert_cameron.dat"),
+    )
 
     # Pinned to the file's own header, `n S(N) S(Z)`. The prototype declares the two columns
     # the other way round, and because S(Z) is looked up at the proton number while S(N) is
     # looked up at the neutron number, the swap is not absorbed by their sum.
-    header = split(strip(first(readlines(joinpath(INPUT, "Aux files", "SZSN.GC")))))
+    header = split(
+        strip(
+            first(
+                readlines(
+                    joinpath(
+                        DATA,
+                        "level_density",
+                        "shell_corrections_gilbert_cameron.dat",
+                    ),
+                ),
+            ),
+        ),
+    )
     @test header[2] == "S(N)"
     @test header[3] == "S(Z)"
     @test corrections.neutron[11] ≈ 6.80
@@ -106,12 +120,49 @@ end
     # Unavailable rather than an error where the neighbouring masses are not tabulated.
     @test level_density_parameter(model, Nuclide(1, 1)) === nothing
 
-    corrections = read_shell_corrections(joinpath(INPUT, "Aux files", "SZSN.GC"))
-    gilbert = GilbertCameron(corrections)
-    a_gc = level_density_parameter(gilbert, Nuclide(52, 134))
-    @test a_gc !== nothing
-    @test 0.05 * 134 < a_gc < 0.2 * 134
+    if SHELL_CORRECTIONS_AVAILABLE
+        gilbert = GilbertCameron(read_shell_corrections(SHELL_CORRECTION_FILE))
+        a_gc = level_density_parameter(gilbert, Nuclide(52, 134))
+        @test a_gc !== nothing
+        @test 0.05 * 134 < a_gc < 0.2 * 134
 
-    # Outside the tabulated nucleon numbers the systematics simply has nothing to say.
-    @test level_density_parameter(gilbert, Nuclide(2, 4)) === nothing
+        # Outside the tabulated nucleon numbers the systematics simply has nothing to say.
+        @test level_density_parameter(gilbert, Nuclide(2, 4)) === nothing
+    end
+end
+
+@testset "the Gilbert-Cameron deformed region" begin
+    # The paper's own definition, p. 1459: two rectangles in (Z, N), bounds inclusive.
+    @test is_deformed_gilbert_cameron(Nuclide(58, 148))    # Z=58, N=90 — heavy fragment peak
+    @test is_deformed_gilbert_cameron(Nuclide(54, 140))    # on the lower corner, Z=54, N=86
+    @test is_deformed_gilbert_cameron(Nuclide(78, 200))    # upper corner of the first region
+    @test !is_deformed_gilbert_cameron(Nuclide(52, 134))   # Z=52 below it, N=82 magic
+    @test !is_deformed_gilbert_cameron(Nuclide(40, 100))   # light fragment, undeformed
+    @test !is_deformed_gilbert_cameron(Nuclide(54, 136))   # Z in range, N=82 is not
+    @test is_deformed_gilbert_cameron(Nuclide(94, 239))    # second region
+    @test is_deformed_gilbert_cameron(Nuclide(15, 31))     # light nuclei, p. 1464
+    @test !is_deformed_gilbert_cameron(Nuclide(25, 55))    # 20 ≤ Z ≤ 29 follows line I
+end
+
+SHELL_CORRECTIONS_AVAILABLE && @testset "the two Gilbert-Cameron branches" begin
+    gilbert = GilbertCameron(read_shell_corrections(SHELL_CORRECTION_FILE))
+
+    # The branches differ by the intercept alone, 0.142 − 0.120 = 0.022 per nucleon, so the
+    # deformed one is lower by exactly 0.022 A. Checked on a fragment inside the region.
+    deformed = Nuclide(58, 148)
+    @test is_deformed_gilbert_cameron(deformed)
+    a = level_density_parameter(gilbert, deformed)
+    corrections = read_shell_corrections(SHELL_CORRECTION_FILE)
+    S = corrections.proton[58] + corrections.neutron[90]
+    undeformed_value = 148 * (0.00917 * S + 0.142)
+    @test undeformed_value - a ≈ 0.022 * 148
+
+    # Roughly a fifth: the size of the correction on the heavy fragment peak.
+    @test 0.15 < (undeformed_value - a) / a < 0.35
+
+    # Z ≥ 99 has no tabulated S(Z). The file pads it with zeros; the reader must not store
+    # them, or the systematics silently answers where the paper says nothing.
+    # Both have a tabulated S(N); they differ only in whether S(Z) exists.
+    @test level_density_parameter(gilbert, Nuclide(99, 240)) === nothing
+    @test level_density_parameter(gilbert, Nuclide(98, 240)) !== nothing
 end

@@ -63,7 +63,6 @@ end
 
 @testset "excitation energy ratio against the archived run" begin
     table = mass_table()
-    domain = cf252_domain()
 
     # The parameterization the archived run used, transcribed from its own provenance header.
     method = ExcitationEnergyRatio(
@@ -81,13 +80,10 @@ end
     expected_heavy = column(reference, :E_excit_H, Float64)
     @test length(reference) == 1200
 
-    by_fragmentation =
-        Dict((entry.heavy.A, entry.heavy.Z) => entry for entry in domain.entries)
-
     worst = 0.0
     checked = 0
     for row in eachindex(masses)
-        fragmentation = by_fragmentation[(masses[row], charges[row])]
+        fragmentation = fragmentation_at(masses[row], charges[row])
         balance = energetics(table, CF252, fragmentation, energies[row])
         @test balance !== nothing
         balance === nothing && continue
@@ -103,7 +99,7 @@ end
     @test worst < 1e-8
 end
 
-@testset "partition conserves TXE" begin
+POLARIZATION_AVAILABLE && @testset "partition conserves TXE" begin
     table = mass_table()
     domain = cf252_domain()
     method = ExcitationEnergyRatio(
@@ -123,15 +119,13 @@ end
 
 @testset "a split into two copies of one nuclide divides evenly" begin
     table = mass_table()
-    domain = cf252_domain()
     model = BackShiftedFermiGas(table)
 
     # A_H = A_L = 126 with Z_H = Z_L = 49: the two fragments are the same nuclide, so they have
     # the same level density parameter and the same temperature identically. E*_L = E*_H is a
     # symmetry, and no parameterization of A_H can be relied on to produce it.
-    identical = only(
-        entry for entry in domain.entries if entry.heavy == entry.light == Nuclide(49, 126)
-    )
+    identical = fragmentation_at(126, 49)
+    @test identical.heavy == identical.light == Nuclide(49, 126)
     balance = energetics(table, CF252, identical, 160.0)
     TXE = value(balance.TXE)
 
@@ -158,7 +152,7 @@ end
 
     # A mass-symmetric split with unequal charges is a different matter: the fragments are
     # distinct nuclides, a_L ≠ a_H, and the prescription must be applied as given.
-    unequal = only(entry for entry in domain.entries if entry.heavy == Nuclide(50, 126))
+    unequal = fragmentation_at(126, 50)
     @test unequal.light == Nuclide(48, 126)
     split = partition(
         TemperatureRatio(JointedSegments([(126, 1.2), (174, 1.2)]), model),
@@ -171,7 +165,6 @@ end
 
 @testset "temperature ratio against the archived run" begin
     table = mass_table()
-    domain = cf252_domain()
     model = BackShiftedFermiGas(table)
 
     # The second archived run, whose R_T pivots come from its own provenance header. The
@@ -201,13 +194,10 @@ end
     expected_heavy = column(reference, :E_excit_H, Float64)
     @test length(reference) == 1200
 
-    by_fragmentation =
-        Dict((entry.heavy.A, entry.heavy.Z) => entry for entry in domain.entries)
-
     worst = 0.0
     checked = 0
     for row in eachindex(masses)
-        fragmentation = by_fragmentation[(masses[row], charges[row])]
+        fragmentation = fragmentation_at(masses[row], charges[row])
         balance = energetics(table, CF252, fragmentation, energies[row])
         @test balance !== nothing
         balance === nothing && continue
@@ -225,7 +215,6 @@ end
 
 @testset "temperature ratio partition" begin
     table = mass_table()
-    domain = cf252_domain()
     model = BackShiftedFermiGas(table)
 
     method = TemperatureRatio(
@@ -241,7 +230,7 @@ end
         model,
     )
 
-    fragmentation = first(filter(e -> e.heavy == Nuclide(52, 134), domain.entries))
+    fragmentation = fragmentation_at(134, 52)
     balance = energetics(table, CF252, fragmentation, 180.0)
     split = partition(method, fragmentation, value(balance.TXE))
     @test split !== nothing
@@ -264,8 +253,7 @@ end
 @testset "scission modelling partition" begin
     table = mass_table()
     model = BackShiftedFermiGas(table)
-    domain = cf252_domain()
-    fragmentation = first(filter(e -> e.heavy == Nuclide(52, 134), domain.entries))
+    fragmentation = fragmentation_at(134, 52)
 
     # With no extra deformation the split reduces to thermal equilibrium at scission,
     # E*_L/E*_H = a_L/a_H, the same limit the temperature ratio reaches at R_T = 1.

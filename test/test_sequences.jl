@@ -76,9 +76,6 @@ end
     expected_E = column(reference, :E_r, Float64)
     expected_ε = column(reference, :eps, Float64)
 
-    domain = cf252_domain()
-    by_fragmentation =
-        Dict((entry.heavy.A, entry.heavy.Z) => entry for entry in domain.entries)
     method = ExcitationEnergyRatio(
         JointedSegments([(126, 0.5), (130, 0.14), (150, 0.607), (174, 0.865)]),
     )
@@ -87,7 +84,7 @@ end
     for row in eachindex(masses)
         key = (masses[row], charges[row], energies[row], sides[row])
         haskey(chains, key) && continue
-        fragmentation = by_fragmentation[(masses[row], charges[row])]
+        fragmentation = fragmentation_at(masses[row], charges[row])
         balance = energetics(table, CF252, fragmentation, energies[row])
         split = partition(method, fragmentation, value(balance.TXE))
         fragment = sides[row] == "L" ? fragmentation.light : fragmentation.heavy
@@ -151,13 +148,12 @@ end
     table = mass_table()
     model = BackShiftedFermiGas(table)
     cross_section = VariableCrossSection()
-    domain = cf252_domain()
     method = ExcitationEnergyRatio(
         JointedSegments([(126, 0.5), (130, 0.14), (150, 0.607), (174, 0.865)]),
     )
 
     # A_H = 134, Z_H = 52 at TKE = 150 MeV: the archive writes zeros for the light fragment.
-    fragmentation = first(filter(e -> e.heavy == Nuclide(52, 134), domain.entries))
+    fragmentation = fragmentation_at(134, 52)
     balance = energetics(table, CF252, fragmentation, 150.0)
     split = partition(method, fragmentation, value(balance.TXE))
 

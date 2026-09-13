@@ -35,10 +35,24 @@ end
 """
     MASS_EXCESS_SPEC
 
-Layout of the tabulated mass-excess files: `Z A symbol Δ σ(Δ)`, whitespace-delimited, no
-header row, with the mass excess and its uncertainty in keV.
+Layout of the tabulated mass-excess files: one header row, then `Z A element Δ σ(Δ)`,
+whitespace-delimited, with the mass excess and its uncertainty in keV.
+
+This is the layout of `data/mass_excess/ame2020.dat`, the one data file the package ships.
 """
-const MASS_EXCESS_SPEC = TableSpec([:Z, :A, :symbol, :excess, :uncertainty]; skip = 0)
+const MASS_EXCESS_SPEC = TableSpec([:Z, :A, :symbol, :excess, :uncertainty]; skip = 1)
+
+"""
+    LEGACY_MASS_EXCESS_SPEC
+
+The same five columns without a header row, which is how the `.ANA` tables are written.
+
+```julia
+read_mass_table("AME2020.ANA"; spec = LEGACY_MASS_EXCESS_SPEC)
+```
+"""
+const LEGACY_MASS_EXCESS_SPEC =
+    TableSpec([:Z, :A, :symbol, :excess, :uncertainty]; skip = 0)
 
 const KEV_TO_MEV = 1.0e-3
 

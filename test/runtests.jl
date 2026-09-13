@@ -2,7 +2,7 @@ using Test
 using Measurements: value, uncertainty
 using DeterministicSequentialEmission
 
-const INPUT = joinpath(@__DIR__, "..", "input_data")
+const DATA = joinpath(@__DIR__, "..", "data")
 const REFERENCE = joinpath(@__DIR__, "references")
 
 include("physics.jl")

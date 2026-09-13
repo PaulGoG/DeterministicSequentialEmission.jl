@@ -1,4 +1,4 @@
-@testset "charge polarization" begin
+POLARIZATION_AVAILABLE && @testset "charge polarization" begin
     polarization = cf252_polarization()
     @test polarization_at(polarization, 126) ≈ 0.41847
     @test width_at(polarization, 126) ≈ 0.50029
@@ -14,13 +14,23 @@
 end
 
 @testset "a mass column written in floating point still reads" begin
-    # DeltaZ_rms_A.U5 tabulates its mass column as 118.0, 119.0, … because a generator wrote
-    # it out in floating point. Read strictly as Int the file cannot be loaded at all, which
-    # blocked 235-U entirely.
-    path = joinpath(@__DIR__, "..", "input_data", "U-235", "DeltaZ_rms_A.U5")
-    polarization = read_charge_polarization(path)
-    @test polarization_at(polarization, 118) ≈ 0.00137468
-    @test width_at(polarization, 118) ≈ 0.62081
+    # The 235-U table writes its mass column as 118.0, 119.0, … because a generator emitted it
+    # in floating point. Read strictly as Int the file cannot be loaded at all, which blocked
+    # 235-U entirely. Checked against the shipped table where it is present, and against a
+    # written fixture regardless, so the behaviour is pinned on a bare clone too.
+    if U235_POLARIZATION_AVAILABLE
+        polarization = read_charge_polarization(U235_POLARIZATION_FILE)
+        @test polarization_at(polarization, 118) ≈ 0.00137468
+        @test width_at(polarization, 118) ≈ 0.62081
+    end
+
+    mktempdir() do dir
+        floating = joinpath(dir, "floating.dat")
+        write(floating, "A ΔZ rms\n118.0 0.00137468 0.62081\n119.0 0.0766041 0.6204323\n")
+        polarization = read_charge_polarization(floating)
+        @test polarization_at(polarization, 118) ≈ 0.00137468
+        @test width_at(polarization, 118) ≈ 0.62081
+    end
 
     # A genuinely fractional nucleon number is still an error, and says what it could not read.
     mktempdir() do dir
