@@ -154,11 +154,18 @@ Four things that look like bugs and are not. They are preserved in the rewrite.
 
 ## The thesis
 
-`Lucrare_disertatie_2023.pdf` is the submitted thesis rebuilt from its LaTeX source with
-orthographic and grammatical corrections, Romanian quotation marks, a repointed source-code
-citation, and one corrected intermediate expression in the appendix proof of root uniqueness —
-verified not to affect that proof's conclusion. The argument, structure, figures and numerical
-results are as submitted.
+`MSc_thesis_2023.pdf` is the submitted thesis rebuilt from its LaTeX source with orthographic
+and grammatical corrections, Romanian quotation marks, a repointed source-code citation, and one
+corrected intermediate expression in the appendix proof of root uniqueness — verified not to
+affect that proof's conclusion. The argument, structure, figures and numerical results are as
+submitted.
+
+A typographic pass follows: margin kerning and font expansion, vertical spacing left ragged
+rather than stretched, the one side-by-side figure pair that overran the text block brought back
+to the 8 cm the document uses everywhere else, and the two moment integrals of the appendix
+broken after their substitution annotation. The submitted source carried 8 overfull lines, the
+worst nearly a centimetre into the margin, and 6 pages padded to justify their height; the
+rebuild carries none. The document is still 48 pages and no wording changed.
 
 ## Licence
 
