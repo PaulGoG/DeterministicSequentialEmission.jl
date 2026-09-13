@@ -21,6 +21,7 @@ include("physics.jl")
     include("test_yields.jl")
     include("test_averaging.jl")
     include("test_spectrum.jl")
+    include("test_configuration.jl")
 
     @testset "quality" begin
         using Aqua

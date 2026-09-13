@@ -60,14 +60,46 @@ jobs:
           using Pkg
           Pkg.add(; name = "JuliaFormatter", version = "2")
           using JuliaFormatter
-          # The prototype sources still at the repository root are excluded until they
-          # have been ported under src/; reformatting them would only obscure the port diff.
-          targets = ["src", "test", "docs"]
+          targets = ["src", "test", "docs", "scripts", "plotting"]
           formatted = all(t -> format(t, verbose = true, overwrite = false), targets)
           if !formatted
-              @error "Some files are not formatted. Run JuliaFormatter.format.([\"src\", \"test\", \"docs\"]) locally."
+              @error "Some files are not formatted. Run JuliaFormatter.format.($targets) locally."
               exit(1)
           end
+  config:
+    name: Configuration
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: '1'
+      - uses: julia-actions/cache@v2
+      - uses: julia-actions/julia-buildpkg@v1
+      # A configuration is only useful if it is valid, and the input data it names does not ship,
+      # so the check is that every shipped file parses and that the loader refuses it for the one
+      # reason it should: a missing input, named.
+      - name: Every shipped configuration parses and fails only on absent data
+        shell: julia --project --color=yes {0}
+        run: |
+          using DeterministicSequentialEmission, TOML
+          for file in sort(readdir("config"; join = true))
+              document = TOML.parsefile(file)
+              for section in ("system", "fragmentation", "energetics", "level_density",
+                              "evaporation", "partition", "output")
+                  haskey(document, section) || error("$file has no [$section]")
+              end
+              try
+                  load_configuration(file)
+                  @info "loaded" file
+              catch err
+                  err isa ArgumentError || rethrow()
+                  occursin("does not exist", err.msg) ||
+                      error("$file was rejected for something other than absent data: $(err.msg)")
+                  @info "input data absent, as expected on a bare clone" file
+              end
+          end
+
   docs:
     name: Documentation
     runs-on: ubuntu-latest
