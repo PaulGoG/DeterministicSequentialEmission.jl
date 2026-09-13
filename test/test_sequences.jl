@@ -56,13 +56,37 @@ end
     @test residual_temperature(constant, a, 100.0; maximum_temperature = 2.0) === nothing
 end
 
-@testset "sequential emission against the archived run" begin
+@testset "sequential emission against the archived runs" for (label, file, method) in [
+    (
+        "E*_H/TXE (A_H)",
+        "CF52_sequences_PARAM.dat",
+        ExcitationEnergyRatio(
+            JointedSegments([(126, 0.5), (130, 0.14), (150, 0.607), (174, 0.865)]),
+        ),
+    ),
+    (
+        "R_T (A_H)",
+        "CF52_sequences_RT.dat",
+        TemperatureRatio(
+            JointedSegments([
+                (126, 1.0),
+                (130, 1.734),
+                (134, 1.28),
+                (138, 1.28),
+                (150, 0.9),
+                (167, 0.68),
+                (174, 0.59),
+            ]),
+            BackShiftedFermiGas(mass_table()),
+        ),
+    ),
+]
     table = mass_table()
     model = BackShiftedFermiGas(table)
     cross_section = VariableCrossSection()
 
     reference = read_table(
-        joinpath(REFERENCE, "CF52_sequences.dat"),
+        joinpath(REFERENCE, file),
         TableSpec([:A_H, :Z_H, :TKE, :side, :k, :S_n, :a, :T, :E_r, :eps]; skip = 1),
     )
     masses = column(reference, :A_H, Int)
@@ -75,10 +99,6 @@ end
     expected_T = column(reference, :T, Float64)
     expected_E = column(reference, :E_r, Float64)
     expected_ε = column(reference, :eps, Float64)
-
-    method = ExcitationEnergyRatio(
-        JointedSegments([(126, 0.5), (130, 0.14), (150, 0.607), (174, 0.865)]),
-    )
 
     chains = Dict{Tuple{Int, Int, Float64, String}, EmissionChain}()
     for row in eachindex(masses)
@@ -130,7 +150,7 @@ end
         end
     end
 
-    @test compared > 150
+    @test compared > 600
     @test worst_S < 1e-8
     @test worst_a < 1e-8
     # The archived temperatures are rounded to eight decimals; the root itself is found by
