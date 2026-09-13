@@ -41,6 +41,31 @@ end
     @test energetics(table, CF252, entry, 400.0) === nothing
 end
 
+POLARIZATION_AVAILABLE && @testset "the kinetic energy grid is validated" begin
+    table = mass_table()
+    domain = cf252_domain()
+
+    # TKE is the other swept axis of the model and it was reaching the sweep unchecked, while
+    # the mass range beside it is fully validated. It is not a harmless omission: since
+    # TXE = Q + E*_CN − TKE, a negative TKE *raises* the excitation energy, so the
+    # configurations pass the TXE > 0 test and the sweep returns results. This grid used to
+    # yield 490 accepted configurations and no complaint.
+    @test_throws ArgumentError sweep_energetics(table, CF252, domain, [-50.0, -10.0])
+
+    # An empty grid used to give a sweep of zero records, indistinguishable from a physical
+    # exclusion.
+    @test_throws ArgumentError sweep_energetics(table, CF252, domain, Float64[])
+
+    @test_throws ArgumentError sweep_energetics(table, CF252, domain, [130.0, NaN])
+    @test_throws ArgumentError sweep_energetics(table, CF252, domain, 230.0:-2.0:130.0)
+    @test_throws ArgumentError sweep_energetics(table, CF252, domain, [130.0, 130.0])
+    @test_throws ArgumentError sweep_energetics(table, CF252, domain, [0.0, 130.0])
+
+    # A valid grid still sweeps.
+    accepted, excluded = sweep_energetics(table, CF252, domain, [150.0, 180.0])
+    @test !isempty(accepted)
+end
+
 POLARIZATION_AVAILABLE && @testset "sweeping the domain" begin
     table = mass_table()
     domain = cf252_domain()

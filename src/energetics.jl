@@ -135,6 +135,47 @@ struct ExcludedConfiguration
 end
 
 """
+    _validate_kinetic_energies(kinetic_energies)
+
+Check the swept `TKE` grid the way [`fragmentation_domain`](@ref) checks the mass range.
+
+It is the other swept axis of the model and it was reaching the sweep unvalidated, which is not
+harmless: `TXE = Q + E*_CN − TKE`, so a negative `TKE` *raises* the excitation energy and the
+configuration passes the `TXE > 0` test. A grid of `[-50.0, -10.0]` produced 490 accepted
+configurations and no complaint. An empty grid produced a sweep of zero records, which looks
+like a physical exclusion rather than a bad argument.
+
+Ascending and distinct is required rather than merely tidy: the sweep emits in grid order, so a
+permuted grid permutes the output for no stated reason.
+"""
+function _validate_kinetic_energies(kinetic_energies::AbstractVector{<:Real})
+    isempty(kinetic_energies) &&
+        throw(ArgumentError("the kinetic energy grid is empty; nothing would be swept"))
+    # Ascending and distinct fall out of one adjacency test, which also keeps this off Base's
+    # `allunique` specialisation for abstractly typed vectors — a path the static analysis
+    # cannot follow through its reinterpret and reshape layers.
+    start = firstindex(kinetic_energies)
+    for index in eachindex(kinetic_energies)
+        TKE = Float64(kinetic_energies[index])
+        isfinite(TKE) ||
+            throw(ArgumentError("kinetic energy number $index of the grid is not finite"))
+        TKE > 0 || throw(
+            ArgumentError(
+                "total kinetic energy must be positive; entry $index is $TKE MeV",
+            ),
+        )
+        index == start && continue
+        previous = Float64(kinetic_energies[index - 1])
+        previous < TKE || throw(
+            ArgumentError(
+                "the grid must ascend strictly; entry $index is $TKE after $previous",
+            ),
+        )
+    end
+    return nothing
+end
+
+"""
     sweep_energetics(table, system, domain, kinetic_energies)
         -> (Vector{Energetics}, Vector{ExcludedConfiguration})
 
@@ -148,6 +189,8 @@ function sweep_energetics(
     domain::FragmentationDomain,
     kinetic_energies::AbstractVector{<:Real},
 )
+    _validate_kinetic_energies(kinetic_energies)
+
     accepted = Energetics[]
     excluded = ExcludedConfiguration[]
     sizehint!(accepted, length(domain) * length(kinetic_energies))

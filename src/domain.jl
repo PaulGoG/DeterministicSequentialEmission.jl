@@ -35,9 +35,12 @@ The deterministic set of fragmentations the model sweeps: every heavy mass in
 `heavy_masses`, each with `charges_per_mass` charge numbers around `Zₚ(A)`, paired with its
 complement.
 
-Entries are sorted by heavy mass and then by heavy charge, as whole rows. The prototype
-sorted the mass and charge columns independently and then looked values up by `(A, Z)`, which
-can pair a mass with a charge that never occurred together.
+Entries are sorted by heavy mass and then by heavy charge, as whole rows. The prototype sorted
+the mass and charge columns independently and then looked each value up by `(A, Z)`, taking the
+first match. Sorting whole rows is `O(N log N)` against that lookup's `O(N²)` and cannot depend
+on a first match, but the stronger claim once made here — that the column-wise sort mispairs a
+mass with a charge — was checked and could not be reproduced: over a full domain the two agree
+on every row, because the charges are grouped by `unique(sort(A))` and so stay with their mass.
 """
 struct FragmentationDomain
     system::FissioningSystem
