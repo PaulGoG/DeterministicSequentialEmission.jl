@@ -41,7 +41,8 @@ DeterministicSequentialEmission.jl/
 ├── test/                 test suite, own environment (Aqua, JET, ExplicitImports)
 ├── docs/                 Documenter site, own environment
 ├── data/                 input data — see data/README.md; only the mass evaluation ships
-├── figures/              the two figures above
+├── figures/              the two figures above, and a diagnostic panel of the
+│                        residual quantities, which is not tracked
 ├── results/              written by a run, one directory per system — not tracked
 ├── formatter/            pinned JuliaFormatter, so the gate cannot drift
 ├── check.jl              the gate CI applies: format, then test
@@ -75,6 +76,10 @@ Redraw the figures from what those runs wrote, without solving anything again:
 ```
 julia --project=plotting plotting/figures.jl
 ```
+
+That draws the two figures above from every system a run has written, and a third panel of the
+quantities internal to the emission chain — `E*(A)`, `Ē_r(A)`, `⟨T⟩(A)`, `⟨ε⟩(A)`. Those have no
+experimental counterpart, so the third figure is a diagnostic and is not tracked.
 
 Run the test suite, and build the documentation:
 
