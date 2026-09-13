@@ -7,8 +7,8 @@ Zero for spontaneous fission. For neutron-induced fission it is the neutron sepa
 of the compound nucleus plus the incident kinetic energy, `E*_CN = Sₙ(A₀,Z₀) + Eₙ`. Returns
 `nothing` when `Sₙ` cannot be formed from the mass table.
 """
-function compound_nucleus_excitation(table::MassTable, system::FissioningSystem)
-    system.spontaneous && return measurement(0.0, 0.0)
+function compound_nucleus_excitation(table::MassExcessTable, system::FissioningSystem)
+    is_spontaneous(system) && return measurement(0.0, 0.0)
     Sₙ = neutron_separation_energy(table, system.compound)
     Sₙ === nothing && return nothing
     return Sₙ + system.incident_energy
@@ -102,7 +102,7 @@ The energy balance of one fragmentation at one kinetic energy, or `nothing` when
 configuration is unphysical — a missing mass excess, a non-positive `Q`, or `TXE ≤ 0`.
 """
 function energetics(
-    table::MassTable,
+    table::MassExcessTable,
     system::FissioningSystem,
     fragmentation::Fragmentation,
     TKE::Real,
@@ -117,19 +117,19 @@ function energetics(
 end
 
 """
-    ExcludedConfiguration
+    Exclusion
 
 Why one `(fragmentation, TKE)` configuration was left out of a sweep.
 
 The prototype drops such configurations silently, so coverage cannot be audited from its
 output: the archived ²⁵²Cf(SF) run writes 9819 records against a declared grid of 12 495.
 """
-struct ExcludedConfiguration
+struct Exclusion
     fragmentation::Fragmentation
     TKE::Float64
     reason::Symbol
 
-    function ExcludedConfiguration(fragmentation::Fragmentation, TKE::Real, reason::Symbol)
+    function Exclusion(fragmentation::Fragmentation, TKE::Real, reason::Symbol)
         return new(fragmentation, Float64(TKE), reason)
     end
 end
@@ -177,14 +177,14 @@ end
 
 """
     sweep_energetics(table, system, domain, kinetic_energies)
-        -> (Vector{Energetics}, Vector{ExcludedConfiguration})
+        -> (Vector{Energetics}, Vector{Exclusion})
 
 Evaluate the energy balance over the whole domain and TKE grid, returning both what survived
 and what did not, each exclusion carrying its reason: `:missing_mass`, `:nonpositive_q` or
 `:nonpositive_txe`.
 """
 function sweep_energetics(
-    table::MassTable,
+    table::MassExcessTable,
     system::FissioningSystem,
     domain::FragmentationDomain,
     kinetic_energies::AbstractVector{<:Real},
@@ -192,7 +192,7 @@ function sweep_energetics(
     _validate_kinetic_energies(kinetic_energies)
 
     accepted = Energetics[]
-    excluded = ExcludedConfiguration[]
+    excluded = Exclusion[]
     sizehint!(accepted, length(domain) * length(kinetic_energies))
 
     E_compound = compound_nucleus_excitation(table, system)
@@ -208,17 +208,14 @@ function sweep_energetics(
         if Q === nothing
             reason = _q_failure_reason(table, system, fragmentation.heavy)
             for TKE in kinetic_energies
-                push!(excluded, ExcludedConfiguration(fragmentation, Float64(TKE), reason))
+                push!(excluded, Exclusion(fragmentation, Float64(TKE), reason))
             end
             continue
         end
         for TKE in kinetic_energies
             TXE = total_excitation_energy(Q, E_compound, TKE)
             if TXE === nothing
-                push!(
-                    excluded,
-                    ExcludedConfiguration(fragmentation, Float64(TKE), :nonpositive_txe),
-                )
+                push!(excluded, Exclusion(fragmentation, Float64(TKE), :nonpositive_txe))
             else
                 push!(accepted, Energetics(fragmentation, Float64(TKE), Q, TXE))
             end
@@ -227,7 +224,7 @@ function sweep_energetics(
     return accepted, excluded
 end
 
-function _q_failure_reason(table::MassTable, system::FissioningSystem, heavy::Nuclide)
+function _q_failure_reason(table::MassExcessTable, system::FissioningSystem, heavy::Nuclide)
     light = complementary_fragment(system, heavy)
     if !haskey(table, heavy) || !haskey(table, light) || !haskey(table, system.compound)
         return :missing_mass
@@ -240,7 +237,7 @@ end
 
 Count the excluded configurations by reason, for the run's provenance record.
 """
-function exclusion_summary(excluded::AbstractVector{ExcludedConfiguration})
+function exclusion_summary(excluded::AbstractVector{Exclusion})
     counts = Dict{Symbol, Int}()
     for exclusion in excluded
         counts[exclusion.reason] = get(counts, exclusion.reason, 0) + 1

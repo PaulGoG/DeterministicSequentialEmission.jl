@@ -35,7 +35,7 @@ about 8 % soft in `⟨E⟩`, 1.96 MeV against 2.13, and the deficit is in the ta
 ```
 DeterministicSequentialEmission.jl/
 ├── src/                  library code behind the public interface
-├── config/               one TOML per fissioning system, validated on load
+├── config/               one TOML per fissioning system, named for it, validated on load
 ├── scripts/run.jl        entry point: solve a system and write its tables
 ├── plotting/             CairoMakie environment; redraws figures from those tables
 ├── test/                 test suite, own environment (Aqua, JET, ExplicitImports)
@@ -43,7 +43,7 @@ DeterministicSequentialEmission.jl/
 ├── data/                 input data — see data/README.md; only the mass evaluation ships
 ├── figures/              the two figures above, and a diagnostic panel of the
 │                        residual quantities, which is not tracked
-├── results/              written by a run, one directory per system — not tracked
+├── results/              written by a run, results/<system>/<run> — not tracked
 ├── formatter/            pinned JuliaFormatter, so the gate cannot drift
 ├── check.jl              the gate CI applies: format, then test
 ├── activate.jl           activates and instantiates the root environment
@@ -62,14 +62,16 @@ julia plotting/activate.jl             # plotting environment
 Solve one fissioning system:
 
 ```
-julia --project scripts/run.jl config/Cf252_0f.toml
+julia --project scripts/run.jl config/Cf252_sf.toml
 ```
 
-That writes `results/Cf252_0f/`: `ν(A)`, `T(A)`, `E*(A)`, the residual quantities, the
-projections against total kinetic energy, the fragment yield projections, the laboratory
-spectrum, a table of totals, and a `metadata.toml` recording the configuration, the package
-version, the commit and the platform. Nothing is overwritten — a directory that already holds a
-run is moved aside with a numbered suffix first.
+That writes `results/Cf252_sf/<run>/`: `nu_vs_A.dat`, `T_vs_A.dat`, `E_star_vs_A.dat`, the
+residual quantities, the projections against total kinetic energy, the fragment yield
+projections, the laboratory spectrum, a table of totals, and a `metadata.toml` recording the
+configuration, the package version, the commit and the platform. `<run>` is the run identifier,
+built from the configuration keys that change the result, so two runs of one system that differ
+in any of them land side by side rather than one displacing the other. Nothing is overwritten — a
+directory that already holds a run is moved aside with a numbered suffix first.
 
 Redraw the figures from what those runs wrote, without solving anything again:
 
@@ -101,21 +103,27 @@ julia check.jl --check    # report differences without rewriting
 
 ## Configuration
 
-Everything a run needs is in one file. `config/Cf252_0f.toml` is the annotated reference; the
-other four are the same file with the system changed. Each key carries its allowed values or its
+Everything a run needs is in one file. `config/Cf252_sf.toml` is the annotated reference; the
+other four are the same file with the system changed. Each is named for the system it declares,
+and the test suite asserts that, so a file cannot drift from what it runs. Each key carries its allowed values or its
 bounds as a comment, and the loader enforces exactly what the comment says — a configuration
 that cannot be honoured fails on load, naming the key.
 
 | System | Configuration | Note |
 |---|---|---|
-| ²⁵²Cf(sf) | `Cf252_0f.toml` | the archived thesis run's system |
-| ²³⁵U(n_th,f) | `U235_nf.toml` | |
-| ²³⁹Pu(n_th,f) | `Pu239_nf.toml` | |
-| ²³³U(n_th,f) | `U233_nf.toml` | no evaluated charge distribution and no `Y(A,TKE)`; both from systematics |
-| ²³⁵U(n,f) at 580 eV | `U235_nf_res.toml` | the resonance-region beam the GELINA measurements use |
+| ²⁵²Cf(sf) | `Cf252_sf.toml` | the archived thesis run's system |
+| ²³⁵U(nth,f) | `U235_nth.toml` | |
+| ²³⁹Pu(nth,f) | `Pu239_nth.toml` | |
+| ²³³U(nth,f) | `U233_nth.toml` | no evaluated charge distribution and no `Y(A,TKE)`; both from systematics |
+| ²³⁵U(nres,f) at 580 eV | `U235_nres.toml` | the resonance-region beam the GELINA measurements use |
+
+A system is named `<ElementSymbol><A>_<entrance channel>` — the channel as the field spells it, not
+as EXFOR codes it — and that one token names the configuration, the input tree under `data/` and
+the output tree under `results/`. It is also what separates the thermal run of ²³⁵U from the
+resonance one, which the reaction code `n,f` alone cannot.
 
 The last two are where the data runs out rather than where the model does. ²³³U has neither an
-evaluated `ΔZ(A)`, `rms(A)` nor a joint `Y(A, TKE)` anywhere in EXFOR, so the charge distribution
+evaluated `ΔZ(A)`, `σ_Z(A)` nor a joint `Y(A, TKE)` anywhere in EXFOR, so the charge distribution
 comes from the Wahl `Zₚ` systematics and the yield is reconstructed from the two marginals that
 were measured, `Y(A)` and `⟨TKE⟩(A)`, from the same experiment. Both substitutions are named in
 the configuration rather than assumed.
@@ -140,10 +148,10 @@ Tests needing anything else announce themselves as skipped rather than passing v
 `R_T(A_H)` need not be supplied by hand. [`FissionTemperatureRatio.jl`][ftr] extracts it from
 experimental prompt neutron multiplicity data and tabulates it at every integer `A_H`;
 [`ExforFissionData.jl`][exfor] retrieves that data, and the yields and spectra, from the IAEA
-EXFOR archive. `read_segments` reads what the first of those writes:
+EXFOR archive. `read_segmented_curve` reads what the first of those writes:
 
 ```julia
-segments = read_segments("R_T_parameterized_<set>_<run>.csv")
+segments = read_segmented_curve("R_T_parameterized_<set>_<run>.csv")
 method = TemperatureRatio(segments, BackShiftedFermiGas(masses))
 ```
 
@@ -198,6 +206,7 @@ second moment — over the whole domain.
 | Mass data, `Q`, `S_n`, `TXE` with uncertainties | done |
 | Fragmentation domain, `Z_p(A)`, `p(Z,A)` | done |
 | Charge distribution — evaluated tables, Wahl `Zₚ` systematics as fallback | done |
+| One name per quantity, from configuration key to column header (`docs/src/naming.md`) | done |
 | Level density parameter — Gilbert-Cameron, Egidy-Bucurescu BSFG | done |
 | TXE partition — scission modelling, `E*_H/TXE (A_H)`, `R_T (A_H)` | done |
 | Sequential equations — constant and variable evaporation cross section | done |

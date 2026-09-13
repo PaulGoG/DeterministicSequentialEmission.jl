@@ -1,35 +1,22 @@
 SHELL_CORRECTIONS_AVAILABLE && @testset "shell correction file layout" begin
-    corrections = read_shell_corrections(
-        joinpath(DATA, "level_density", "shell_corrections_gilbert_cameron.dat"),
-    )
+    corrections = read_shell_correction_table(SHELL_CORRECTION_FILE)
 
-    # Pinned to the file's own header, `n S(N) S(Z)`. The prototype declares the two columns
+    # The reader takes columns by position, so this guards the shipped file rather than the
+    # reader: the neutron correction comes first, `n S_N S_Z`. The prototype declares the two
     # the other way round, and because S(Z) is looked up at the proton number while S(N) is
     # looked up at the neutron number, the swap is not absorbed by their sum.
-    header = split(
-        strip(
-            first(
-                readlines(
-                    joinpath(
-                        DATA,
-                        "level_density",
-                        "shell_corrections_gilbert_cameron.dat",
-                    ),
-                ),
-            ),
-        ),
-    )
-    @test header[2] == "S(N)"
-    @test header[3] == "S(Z)"
-    @test corrections.neutron[11] ≈ 6.80
-    @test corrections.proton[11] ≈ -2.91
+    header = split(strip(first(readlines(SHELL_CORRECTION_FILE))))
+    @test header[2] == "S_N"
+    @test header[3] == "S_Z"
+    @test corrections.S_N[11] ≈ 6.80
+    @test corrections.S_Z[11] ≈ -2.91
 end
 
 @testset "back-shifted Fermi gas against the archived run" begin
     table = mass_table()
     model = BackShiftedFermiGas(table)
     reference = read_table(
-        joinpath(REFERENCE, "CF52_level_density.dat"),
+        joinpath(REFERENCE, "a_vs_A_H_Z_H.dat"),
         TableSpec([:A_H, :Z_H, :a_L, :a_H]; skip = 1),
     )
     heavy_masses = column(reference, :A_H, Int)
@@ -121,7 +108,7 @@ end
     @test level_density_parameter(model, Nuclide(1, 1)) === nothing
 
     if SHELL_CORRECTIONS_AVAILABLE
-        gilbert = GilbertCameron(read_shell_corrections(SHELL_CORRECTION_FILE))
+        gilbert = GilbertCameron(read_shell_correction_table(SHELL_CORRECTION_FILE))
         a_gc = level_density_parameter(gilbert, Nuclide(52, 134))
         @test a_gc !== nothing
         @test 0.05 * 134 < a_gc < 0.2 * 134
@@ -145,15 +132,15 @@ end
 end
 
 SHELL_CORRECTIONS_AVAILABLE && @testset "the two Gilbert-Cameron branches" begin
-    gilbert = GilbertCameron(read_shell_corrections(SHELL_CORRECTION_FILE))
+    gilbert = GilbertCameron(read_shell_correction_table(SHELL_CORRECTION_FILE))
 
     # The branches differ by the intercept alone, 0.142 − 0.120 = 0.022 per nucleon, so the
     # deformed one is lower by exactly 0.022 A. Checked on a fragment inside the region.
     deformed = Nuclide(58, 148)
     @test is_deformed_gilbert_cameron(deformed)
     a = level_density_parameter(gilbert, deformed)
-    corrections = read_shell_corrections(SHELL_CORRECTION_FILE)
-    S = corrections.proton[58] + corrections.neutron[90]
+    corrections = read_shell_correction_table(SHELL_CORRECTION_FILE)
+    S = corrections.S_Z[58] + corrections.S_N[90]
     undeformed_value = 148 * (0.00917 * S + 0.142)
     @test undeformed_value - a ≈ 0.022 * 148
 
@@ -163,7 +150,7 @@ SHELL_CORRECTIONS_AVAILABLE && @testset "the two Gilbert-Cameron branches" begin
     # Selecting eq. (20) alone reverts to the single-branch behaviour, which is what the
     # published results of this method used and what the companion package implements.
     undeformed = GilbertCameron(
-        read_shell_corrections(SHELL_CORRECTION_FILE);
+        read_shell_correction_table(SHELL_CORRECTION_FILE);
         deformed_branch = false,
     )
     @test level_density_parameter(undeformed, deformed) ≈ undeformed_value

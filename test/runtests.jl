@@ -1,9 +1,10 @@
 using Test
+using TOML: TOML
 using Measurements: Measurement, measurement, value, uncertainty
 using DeterministicSequentialEmission
 
 const DATA = joinpath(@__DIR__, "..", "data")
-const REFERENCE = joinpath(@__DIR__, "references")
+const REFERENCE = joinpath(@__DIR__, "references", "Cf252_sf")
 
 include("physics.jl")
 

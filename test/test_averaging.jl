@@ -1,7 +1,7 @@
 @testset "contractions of a rank-3 quantity" begin
     # Synthetic, so the contraction itself is exercised without any input data.
-    q = ConfigurationValues{Float64}()
-    w = ConfigurationValues{Float64}()
+    q = FragmentQuantity{Float64}()
+    w = FragmentQuantity{Float64}()
     for A in (100, 140), Z in (40, 41), TKE in (150.0, 170.0)
         q[(A, Z, TKE)] = A + Z / 100 + TKE / 1000
         w[(A, Z, TKE)] = Z == 40 ? 3.0 : 1.0
@@ -44,8 +44,8 @@ end
     # The quantity is tabulated on a coarser grid than the weight, which is the archived
     # configuration's own situation. A cell the model never solved must not dilute the mean by
     # entering the denominator alone.
-    q = ConfigurationValues{Float64}()
-    w = ConfigurationValues{Float64}()
+    q = FragmentQuantity{Float64}()
+    w = FragmentQuantity{Float64}()
     q[(140, 54, 150.0)] = 2.0
     q[(140, 54, 170.0)] = 4.0
     for TKE in (150.0, 160.0, 170.0)
@@ -62,8 +62,8 @@ end
 
 @testset "uncertainty through a weighted mean" begin
     # Both terms of the propagation: the quantity's own uncertainty and the weights'.
-    q = ConfigurationValues{Measurement{Float64}}()
-    w = ConfigurationValues{Measurement{Float64}}()
+    q = FragmentQuantity{Measurement{Float64}}()
+    w = FragmentQuantity{Measurement{Float64}}()
     q[(140, 54, 150.0)] = measurement(2.0, 0.1)
     q[(140, 54, 170.0)] = measurement(4.0, 0.2)
     w[(140, 54, 150.0)] = measurement(1.0, 0.05)
@@ -80,7 +80,7 @@ end
 
     # A quantity with no uncertainty leaves only the weight term, and a bare Float64 quantity
     # against Measurement weights still propagates the weight term.
-    exact = ConfigurationValues{Float64}()
+    exact = FragmentQuantity{Float64}()
     exact[(140, 54, 150.0)] = 2.0
     exact[(140, 54, 170.0)] = 4.0
     only_weights = total_average(exact, w)
@@ -88,7 +88,7 @@ end
 
     # An absent uncertainty propagates as absent rather than as zero, which is how the
     # prototype marks a yield that arrived without one.
-    unmeasured = ConfigurationValues{Measurement{Float64}}()
+    unmeasured = FragmentQuantity{Measurement{Float64}}()
     unmeasured[(140, 54, 150.0)] = measurement(1.0, NaN)
     unmeasured[(140, 54, 170.0)] = measurement(3.0, 0.05)
     blurred = total_average(q, unmeasured)
@@ -96,27 +96,27 @@ end
     @test isnan(uncertainty(blurred))
 end
 
-POLARIZATION_AVAILABLE &&
+CHARGE_DISTRIBUTION_AVAILABLE &&
     YIELD_AVAILABLE &&
     @testset "averaged quantities against the archived run" begin
         table = mass_table()
-        polarization = cf252_polarization()
+        distribution = cf252_charge_distribution()
         domain = cf252_domain()
         model = BackShiftedFermiGas(table)
         cross_section = VariableCrossSection()
         method = ExcitationEnergyRatio(
-            JointedSegments([(126, 0.5), (130, 0.14), (150, 0.607), (174, 0.865)]),
+            SegmentedCurve([(126, 0.5), (130, 0.14), (150, 0.607), (174, 0.865)]),
         )
-        yields = build_fragment_yields(
+        yields = build_fragment_yield(
             domain,
-            polarization,
-            read_experimental_yield(CF252_YIELD_FILE),
+            distribution,
+            read_mass_energy_yield(CF252_YIELD_FILE),
         )
         weights = weights_from(yields)
 
-        ν = ConfigurationValues{Float64}()
-        T = ConfigurationValues{Float64}()
-        excitation = ConfigurationValues{Float64}()
+        ν = FragmentQuantity{Float64}()
+        T = FragmentQuantity{Float64}()
+        excitation = FragmentQuantity{Float64}()
         for entry in domain.entries, TKE in CF252_TKE
             balance = energetics(table, CF252, entry, TKE)
             balance === nothing && continue
@@ -140,10 +140,10 @@ POLARIZATION_AVAILABLE &&
         end
 
         for (quantity, file, columns, over) in (
-            (ν, "CF52_nu_A.dat", [:A, :nu], (:charge, :kinetic_energy)),
-            (T, "CF52_T_A.dat", [:A, :T], (:charge, :kinetic_energy)),
-            (excitation, "CF52_E_excit_A.dat", [:A, :E], (:charge, :kinetic_energy)),
-            (excitation, "CF52_E_excit_TKE.dat", [:TKE, :E], (:mass, :charge)),
+            (ν, "nu_vs_A.dat", [:A, :nu], (:charge, :kinetic_energy)),
+            (T, "T_vs_A.dat", [:A, :T], (:charge, :kinetic_energy)),
+            (excitation, "E_star_vs_A.dat", [:A, :E_star], (:charge, :kinetic_energy)),
+            (excitation, "E_star_vs_TKE.dat", [:TKE, :E_star], (:mass, :charge)),
         )
             reference = read_table(joinpath(REFERENCE, file), TableSpec(columns; skip = 1))
             arguments = column(reference, columns[1], Float64)

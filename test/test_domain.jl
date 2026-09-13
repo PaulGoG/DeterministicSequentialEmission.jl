@@ -1,4 +1,4 @@
-POLARIZATION_AVAILABLE && @testset "fragmentation domain" begin
+CHARGE_DISTRIBUTION_AVAILABLE && @testset "fragmentation domain" begin
     domain = cf252_domain()
 
     # 49 heavy masses × 5 charge numbers, the configuration of the archived run.
@@ -22,19 +22,19 @@ POLARIZATION_AVAILABLE && @testset "fragmentation domain" begin
 
     # The probability is a property of the pair: the light fragment's Gaussian argument is
     # the negative of the heavy one's, so both fragments carry the same p(Z,A).
-    polarization = cf252_polarization()
+    distribution = cf252_charge_distribution()
     entry = first(domain)
     Zₚ = most_probable_charge(
         CF252,
         entry.heavy.A,
-        polarization_at(polarization, entry.heavy.A),
+        charge_polarization(distribution, entry.heavy.A),
     )
-    rms = width_at(polarization, entry.heavy.A)
-    @test entry.probability ≈ charge_probability(entry.heavy.Z, Zₚ, rms)
-    @test entry.probability ≈ charge_probability(entry.light.Z, 98 - Zₚ, rms)
+    σ_Z = charge_dispersion(distribution, entry.heavy.A)
+    @test entry.probability ≈ charge_probability(entry.heavy.Z, Zₚ, σ_Z)
+    @test entry.probability ≈ charge_probability(entry.light.Z, 98 - Zₚ, σ_Z)
 end
 
-POLARIZATION_AVAILABLE && @testset "symmetric splits" begin
+CHARGE_DISTRIBUTION_AVAILABLE && @testset "symmetric splits" begin
     domain = cf252_domain()
     symmetric = filter(is_symmetric, domain.entries)
 
@@ -55,10 +55,10 @@ POLARIZATION_AVAILABLE && @testset "symmetric splits" begin
 
     # It agrees with the charge-probability table, the other per-nuclide view.
     @test Set(listed) ==
-          Set(keys(fragment_charge_probabilities(domain, cf252_polarization())))
+          Set(keys(fragment_charge_probabilities(domain, cf252_charge_distribution())))
 end
 
-POLARIZATION_AVAILABLE && @testset "distinct splits" begin
+CHARGE_DISTRIBUTION_AVAILABLE && @testset "distinct splits" begin
     domain = cf252_domain()
     splits = distinct_splits(domain)
 
@@ -74,41 +74,41 @@ POLARIZATION_AVAILABLE && @testset "distinct splits" begin
     @test length(pairs) == 3
 
     # A split whose mirror charge falls outside the retained window has no second labelling and
-    # must survive whichever side names it. With the mean polarization Zₚ(126) = 48.5, so the
+    # must survive whichever side names it. With the mean distribution Zₚ(126) = 48.5, so the
     # window 46:50 is not symmetric about Z₀/2 = 49 — exactly that case.
-    offset = fragmentation_domain(CF252, mean_charge_polarization(), 126:174)
+    offset = fragmentation_domain(CF252, mean_charge_distribution(), 126:174)
     offset_splits = distinct_splits(offset)
     @test length(offset_splits) == length(offset) - 1
     @test sort([e.heavy.Z for e in offset_splits if e.heavy.A == 126]) == [46, 47, 49, 50]
 end
 
 @testset "domain validation" begin
-    polarization = mean_charge_polarization()
+    distribution = mean_charge_distribution()
 
     # The range is validated against the compound nucleus, which is what splits. The
     # prototype validates against the target, which agrees only when the bound sits at A₀/2.
-    pu = neutron_induced_fission(Nuclide(94, 239), 2.53e-8)
+    pu = neutron_induced_fission(Nuclide(94, 239), 2.53e-8, "nth")
     @test symmetric_mass(pu) == 120.0
-    @test_throws ArgumentError fragmentation_domain(pu, polarization, 119:160)
-    @test length(fragmentation_domain(pu, polarization, 120:160)) == 41 * 5
+    @test_throws ArgumentError fragmentation_domain(pu, distribution, 119:160)
+    @test length(fragmentation_domain(pu, distribution, 120:160)) == 41 * 5
 
-    @test_throws ArgumentError fragmentation_domain(CF252, polarization, 125:174)
-    @test_throws ArgumentError fragmentation_domain(CF252, polarization, 126:252)
+    @test_throws ArgumentError fragmentation_domain(CF252, distribution, 125:174)
+    @test_throws ArgumentError fragmentation_domain(CF252, distribution, 126:252)
     @test_throws ArgumentError fragmentation_domain(
         CF252,
-        polarization,
+        distribution,
         126:174;
         charges_per_mass = 4,
     )
 
     # A degenerate single-mass range. The prototype rejects A_H_min >= A_H_max outright.
-    @test_throws ArgumentError fragmentation_domain(CF252, polarization, 130:130)
+    @test_throws ArgumentError fragmentation_domain(CF252, distribution, 130:130)
 
     # Enough charge numbers per mass and the window walks off the end of the charge range,
     # asking for a fragment with no protons or with all of them.
     @test_throws ArgumentError fragmentation_domain(
         CF252,
-        polarization,
+        distribution,
         126:174;
         charges_per_mass = 199,
     )

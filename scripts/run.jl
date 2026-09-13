@@ -1,7 +1,7 @@
 # Entry point: julia --project scripts/run.jl config/<case>.toml [data directory]
 #
 # Solves every configuration the domain and the kinetic energy grid span, contracts the results
-# against the yield weights, and writes the tables under results/<subdirectory>. Nothing is
+# against the yield weights, and writes the tables under results/<system>/<run>. Nothing is
 # plotted here — plotting/figures.jl reads what this writes, so a figure can be redrawn without
 # solving the model again.
 
@@ -24,6 +24,12 @@ function main(arguments::Vector{String})
     configuration = load_configuration(path; data_directory = data)
     println(configuration)
     result = run_pipeline(configuration)
+    destination = joinpath(
+        root,
+        "results",
+        system_label(configuration.system),
+        run_identifier(configuration),
+    )
 
     @printf(
         "  %d of %d configurations solved (%.1f %%)\n",
@@ -32,7 +38,7 @@ function main(arguments::Vector{String})
         100 * result.configurations_solved / result.configurations_attempted
     )
     @printf(
-        "  R_T segments cover %.0f %% of the heavy masses\n",
+        "  the segmented curve covers %.0f %% of the heavy masses\n",
         100 * result.segment_coverage
     )
     @printf(
@@ -43,7 +49,7 @@ function main(arguments::Vector{String})
     @printf("  ⟨TKE⟩ = %.3f MeV\n", result.mean_kinetic_energy)
     isnan(result.mean_neutron_lab_energy) ||
         @printf("  ⟨E⟩ = %.4f MeV in the laboratory\n", result.mean_neutron_lab_energy)
-    println("  written to ", joinpath(root, "results", configuration.subdirectory))
+    println("  written to ", destination)
     return 0
 end
 

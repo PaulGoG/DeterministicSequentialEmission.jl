@@ -1,5 +1,5 @@
 """
-    JointedSegments(points)
+    SegmentedCurve(points)
 
 A piecewise-linear function of heavy-fragment mass, given as jointed segment endpoints
 `(A_H, y)` in ascending `A_H`.
@@ -13,11 +13,11 @@ Outside the tabulated range the first segment is extended below the first point,
 function is undefined above the last. That asymmetry reproduces the prototype, whose
 published parameterizations always end at `A_H_max`.
 """
-struct JointedSegments
+struct SegmentedCurve
     masses::Vector{Int}
     values::Vector{Float64}
 
-    function JointedSegments(masses::Vector{Int}, values::Vector{Float64})
+    function SegmentedCurve(masses::Vector{Int}, values::Vector{Float64})
         length(masses) == length(values) ||
             throw(ArgumentError("segment masses and values must have equal length"))
         length(masses) >= 2 || throw(
@@ -33,14 +33,14 @@ struct JointedSegments
 end
 
 """
-    JointedSegments(points::AbstractVector{<:Tuple})
+    SegmentedCurve(points::AbstractVector{<:Tuple})
 
 Build from `(A_H, value)` pairs.
 
 # Examples
 
 ```jldoctest
-julia> segments = JointedSegments([(126, 0.5), (130, 0.14), (150, 0.607), (174, 0.865)]);
+julia> segments = SegmentedCurve([(126, 0.5), (130, 0.14), (150, 0.607), (174, 0.865)]);
 
 julia> segments(130)
 0.14
@@ -49,16 +49,16 @@ julia> round(segments(140); digits = 4)
 0.3735
 ```
 """
-function JointedSegments(points::AbstractVector{<:Tuple{Integer, Real}})
-    return JointedSegments([Int(p[1]) for p in points], [Float64(p[2]) for p in points])
+function SegmentedCurve(points::AbstractVector{<:Tuple{Integer, Real}})
+    return SegmentedCurve([Int(p[1]) for p in points], [Float64(p[2]) for p in points])
 end
 
-Base.length(segments::JointedSegments) = length(segments.masses)
+Base.length(segments::SegmentedCurve) = length(segments.masses)
 
-function Base.show(io::IO, segments::JointedSegments)
+function Base.show(io::IO, segments::SegmentedCurve)
     print(
         io,
-        "JointedSegments(",
+        "SegmentedCurve(",
         length(segments),
         " points, A_H ∈ ",
         first(segments.masses),
@@ -75,7 +75,7 @@ end
 Evaluate the parameterization at heavy-fragment mass `A`, or `nothing` above the last point
 or where the interpolated value is non-positive.
 """
-function (segments::JointedSegments)(A::Integer)
+function (segments::SegmentedCurve)(A::Integer)
     for index in 2:length(segments)
         if segments.masses[index] >= A
             x₀ = segments.masses[index - 1]
@@ -113,9 +113,9 @@ The ratio is normally obtained from modelling at scission in a separate code, th
 the prompt-emission calculation as a parameterization.
 """
 struct ExcitationEnergyRatio <: PartitionMethod
-    segments::JointedSegments
+    segments::SegmentedCurve
 
-    function ExcitationEnergyRatio(segments::JointedSegments)
+    function ExcitationEnergyRatio(segments::SegmentedCurve)
         for (index, value) in pairs(segments.values)
             0 < value < 1 || throw(
                 ArgumentError(
@@ -144,11 +144,11 @@ so the temperature ratio and the level density parameters together fix the split
 input parameter by which several prompt-emission codes partition `TXE` directly.
 """
 struct TemperatureRatio{M <: LevelDensityModel} <: PartitionMethod
-    segments::JointedSegments
+    segments::SegmentedCurve
     model::M
 
     function TemperatureRatio(
-        segments::JointedSegments,
+        segments::SegmentedCurve,
         model::M,
     ) where {M <: LevelDensityModel}
         for (index, value) in pairs(segments.values)
@@ -190,7 +190,7 @@ struct ScissionModelling{M <: LevelDensityModel} <: PartitionMethod
 end
 
 """
-    SEGMENT_SPEC
+    SEGMENTED_CURVE_SPEC
 
 Layout of a tabulated partition parameterization: one header row, then `A_H, value` and an
 optional uncertainty column, comma-delimited.
@@ -199,7 +199,7 @@ This is what `FissionTemperatureRatio.jl` writes as `R_T_parameterized_<set>_<ru
 uncertainty is read past and discarded: the partition carries none downstream, for the reason
 [`PartitionMethod`](@ref) gives.
 """
-const SEGMENT_SPEC = TableSpec(
+const SEGMENTED_CURVE_SPEC = TableSpec(
     [:A_H, :value, :uncertainty];
     delimiter = ',',
     skip = 1,
@@ -207,13 +207,13 @@ const SEGMENT_SPEC = TableSpec(
 )
 
 """
-    read_segments(path; spec = SEGMENT_SPEC) -> JointedSegments
+    read_segmented_curve(path; spec = SEGMENTED_CURVE_SPEC) -> SegmentedCurve
 
 Read a partition parameterization tabulated against heavy-fragment mass.
 
 Written for the output of `FissionTemperatureRatio.jl`, which extracts `R_T = T_L/T_H` from
 experimental `ν(A)` and writes it at **every integer `A_H`** of its fit range. Fed whole to
-[`JointedSegments`](@ref) that is exact rather than an approximation: every abscissa the model
+[`SegmentedCurve`](@ref) that is exact rather than an approximation: every abscissa the model
 evaluates is itself a tabulated point, so no interpolation happens. Handing over only the
 breakpoints of that package's own piecewise-linear fit would not be equivalent — it fits the
 multiplicity ratio `r_ν`, and `R_T = √[(1−r_ν)/(R_a r_ν)]` is not piecewise linear where `r_ν`
@@ -228,11 +228,11 @@ per-`(A_H, Z_H)` level density parameters and reduces over `Z` afterwards, which
 `Z`-averaged multiplicity ratio with `⟨a_L/a_H⟩` rather than `⟨a_L⟩/⟨a_H⟩`. That setting is
 recorded in the file name.
 """
-function read_segments(path::AbstractString; spec::TableSpec = SEGMENT_SPEC)
+function read_segmented_curve(path::AbstractString; spec::TableSpec = SEGMENTED_CURVE_SPEC)
     table = read_table(path, spec)
     masses = integer_column(table, :A_H)
     values = column(table, :value, Float64)
-    return JointedSegments(masses, values)
+    return SegmentedCurve(masses, values)
 end
 
 """
@@ -252,7 +252,7 @@ model could not solve and a fragmentation nobody parameterized look identical do
 # Examples
 
 ```jldoctest
-julia> method = ExcitationEnergyRatio(JointedSegments([(126, 0.5), (150, 0.6)]));
+julia> method = ExcitationEnergyRatio(SegmentedCurve([(126, 0.5), (150, 0.6)]));
 
 julia> report = segment_coverage(method, 126:174);
 
@@ -341,7 +341,7 @@ density parameter, an absent deformation energy, or a division that leaves eithe
 with negative excitation energy.
 
 A split into two copies of the same nuclide divides `TXE` evenly, and does so before the
-prescription is consulted — see [`_self_complementary`](@ref).
+partition method is consulted — see [`_self_complementary`](@ref).
 """
 function partition(method::ExcitationEnergyRatio, fragmentation::Fragmentation, TXE::Real)
     _self_complementary(fragmentation) && return _split(TXE, 0.5)
@@ -388,11 +388,11 @@ the fragments are indistinguishable, so `a_L == a_H` and `T_L == T_H` identicall
 `E*_L == E*_H` and `R_T == 1`. No parameterization of `A_H` can know this — `R_T(A_H)` and
 `E*_H/TXE (A_H)` are fitted curves, and nothing makes them pass through `1` and `0.5` at
 `A₀/2`. Evaluated there with the ²⁵²Cf literature value `R_T = 1.2` the temperature-ratio
-prescription returns `E*_H/TXE = 0.41`, dividing energy unequally between two copies of the
+method returns `E*_H/TXE = 0.41`, dividing energy unequally between two copies of the
 same nucleus.
 
 Guarding on it restores the behaviour of the prototype, which special-cased
-`A_L == A_H && Z_L == Z_H` in all three prescriptions. `ScissionModelling` needs no guard and
+`A_L == A_H && Z_L == Z_H` in all three methods. `ScissionModelling` needs no guard and
 does not carry one: identical fragments give `a_L/a_H == 1` and `ΔE_def^L == ΔE_def^H`, so it
 divides evenly on its own arithmetic, and short-circuiting it would skip its check that the
 energy remaining at scission is non-negative.

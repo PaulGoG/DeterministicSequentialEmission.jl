@@ -1,5 +1,5 @@
 """
-    MassTable
+    MassExcessTable
 
 Tabulated mass excesses with their uncertainties, in MeV, indexed by nuclide.
 
@@ -8,23 +8,23 @@ uncertainty without the call sites combining variances by hand — and so that a
 entering an expression twice is treated as correlated with itself rather than as two
 independent draws.
 """
-struct MassTable
-    excess::Dict{Nuclide, Measurement{Float64}}
+struct MassExcessTable
+    Δ::Dict{Nuclide, Measurement{Float64}}
     source::String
 
-    function MassTable(excess::Dict{Nuclide, Measurement{Float64}}, source::AbstractString)
-        return new(excess, String(source))
+    function MassExcessTable(Δ::Dict{Nuclide, Measurement{Float64}}, source::AbstractString)
+        return new(Δ, String(source))
     end
 end
 
-Base.length(table::MassTable) = length(table.excess)
-Base.haskey(table::MassTable, nuclide::Nuclide) = haskey(table.excess, nuclide)
+Base.length(table::MassExcessTable) = length(table.Δ)
+Base.haskey(table::MassExcessTable, nuclide::Nuclide) = haskey(table.Δ, nuclide)
 
-function Base.show(io::IO, table::MassTable)
+function Base.show(io::IO, table::MassExcessTable)
     print(
         io,
-        "MassTable(",
-        length(table.excess),
+        "MassExcessTable(",
+        length(table.Δ),
         " nuclides from ",
         basename(table.source),
         ")",
@@ -35,42 +35,49 @@ end
 """
     MASS_EXCESS_SPEC
 
-Layout of the tabulated mass-excess files: one header row, then `Z A element Δ σ(Δ)`,
-whitespace-delimited, with the mass excess and its uncertainty in keV.
+Layout of the tabulated mass-excess files: one header row, then
+`Z A element mass_excess mass_excess_uncertainty`, whitespace-delimited, with the mass excess and
+its uncertainty in keV.
 
-This is the layout of `data/mass_excess/ame2020.dat`, the one data file the package ships.
+This is the layout of `data/reference/mass_excess_ame2020.dat`, the one data file the package
+ships.
 """
-const MASS_EXCESS_SPEC = TableSpec([:Z, :A, :symbol, :excess, :uncertainty]; skip = 1)
+const MASS_EXCESS_SPEC =
+    TableSpec([:Z, :A, :symbol, :mass_excess, :mass_excess_uncertainty]; skip = 1)
 
 """
-    LEGACY_MASS_EXCESS_SPEC
+    HEADERLESS_MASS_EXCESS_SPEC
 
-The same five columns without a header row, which is how the `.ANA` tables are written.
+The same five columns with no header row at all, which is how the atomic mass evaluation is
+distributed.
 
 ```julia
-read_mass_table("AME2020.ANA"; spec = LEGACY_MASS_EXCESS_SPEC)
+read_mass_excess_table(path; spec = HEADERLESS_MASS_EXCESS_SPEC)
 ```
 """
-const LEGACY_MASS_EXCESS_SPEC =
-    TableSpec([:Z, :A, :symbol, :excess, :uncertainty]; skip = 0)
+const HEADERLESS_MASS_EXCESS_SPEC =
+    TableSpec([:Z, :A, :symbol, :mass_excess, :mass_excess_uncertainty]; skip = 0)
 
 const KEV_TO_MEV = 1.0e-3
 
 """
-    read_mass_table(path; spec = MASS_EXCESS_SPEC) -> MassTable
+    read_mass_excess_table(path; spec = MASS_EXCESS_SPEC) -> MassExcessTable
 
 Read a mass-excess table, converting from keV to MeV on load so that MeV is the only energy
 unit inside the package.
 
+**Columns are taken by position**, not by header text: charge, mass, element symbol, mass excess,
+uncertainty. Nothing here may be changed to a lookup by name.
+
 Throws if the file repeats a nuclide, which would otherwise leave the winner decided by row
 order.
 """
-function read_mass_table(path::AbstractString; spec::TableSpec = MASS_EXCESS_SPEC)
+function read_mass_excess_table(path::AbstractString; spec::TableSpec = MASS_EXCESS_SPEC)
     table = read_table(path, spec)
     protons = integer_column(table, :Z)
     masses = integer_column(table, :A)
-    excess = column(table, :excess, Float64)
-    uncertainty = column(table, :uncertainty, Float64)
+    excess = column(table, :mass_excess, Float64)
+    uncertainty = column(table, :mass_excess_uncertainty, Float64)
 
     entries = Dict{Nuclide, Measurement{Float64}}()
     sizehint!(entries, length(table))
@@ -84,7 +91,7 @@ function read_mass_table(path::AbstractString; spec::TableSpec = MASS_EXCESS_SPE
         entries[nuclide] =
             measurement(excess[row] * KEV_TO_MEV, uncertainty[row] * KEV_TO_MEV)
     end
-    return MassTable(entries, String(path))
+    return MassExcessTable(entries, String(path))
 end
 
 """
@@ -96,8 +103,8 @@ Absence is ordinary rather than exceptional: a deterministic fragmentation domai
 nuclides for which no measured or extrapolated mass exists, and those configurations are
 excluded rather than treated as an error.
 """
-function mass_excess(table::MassTable, nuclide::Nuclide)
-    return get(table.excess, nuclide, nothing)
+function mass_excess(table::MassExcessTable, nuclide::Nuclide)
+    return get(table.Δ, nuclide, nothing)
 end
 
 """
@@ -111,7 +118,7 @@ S = Δ(A − Aₚ, Z − Zₚ) + Δ(Aₚ, Zₚ) − Δ(A, Z)
 
 returning `nothing` if any of the three mass excesses is unavailable.
 """
-function separation_energy(table::MassTable, nuclide::Nuclide, particle::Nuclide)
+function separation_energy(table::MassExcessTable, nuclide::Nuclide, particle::Nuclide)
     particle.A <= nuclide.A && particle.Z <= nuclide.Z ||
         throw(ArgumentError("cannot remove $particle from the smaller nuclide $nuclide"))
     residual = Nuclide(nuclide.Z - particle.Z, nuclide.A - particle.A)
@@ -128,7 +135,7 @@ end
 
 Neutron separation energy `Sₙ` in MeV.
 """
-neutron_separation_energy(table::MassTable, nuclide::Nuclide) =
+neutron_separation_energy(table::MassExcessTable, nuclide::Nuclide) =
     separation_energy(table, nuclide, NEUTRON)
 
 """
@@ -144,7 +151,7 @@ Q = Δ(A₀, Z₀) − [Δ(A_H, Z_H) + Δ(A_L, Z_L)]
 Returns `nothing` when a mass excess is unavailable, and also when `Q ≤ 0`, which is not a
 physical fission channel.
 """
-function q_value(table::MassTable, system::FissioningSystem, heavy::Nuclide)
+function q_value(table::MassExcessTable, system::FissioningSystem, heavy::Nuclide)
     light = complementary_fragment(system, heavy)
     Δ_compound = mass_excess(table, system.compound)
     Δ_heavy = mass_excess(table, heavy)

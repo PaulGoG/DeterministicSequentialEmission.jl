@@ -175,7 +175,7 @@ end
     fragmentation = fragmentation_at(134, 52)
     balance = energetics(table, CF252, fragmentation, 180.0)
     method = ExcitationEnergyRatio(
-        JointedSegments([(126, 0.5), (130, 0.14), (150, 0.607), (174, 0.865)]),
+        SegmentedCurve([(126, 0.5), (130, 0.14), (150, 0.607), (174, 0.865)]),
     )
     split = partition(method, fragmentation, value(balance.TXE))
     E_light, E_heavy = fragment_energy_per_nucleon(fragmentation, 180.0)
@@ -230,7 +230,7 @@ end
     fragmentation = fragmentation_at(140, 54)
     balance = energetics(table, CF252, fragmentation, 175.0)
     method = ExcitationEnergyRatio(
-        JointedSegments([(126, 0.5), (130, 0.14), (150, 0.607), (174, 0.865)]),
+        SegmentedCurve([(126, 0.5), (130, 0.14), (150, 0.607), (174, 0.865)]),
     )
     split = partition(method, fragmentation, value(balance.TXE))
     light = emission_chain(table, model, cross_section, fragmentation.light, split.light)

@@ -1,5 +1,5 @@
 @testset "jointed segments" begin
-    segments = JointedSegments([(126, 0.5), (130, 0.14), (150, 0.607), (174, 0.865)])
+    segments = SegmentedCurve([(126, 0.5), (130, 0.14), (150, 0.607), (174, 0.865)])
     @test length(segments) == 4
 
     # Endpoints are reproduced exactly, and interpolation is linear between them.
@@ -16,46 +16,46 @@
     @test segments(125) ≈ 0.5 + (0.14 - 0.5) * (125 - 126) / (130 - 126)
 
     # A segment crossing zero leaves the function undefined there rather than negative.
-    crossing = JointedSegments([(120, 1.0), (140, -1.0)])
+    crossing = SegmentedCurve([(120, 1.0), (140, -1.0)])
     @test crossing(130) === nothing
     @test crossing(125) > 0
 
-    @test_throws ArgumentError JointedSegments([(126, 0.5)])
-    @test_throws ArgumentError JointedSegments([(150, 0.5), (126, 0.1)])
-    @test_throws ArgumentError JointedSegments([(126, 0.5), (126, 0.1)])
+    @test_throws ArgumentError SegmentedCurve([(126, 0.5)])
+    @test_throws ArgumentError SegmentedCurve([(150, 0.5), (126, 0.1)])
+    @test_throws ArgumentError SegmentedCurve([(126, 0.5), (126, 0.1)])
 end
 
 @testset "parameterization values are checked against their meaning" begin
     # E*_H/TXE is a fraction of the total excitation energy.
     @test_throws ArgumentError ExcitationEnergyRatio(
-        JointedSegments([(126, 0.5), (150, 1.4)]),
+        SegmentedCurve([(126, 0.5), (150, 1.4)]),
     )
     @test_throws ArgumentError ExcitationEnergyRatio(
-        JointedSegments([(126, -0.1), (150, 0.6)]),
+        SegmentedCurve([(126, -0.1), (150, 0.6)]),
     )
-    @test ExcitationEnergyRatio(JointedSegments([(126, 0.5), (150, 0.6)])) isa
+    @test ExcitationEnergyRatio(SegmentedCurve([(126, 0.5), (150, 0.6)])) isa
           ExcitationEnergyRatio
 
     # R_T is a ratio of temperatures, so positive, but it may exceed one.
     model = BackShiftedFermiGas(mass_table())
     @test_throws ArgumentError TemperatureRatio(
-        JointedSegments([(126, 1.0), (150, -0.3)]),
+        SegmentedCurve([(126, 1.0), (150, -0.3)]),
         model,
     )
-    @test TemperatureRatio(JointedSegments([(126, 1.0), (150, 1.7)]), model) isa
+    @test TemperatureRatio(SegmentedCurve([(126, 1.0), (150, 1.7)]), model) isa
           TemperatureRatio
 end
 
 @testset "segment coverage against a sweep" begin
     # A parameterization fitted over part of the domain leaves the rest unpartitioned, and that
     # exclusion is indistinguishable downstream from one the physics made.
-    short = ExcitationEnergyRatio(JointedSegments([(126, 0.5), (150, 0.6)]))
+    short = ExcitationEnergyRatio(SegmentedCurve([(126, 0.5), (150, 0.6)]))
     report = segment_coverage(short, 126:174)
     @test report.uncovered == collect(151:174)
     @test report.covered ≈ 25 / 49
 
     whole = ExcitationEnergyRatio(
-        JointedSegments([(126, 0.5), (130, 0.14), (150, 0.607), (174, 0.865)]),
+        SegmentedCurve([(126, 0.5), (130, 0.14), (150, 0.607), (174, 0.865)]),
     )
     full = segment_coverage(whole, 126:174)
     @test isempty(full.uncovered)
@@ -77,7 +77,7 @@ end
             129,1.932797,0.061908
             """,
         )
-        segments = read_segments(path)
+        segments = read_segmented_curve(path)
         @test length(segments) == 4
 
         # Tabulated at every integer mass, so evaluation reproduces each value exactly rather
@@ -94,7 +94,7 @@ end
         # The uncertainty column is optional, as it is for every other reader here.
         bare = joinpath(dir, "bare.csv")
         write(bare, "A_H,value\n126,1.0\n127,1.2\n")
-        @test read_segments(bare)(127) == 1.2
+        @test read_segmented_curve(bare)(127) == 1.2
     end
 end
 
@@ -103,18 +103,18 @@ end
 
     # The parameterization the archived run used, transcribed from its own provenance header.
     method = ExcitationEnergyRatio(
-        JointedSegments([(126, 0.5), (130, 0.14), (150, 0.607), (174, 0.865)]),
+        SegmentedCurve([(126, 0.5), (130, 0.14), (150, 0.607), (174, 0.865)]),
     )
 
     reference = read_table(
-        joinpath(REFERENCE, "CF52_excitation_PARAM.dat"),
-        TableSpec([:A_H, :Z_H, :TKE, :E_excit_L, :E_excit_H]; skip = 1),
+        joinpath(REFERENCE, "E_star_vs_A_H_Z_H_TKE_excitation_ratio.dat"),
+        TableSpec([:A_H, :Z_H, :TKE, :E_star_L, :E_star_H]; skip = 1),
     )
     masses = column(reference, :A_H, Int)
     charges = column(reference, :Z_H, Int)
     energies = column(reference, :TKE, Float64)
-    expected_light = column(reference, :E_excit_L, Float64)
-    expected_heavy = column(reference, :E_excit_H, Float64)
+    expected_light = column(reference, :E_star_L, Float64)
+    expected_heavy = column(reference, :E_star_H, Float64)
     @test length(reference) == 1200
 
     worst = 0.0
@@ -136,11 +136,11 @@ end
     @test worst < 1e-8
 end
 
-POLARIZATION_AVAILABLE && @testset "partition conserves TXE" begin
+CHARGE_DISTRIBUTION_AVAILABLE && @testset "partition conserves TXE" begin
     table = mass_table()
     domain = cf252_domain()
     method = ExcitationEnergyRatio(
-        JointedSegments([(126, 0.5), (130, 0.14), (150, 0.607), (174, 0.865)]),
+        SegmentedCurve([(126, 0.5), (130, 0.14), (150, 0.607), (174, 0.865)]),
     )
 
     for fragmentation in domain.entries[1:20:end]
@@ -171,8 +171,8 @@ end
     # Both archived thesis runs happen to pin their first segment at R_T = 1 and 0.5, so
     # neither exercises this.
     methods = [
-        TemperatureRatio(JointedSegments([(126, 1.2), (174, 1.2)]), model),
-        ExcitationEnergyRatio(JointedSegments([(126, 0.42), (174, 0.42)])),
+        TemperatureRatio(SegmentedCurve([(126, 1.2), (174, 1.2)]), model),
+        ExcitationEnergyRatio(SegmentedCurve([(126, 0.42), (174, 0.42)])),
     ]
     for method in methods
         split = partition(method, identical, TXE)
@@ -188,11 +188,11 @@ end
     @test sum(split) ≈ TXE
 
     # A mass-symmetric split with unequal charges is a different matter: the fragments are
-    # distinct nuclides, a_L ≠ a_H, and the prescription must be applied as given.
+    # distinct nuclides, a_L ≠ a_H, and the partition method must be applied as given.
     unequal = fragmentation_at(126, 50)
     @test unequal.light == Nuclide(48, 126)
     split = partition(
-        TemperatureRatio(JointedSegments([(126, 1.2), (174, 1.2)]), model),
+        TemperatureRatio(SegmentedCurve([(126, 1.2), (174, 1.2)]), model),
         unequal,
         TXE,
     )
@@ -208,7 +208,7 @@ end
     # instructions file shipped with the prototype lists a different tail — (167, 0.69),
     # (174, 0.6) — which is not what produced the published figures.
     method = TemperatureRatio(
-        JointedSegments([
+        SegmentedCurve([
             (126, 1.0),
             (130, 1.734),
             (134, 1.28),
@@ -221,14 +221,14 @@ end
     )
 
     reference = read_table(
-        joinpath(REFERENCE, "CF52_excitation_RT.dat"),
-        TableSpec([:A_H, :Z_H, :TKE, :E_excit_L, :E_excit_H]; skip = 1),
+        joinpath(REFERENCE, "E_star_vs_A_H_Z_H_TKE_temperature_ratio.dat"),
+        TableSpec([:A_H, :Z_H, :TKE, :E_star_L, :E_star_H]; skip = 1),
     )
     masses = column(reference, :A_H, Int)
     charges = column(reference, :Z_H, Int)
     energies = column(reference, :TKE, Float64)
-    expected_light = column(reference, :E_excit_L, Float64)
-    expected_heavy = column(reference, :E_excit_H, Float64)
+    expected_light = column(reference, :E_star_L, Float64)
+    expected_heavy = column(reference, :E_star_H, Float64)
     @test length(reference) == 1200
 
     worst = 0.0
@@ -255,7 +255,7 @@ end
     model = BackShiftedFermiGas(table)
 
     method = TemperatureRatio(
-        JointedSegments([
+        SegmentedCurve([
             (126, 1.0),
             (130, 1.734),
             (134, 1.28),
@@ -280,7 +280,7 @@ end
     @test split.light > split.heavy
 
     # At R_T = 1 the split is fixed by the level density parameters alone, E*_L/E*_H = a_L/a_H.
-    unit = TemperatureRatio(JointedSegments([(126, 1.0), (174, 1.0)]), model)
+    unit = TemperatureRatio(SegmentedCurve([(126, 1.0), (174, 1.0)]), model)
     split_unit = partition(unit, fragmentation, value(balance.TXE))
     a_light = level_density_parameter(model, fragmentation.light)
     a_heavy = level_density_parameter(model, fragmentation.heavy)

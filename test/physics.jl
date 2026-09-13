@@ -10,32 +10,34 @@ const CF252_CHARGES_PER_MASS = 5
 # bare clone. The charge distribution systematics does not ship, because it is a third-party
 # table this package has no licence to redistribute; the tests that need it are skipped when it
 # is absent, exactly as the companion packages do. `data/README.md` says where to obtain it.
-const MASS_EXCESS_FILE = joinpath(DATA, "mass_excess", "ame2020.dat")
-const CF252_POLARIZATION_FILE = joinpath(DATA, "charge_distribution", "Cf252.dat")
-const U235_POLARIZATION_FILE = joinpath(DATA, "charge_distribution", "U235.dat")
+const MASS_EXCESS_FILE = joinpath(DATA, "reference", "mass_excess_ame2020.dat")
+const CF252_CHARGE_DISTRIBUTION_FILE =
+    joinpath(DATA, "Cf252_sf", "charge_distribution_vs_A.dat")
+const U235_CHARGE_DISTRIBUTION_FILE =
+    joinpath(DATA, "U235_nth", "charge_distribution_vs_A.dat")
 
 const SHELL_CORRECTION_FILE =
-    joinpath(DATA, "level_density", "shell_corrections_gilbert_cameron.dat")
+    joinpath(DATA, "reference", "shell_corrections_gilbert_cameron.dat")
 
-const POLARIZATION_AVAILABLE = isfile(CF252_POLARIZATION_FILE)
-const U235_POLARIZATION_AVAILABLE = isfile(U235_POLARIZATION_FILE)
+const CHARGE_DISTRIBUTION_AVAILABLE = isfile(CF252_CHARGE_DISTRIBUTION_FILE)
+const U235_POLARIZATION_AVAILABLE = isfile(U235_CHARGE_DISTRIBUTION_FILE)
 const SHELL_CORRECTIONS_AVAILABLE = isfile(SHELL_CORRECTION_FILE)
 
-const CF252_YIELD_FILE = joinpath(DATA, "yield", "Cf252", "vespa_Y_A_TKE.dat")
+const CF252_YIELD_FILE = joinpath(DATA, "Cf252_sf", "Y_vs_A_TKE.dat")
 const YIELD_AVAILABLE = isfile(CF252_YIELD_FILE)
 
-POLARIZATION_AVAILABLE || @warn """
+CHARGE_DISTRIBUTION_AVAILABLE || @warn """
     charge distribution systematics not present; the tests that build a fragmentation domain \
     from it are skipped. The reference tests are unaffected — they take their fragmentations \
-    from the reference files. See data/README.md.""" file = CF252_POLARIZATION_FILE
+    from the reference files. See data/README.md.""" file = CF252_CHARGE_DISTRIBUTION_FILE
 
-mass_table() = read_mass_table(MASS_EXCESS_FILE)
+mass_table() = read_mass_excess_table(MASS_EXCESS_FILE)
 
-cf252_polarization() = read_charge_polarization(CF252_POLARIZATION_FILE)
+cf252_charge_distribution() = read_charge_distribution(CF252_CHARGE_DISTRIBUTION_FILE)
 
 cf252_domain() = fragmentation_domain(
     CF252,
-    cf252_polarization(),
+    cf252_charge_distribution(),
     CF252_HEAVY_MASSES;
     charges_per_mass = CF252_CHARGES_PER_MASS,
 )

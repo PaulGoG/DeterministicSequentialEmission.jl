@@ -16,28 +16,36 @@ reported and would be misleading if it were.
 abstract type LevelDensityModel end
 
 """
-    ShellCorrections
+    LEVEL_DENSITY_MODELS
+
+The level density models a configuration may select, in the spelling `[level_density] model`
+takes: `"BSFG"` for [`BackShiftedFermiGas`](@ref) and `"GC"` for [`GilbertCameron`](@ref).
+"""
+const LEVEL_DENSITY_MODELS = ("BSFG", "GC")
+
+"""
+    ShellCorrectionTable
 
 Gilbert-Cameron shell corrections `S(Z)` and `S(N)`, indexed by nucleon number.
 """
-struct ShellCorrections
-    proton::Dict{Int, Float64}
-    neutron::Dict{Int, Float64}
+struct ShellCorrectionTable
+    S_Z::Dict{Int, Float64}
+    S_N::Dict{Int, Float64}
     source::String
 
-    function ShellCorrections(
-        proton::Dict{Int, Float64},
-        neutron::Dict{Int, Float64},
+    function ShellCorrectionTable(
+        S_Z::Dict{Int, Float64},
+        S_N::Dict{Int, Float64},
         source::AbstractString,
     )
-        return new(proton, neutron, String(source))
+        return new(S_Z, S_N, String(source))
     end
 end
 
 """
     SHELL_CORRECTION_SPEC
 
-Layout of the shell-correction file: one header row, then `n S(N) S(Z)`.
+Layout of the shell-correction file: one header row, then `n S_N S_Z`.
 
 **The neutron correction comes first.** The file's own header reads `n S(N) S(Z)`, and the
 earlier coursework implementation of this model read it in that order. The prototype ported
@@ -48,21 +56,24 @@ absorbed by the sum: it evaluates the neutron correction at the proton number an
 The archived reference run used the back-shifted Fermi gas, so no published result depends on
 which order was used, but a Gilbert-Cameron run of the prototype does.
 """
-const SHELL_CORRECTION_SPEC = TableSpec([:n, :neutron, :proton]; skip = 1)
+const SHELL_CORRECTION_SPEC = TableSpec([:n, :S_N, :S_Z]; skip = 1)
 
 """
-    read_shell_corrections(path; spec = SHELL_CORRECTION_SPEC) -> ShellCorrections
+    read_shell_correction_table(path; spec = SHELL_CORRECTION_SPEC) -> ShellCorrectionTable
 
 Read the Gilbert-Cameron shell corrections.
+
+**Columns are taken by position**, not by header text: nucleon number, `S(N)`, `S(Z)`. Nothing
+here may be changed to a lookup by name.
 """
-function read_shell_corrections(
+function read_shell_correction_table(
     path::AbstractString;
     spec::TableSpec = SHELL_CORRECTION_SPEC,
 )
     table = read_table(path, spec)
     nucleons = integer_column(table, :n)
-    neutron = column(table, :neutron, Float64)
-    proton = column(table, :proton, Float64)
+    neutron = column(table, :S_N, Float64)
+    proton = column(table, :S_Z, Float64)
 
     # `S(Z)` is tabulated to Z = 98 and `S(N)` to N = 150, but the file is rectangular: the
     # proton column is padded with an exact 0.00 from 99 on. No tabulated `S(Z)` is zero, so
@@ -76,14 +87,14 @@ function read_shell_corrections(
         row <= last_proton && (protons[nucleons[row]] = proton[row])
         neutrons[nucleons[row]] = neutron[row]
     end
-    return ShellCorrections(protons, neutrons, String(path))
+    return ShellCorrectionTable(protons, neutrons, String(path))
 end
 
-function Base.show(io::IO, corrections::ShellCorrections)
+function Base.show(io::IO, corrections::ShellCorrectionTable)
     print(
         io,
-        "ShellCorrections(",
-        length(corrections.proton),
+        "ShellCorrectionTable(",
+        length(corrections.S_Z),
         " entries from ",
         basename(corrections.source),
         ")",
@@ -136,10 +147,10 @@ Source: A. Gilbert and A. G. W. Cameron, *Canadian Journal of Physics* **43**, 1
 eqs. (20) and (21) p. 1457, the deformation regions p. 1459, Table III pp. 1453-1455.
 """
 struct GilbertCameron <: LevelDensityModel
-    corrections::ShellCorrections
+    corrections::ShellCorrectionTable
     deformed_branch::Bool
 
-    function GilbertCameron(corrections::ShellCorrections; deformed_branch::Bool = true)
+    function GilbertCameron(corrections::ShellCorrectionTable; deformed_branch::Bool = true)
         return new(corrections, deformed_branch)
     end
 end
@@ -248,11 +259,11 @@ References: T. von Egidy and D. Bucurescu, *Phys. Rev. C* **72**, 044311 (2005);
 
 """
 struct BackShiftedFermiGas <: LevelDensityModel
-    table::MassTable
+    mass_excess_table::MassExcessTable
     proton_excess::Float64
     neutron_excess::Float64
 
-    function BackShiftedFermiGas(table::MassTable)
+    function BackShiftedFermiGas(table::MassExcessTable)
         proton = mass_excess(table, Nuclide(1, 1))
         neutron = mass_excess(table, NEUTRON)
         (proton === nothing || neutron === nothing) && throw(
@@ -309,12 +320,12 @@ carries no `(−1)^Z` alternation.
 undefined for the most exotic fragments of a deterministic domain.
 """
 function shell_correction(model::BackShiftedFermiGas, nuclide::Nuclide)
-    Δ = mass_excess(model.table, nuclide)
+    Δ = mass_excess(model.mass_excess_table, nuclide)
     Δ === nothing && return nothing
-    Δ_up = mass_excess(model.table, Nuclide(nuclide.Z + 1, nuclide.A + 2))
+    Δ_up = mass_excess(model.mass_excess_table, Nuclide(nuclide.Z + 1, nuclide.A + 2))
     Δ_up === nothing && return nothing
     nuclide.Z >= 1 && nuclide.A >= 2 || return nothing
-    Δ_down = mass_excess(model.table, Nuclide(nuclide.Z - 1, nuclide.A - 2))
+    Δ_down = mass_excess(model.mass_excess_table, Nuclide(nuclide.Z - 1, nuclide.A - 2))
     Δ_down === nothing && return nothing
 
     experimental =
@@ -337,7 +348,7 @@ temperature through `Ē_r = a T²`, so it is reported as unavailable rather than
 # Examples
 
 ```jldoctest
-julia> table = read_mass_table(joinpath(pkgdir(DeterministicSequentialEmission), "data", "mass_excess", "ame2020.dat"));
+julia> table = read_mass_excess_table(joinpath(pkgdir(DeterministicSequentialEmission), "data", "reference", "mass_excess_ame2020.dat"));
 
 julia> a = level_density_parameter(BackShiftedFermiGas(table), Nuclide(52, 134));
 
@@ -353,9 +364,9 @@ function level_density_parameter(model::BackShiftedFermiGas, nuclide::Nuclide)
 end
 
 function level_density_parameter(model::GilbertCameron, nuclide::Nuclide)
-    S_proton = get(model.corrections.proton, nuclide.Z, nothing)
+    S_proton = get(model.corrections.S_Z, nuclide.Z, nothing)
     S_proton === nothing && return nothing
-    S_neutron = get(model.corrections.neutron, neutron_number(nuclide), nothing)
+    S_neutron = get(model.corrections.S_N, neutron_number(nuclide), nothing)
     S_neutron === nothing && return nothing
     offset =
         model.deformed_branch && is_deformed_gilbert_cameron(nuclide) ?

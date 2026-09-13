@@ -21,28 +21,45 @@ using SpecialFunctions: gamma_inc
 using TOML: TOML
 
 export Nuclide, NEUTRON, neutron_number, element_symbol
-export FissioningSystem, spontaneous_fission, neutron_induced_fission, symmetric_mass
+export FissioningSystem,
+    CHANNELS,
+    CHANNEL_REACTION,
+    REACTIONS,
+    spontaneous_fission,
+    neutron_induced_fission,
+    is_spontaneous,
+    reaction,
+    symmetric_mass,
+    system_label,
+    system_notation
 export TableSpec, DataTable, read_table, column, column_or, integer_column, has_column
-export MassTable,
+export MassExcessTable,
     MASS_EXCESS_SPEC,
-    LEGACY_MASS_EXCESS_SPEC,
-    read_mass_table,
+    HEADERLESS_MASS_EXCESS_SPEC,
+    read_mass_excess_table,
     mass_excess,
     separation_energy,
     neutron_separation_energy,
     q_value,
     complementary_fragment
-export ChargePolarization,
-    read_charge_polarization,
-    mean_charge_polarization,
-    polarization_at,
-    width_at,
+export ChargeDistribution,
+    CHARGE_DISTRIBUTION_SPEC,
+    DEFAULT_CHARGE_POLARIZATION,
+    DEFAULT_CHARGE_DISPERSION,
+    read_charge_distribution,
+    mean_charge_distribution,
+    charge_polarization,
+    charge_dispersion,
     unchanged_charge_distribution,
     most_probable_charge,
     charge_probability,
     charge_numbers
 export WahlSystematics,
-    WAHL_LOW_ENERGY, WAHL_VALIDITY, wahl_polarization, wahl_width, wahl_charge_polarization
+    WAHL_LOW_ENERGY,
+    WAHL_VALIDITY,
+    wahl_polarization,
+    wahl_dispersion,
+    wahl_charge_distribution
 export Fragmentation,
     FragmentationDomain,
     fragmentation_domain,
@@ -51,7 +68,7 @@ export Fragmentation,
     mass_range,
     is_symmetric
 export Energetics,
-    ExcludedConfiguration,
+    Exclusion,
     energetics,
     sweep_energetics,
     exclusion_summary,
@@ -59,17 +76,18 @@ export Energetics,
     total_excitation_energy,
     kinetic_energy
 export LevelDensityModel,
-    ShellCorrections,
-    read_shell_corrections,
+    LEVEL_DENSITY_MODELS,
+    ShellCorrectionTable,
+    read_shell_correction_table,
     GilbertCameron,
     is_deformed_gilbert_cameron,
     BackShiftedFermiGas,
     level_density_parameter,
     shell_correction,
     liquid_drop_energy
-export JointedSegments,
-    SEGMENT_SPEC,
-    read_segments,
+export SegmentedCurve,
+    SEGMENTED_CURVE_SPEC,
+    read_segmented_curve,
     PartitionMethod,
     ExcitationEnergyRatio,
     TemperatureRatio,
@@ -87,17 +105,17 @@ export EvaporationCrossSection,
     fermi_gas_energy,
     residual_temperature,
     MINIMUM_TEMPERATURE
-export ConfigurationValues, average, total_average, weights_from
-export ExperimentalYield,
-    EXPERIMENTAL_YIELD_SPEC,
+export FragmentQuantity, average, total_average, weights_from
+export MassEnergyYield,
+    MASS_ENERGY_YIELD_SPEC,
     MASS_YIELD_SPEC,
     MEAN_KINETIC_ENERGY_SPEC,
-    read_experimental_yield,
+    read_mass_energy_yield,
     factorized_yield,
     fragment_charge_probabilities,
-    FragmentYields,
+    FragmentYield,
     DEFAULT_YIELD_TOTAL,
-    build_fragment_yields,
+    build_fragment_yield,
     coverage,
     yield_over,
     mean_kinetic_energy_by_mass
@@ -118,7 +136,7 @@ export EmissionSequence,
     post_neutron_mass,
     sequence_average
 export Configuration, load_configuration
-export RunResult, run_pipeline, write_results
+export RunResult, run_pipeline, write_results, run_identifier, RUN_IDENTIFIER_ABBREVIATIONS
 
 """
     PACKAGE_ROOT

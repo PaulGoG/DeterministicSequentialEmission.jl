@@ -11,7 +11,7 @@
             141 171.0 NaN NaN
             """,
         )
-        measured = read_experimental_yield(path)
+        measured = read_mass_energy_yield(path)
 
         # A cell with no finite yield is dropped: an unmeasured (A, TKE) is not a yield of zero.
         @test length(measured) == 3
@@ -24,29 +24,29 @@
         # The uncertainty column is optional, as everywhere else.
         bare = joinpath(dir, "bare.dat")
         write(bare, "A TKE Value\n140 170.0 1.5\n")
-        @test length(read_experimental_yield(bare)) == 1
+        @test length(read_mass_energy_yield(bare)) == 1
 
         # A repeat carrying the same yield is the symmetric mass written from both sides of
         # the split, which the 235-U distribution does at every kinetic energy. One measurement,
         # counted once.
         mirrored = joinpath(dir, "mirrored.dat")
         write(mirrored, "A TKE Value\n118 170.0 1.5\n118 170.0 1.5\n119 170.0 2.0\n")
-        @test length(read_experimental_yield(mirrored)) == 2
-        @test read_experimental_yield(mirrored).values[(118, 170.0)] == 1.5
+        @test length(read_mass_energy_yield(mirrored)) == 2
+        @test read_mass_energy_yield(mirrored).values[(118, 170.0)] == 1.5
 
         # A repeat that disagrees is a real inconsistency in the file.
         repeated = joinpath(dir, "repeated.dat")
         write(repeated, "A TKE Value\n140 170.0 1.5\n140 170.0 2.0\n")
-        @test_throws ArgumentError read_experimental_yield(repeated)
+        @test_throws ArgumentError read_mass_energy_yield(repeated)
 
         empty = joinpath(dir, "empty.dat")
         write(empty, "A TKE Value\n140 170.0 NaN\n")
-        @test_throws ArgumentError read_experimental_yield(empty)
+        @test_throws ArgumentError read_mass_energy_yield(empty)
     end
 end
 
 @testset "coverage reports what a sweep reaches" begin
-    yields = FragmentYields(
+    yields = FragmentYield(
         Dict((140, 54, 170.0) => 3.0, (140, 54, 171.0) => 1.0, (140, 54, 172.0) => 4.0),
         8.0,
     )
@@ -57,13 +57,13 @@ end
     @test report.swept == [170.0, 172.0]
 end
 
-POLARIZATION_AVAILABLE &&
+CHARGE_DISTRIBUTION_AVAILABLE &&
     YIELD_AVAILABLE &&
     @testset "fragment yields against the archived run" begin
-        polarization = cf252_polarization()
+        distribution = cf252_charge_distribution()
         domain = cf252_domain()
-        measured = read_experimental_yield(CF252_YIELD_FILE)
-        yields = build_fragment_yields(domain, polarization, measured)
+        measured = read_mass_energy_yield(CF252_YIELD_FILE)
+        yields = build_fragment_yield(domain, distribution, measured)
 
         # The archived matrix, cell for cell.
         @test length(yields) == 48985
@@ -72,7 +72,7 @@ POLARIZATION_AVAILABLE &&
         # Each nuclide takes the charge probability of its own mass. Summing a nuclide's
         # contributions instead, as the fragment census does, is wrong here and shows up at the
         # symmetric mass as a factor of 28.
-        probabilities = fragment_charge_probabilities(domain, polarization)
+        probabilities = fragment_charge_probabilities(domain, distribution)
         @test probabilities[Nuclide(50, 126)] ≈ 0.405781 atol = 1e-6
         @test probabilities[Nuclide(48, 126)] ≈ 0.014324 atol = 1e-6
 
@@ -81,9 +81,9 @@ POLARIZATION_AVAILABLE &&
         @test probabilities[Nuclide(52, 134)] ≈ probabilities[Nuclide(46, 118)]
 
         for (dimension, file, column_names) in (
-            (:mass, "CF52_Y_A.dat", [:A, :Y]),
-            (:charge, "CF52_Y_Z.dat", [:Z, :Y]),
-            (:kinetic_energy, "CF52_Y_TKE.dat", [:TKE, :Y]),
+            (:mass, "Y_vs_A.dat", [:A, :Y]),
+            (:charge, "Y_vs_Z.dat", [:Z, :Y]),
+            (:kinetic_energy, "Y_vs_TKE.dat", [:TKE, :Y]),
         )
             reference =
                 read_table(joinpath(REFERENCE, file), TableSpec(column_names; skip = 1))
@@ -107,7 +107,7 @@ POLARIZATION_AVAILABLE &&
 
         # ⟨TKE⟩(A) against the archive.
         reference = read_table(
-            joinpath(REFERENCE, "CF52_TKE_AH.dat"),
+            joinpath(REFERENCE, "TKE_vs_A_H.dat"),
             TableSpec([:A_H, :TKE]; skip = 1),
         )
         masses = column(reference, :A_H, Int)
@@ -133,7 +133,7 @@ POLARIZATION_AVAILABLE &&
 
 @testset "yield construction validation" begin
     @test_throws ArgumentError yield_over(
-        FragmentYields(Dict((1, 1, 1.0) => 1.0), 1.0),
+        FragmentYield(Dict((1, 1, 1.0) => 1.0), 1.0),
         :temperature,
     )
 end

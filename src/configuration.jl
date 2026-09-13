@@ -2,16 +2,19 @@
     Configuration
 
 A complete run: the fissioning system, the fragmentation domain, the level density and
-evaporation prescriptions, the TXE partition, the yield weights, and where the results go.
+evaporation models, the TXE partition, and the yield weights.
 
 Built by [`load_configuration`](@ref) from a TOML file. Every field is validated on load, so a
 pipeline cannot start from a configuration it is unable to honour, and the values that reach the
 model are the ones the file states rather than defaults filled in silently along the way.
+
+Where the results go is not a field, because it is not a key: a run writes to the directory
+[`system_label`](@ref) names, under the run identifier [`run_identifier`](@ref) builds.
 """
 struct Configuration
     system::FissioningSystem
-    masses::MassTable
-    polarization::ChargePolarization
+    mass_excess_table::MassExcessTable
+    charge_distribution::ChargeDistribution
     heavy_masses::UnitRange{Int}
     charges_per_mass::Int
     kinetic_energies::StepRangeLen{Float64}
@@ -19,11 +22,10 @@ struct Configuration
     cross_section::EvaporationCrossSection
     maximum_temperature::Float64
     method::PartitionMethod
-    yields::Union{FragmentYields, Nothing}
+    fragment_yield::Union{FragmentYield, Nothing}
     spectrum_grid::Union{Vector{Float64}, Nothing}
     maxwellian_temperature::Float64
-    digits::Int
-    subdirectory::String
+    significant_digits::Int
     source::String
     data_directory::String
 end
@@ -32,7 +34,7 @@ function Base.show(io::IO, configuration::Configuration)
     print(
         io,
         "Configuration(",
-        configuration.subdirectory,
+        system_label(configuration.system),
         ", A_H ∈ ",
         configuration.heavy_masses,
         ", TKE ∈ ",
@@ -134,7 +136,7 @@ function load_configuration(
 
     system = _load_system(document)
     energetics_section = _section(document, "energetics")
-    masses = read_mass_table(
+    mass_excess_table = read_mass_excess_table(
         _input(
             data_directory,
             _value(
@@ -146,28 +148,28 @@ function load_configuration(
             "energetics.mass_excess_file",
         ),
     )
-    heavy_masses, charges_per_mass, polarization =
-        _load_fragmentation(document, system, masses, data_directory)
+    heavy_masses, charges_per_mass, charge_distribution =
+        _load_fragmentation(document, system, mass_excess_table, data_directory)
     kinetic_energies = _load_kinetic_energies(energetics_section)
-    model = _load_level_density(document, masses, data_directory)
+    model = _load_level_density(document, mass_excess_table, data_directory)
     cross_section, maximum_temperature = _load_evaporation(document)
     method = _load_partition(document, model, data_directory)
-    yields = _load_yields(
+    fragment_yield = _load_yield(
         document,
         system,
-        polarization,
+        charge_distribution,
         heavy_masses,
         charges_per_mass,
         kinetic_energies,
         data_directory,
     )
     spectrum_grid, maxwellian = _load_spectrum(document)
-    digits, subdirectory = _load_output(document)
+    significant_digits = _load_output(document)
 
     return Configuration(
         system,
-        masses,
-        polarization,
+        mass_excess_table,
+        charge_distribution,
         heavy_masses,
         charges_per_mass,
         kinetic_energies,
@@ -175,11 +177,10 @@ function load_configuration(
         cross_section,
         maximum_temperature,
         method,
-        yields,
+        fragment_yield,
         spectrum_grid,
         maxwellian,
-        digits,
-        subdirectory,
+        significant_digits,
         abspath(path),
         abspath(data_directory),
     )
@@ -204,7 +205,7 @@ function _load_system(document::AbstractDict)
         ),
     )
     Z < A || throw(ArgumentError("system.target_Z = $Z must be below system.target_A = $A"))
-    reaction = _choice(section, "reaction", ("0,f", "n,f"), "system.reaction")
+    channel = _choice(section, "channel", CHANNELS, "system.channel")
     energy = Float64(
         _bounded(
             _value(section, "incident_energy", Real, "system.incident_energy", 0.0),
@@ -214,20 +215,20 @@ function _load_system(document::AbstractDict)
         ),
     )
     target = Nuclide(Z, A)
-    if reaction == "0,f"
+    if channel == "sf"
         iszero(energy) || throw(
-            ArgumentError("system.reaction = \"0,f\" is spontaneous fission and requires \
+            ArgumentError("system.channel = \"sf\" is spontaneous fission and requires \
                            system.incident_energy = 0, got $energy MeV"),
         )
         return spontaneous_fission(target)
     end
-    return neutron_induced_fission(target, energy)
+    return neutron_induced_fission(target, energy, channel)
 end
 
 function _load_fragmentation(
     document::AbstractDict,
     system::FissioningSystem,
-    masses::MassTable,
+    mass_excess_table::MassExcessTable,
     data_directory::AbstractString,
 )
     section = _section(document, "fragmentation")
@@ -269,25 +270,25 @@ function _load_fragmentation(
         String,
         "fragmentation.charge_distribution_file",
     )
-    polarization = if source == "wahl"
+    distribution = if source == "wahl"
         # The Zₚ systematics rather than a table: the route for a system with no evaluated
-        # ΔZ(A), rms(A) of its own. Tabulated over exactly the masses the domain will ask for.
-        systematics = WahlSystematics(masses, system)
+        # ΔZ(A), σ_Z(A) of its own. Tabulated over exactly the masses the domain will ask for.
+        systematics = WahlSystematics(mass_excess_table, system)
         systematics === nothing && throw(
             ArgumentError(
                 "fragmentation.charge_distribution_file = \"wahl\" needs Sₙ of the \
                            compound nucleus, which the mass table cannot form",
             ),
         )
-        wahl_charge_polarization(systematics, lower:upper)
+        wahl_charge_distribution(systematics, lower:upper)
     elseif source == "mean"
-        mean_charge_polarization()
+        mean_charge_distribution()
     else
-        read_charge_polarization(
+        read_charge_distribution(
             _input(data_directory, source, "fragmentation.charge_distribution_file"),
         )
     end
-    return lower:upper, charges, polarization
+    return lower:upper, charges, distribution
 end
 
 function _load_kinetic_energies(section::AbstractDict)
@@ -324,19 +325,13 @@ end
 
 function _load_level_density(
     document::AbstractDict,
-    masses::MassTable,
+    mass_excess_table::MassExcessTable,
     data_directory::AbstractString,
 )
     section = _section(document, "level_density")
-    prescription = _choice(
-        section,
-        "prescription",
-        ("BSFG", "GC"),
-        "level_density.prescription",
-        "BSFG",
-    )
-    prescription == "BSFG" && return BackShiftedFermiGas(masses)
-    corrections = read_shell_corrections(
+    model = _choice(section, "model", LEVEL_DENSITY_MODELS, "level_density.model", "BSFG")
+    model == "BSFG" && return BackShiftedFermiGas(mass_excess_table)
+    corrections = read_shell_correction_table(
         _input(
             data_directory,
             _value(
@@ -397,27 +392,37 @@ function _load_partition(
         deformation = read_extra_deformation(
             _input(
                 data_directory,
-                _value(section, "deformation_file", String, "partition.deformation_file"),
-                "partition.deformation_file",
+                _value(
+                    section,
+                    "deformation_energy_file",
+                    String,
+                    "partition.deformation_energy_file",
+                ),
+                "partition.deformation_energy_file",
             ),
         )
         return ScissionModelling(deformation, model)
     end
-    segments = read_segments(
+    curve = read_segmented_curve(
         _input(
             data_directory,
-            _value(section, "segments_file", String, "partition.segments_file"),
-            "partition.segments_file",
+            _value(
+                section,
+                "segmented_curve_file",
+                String,
+                "partition.segmented_curve_file",
+            ),
+            "partition.segmented_curve_file",
         ),
     )
-    method == "temperature_ratio" && return TemperatureRatio(segments, model)
-    return ExcitationEnergyRatio(segments)
+    method == "temperature_ratio" && return TemperatureRatio(curve, model)
+    return ExcitationEnergyRatio(curve)
 end
 
-function _load_yields(
+function _load_yield(
     document::AbstractDict,
     system::FissioningSystem,
-    polarization::ChargePolarization,
+    charge_distribution::ChargeDistribution,
     heavy_masses::UnitRange{Int},
     charges_per_mass::Integer,
     kinetic_energies,
@@ -433,38 +438,43 @@ function _load_yields(
             exclusive_min = true,
         ),
     )
-    joint = haskey(section, "file")
+    joint = haskey(section, "mass_energy_yield_file")
     marginal = haskey(section, "mass_yield_file")
     joint || marginal || return nothing
     joint &&
         marginal &&
         throw(
             ArgumentError(
-                "yield.file and yield.mass_yield_file are alternatives: the second \
-                       reconstructs a joint distribution from its marginals and is for systems \
-                       where the first does not exist",
+                "yield.mass_energy_yield_file and yield.mass_yield_file are alternatives: the \
+                       second reconstructs a joint distribution from its marginals and is for \
+                       systems where the first does not exist",
             ),
         )
 
-    experimental = if joint
-        read_experimental_yield(
+    measured = if joint
+        read_mass_energy_yield(
             _input(
                 data_directory,
-                _value(section, "file", String, "yield.file"),
-                "yield.file",
+                _value(
+                    section,
+                    "mass_energy_yield_file",
+                    String,
+                    "yield.mass_energy_yield_file",
+                ),
+                "yield.mass_energy_yield_file",
             ),
         )
     else
-        width = Float64(
+        dispersion = Float64(
             _bounded(
                 _value(
                     section,
-                    "kinetic_energy_width",
+                    "kinetic_energy_dispersion",
                     Real,
-                    "yield.kinetic_energy_width",
+                    "yield.kinetic_energy_dispersion",
                     10.0,
                 ),
-                "yield.kinetic_energy_width";
+                "yield.kinetic_energy_dispersion";
                 min = 0,
                 max = 100,
                 exclusive_min = true,
@@ -478,23 +488,28 @@ function _load_yields(
             ),
             _input(
                 data_directory,
-                _value(section, "kinetic_energy_file", String, "yield.kinetic_energy_file"),
-                "yield.kinetic_energy_file",
+                _value(
+                    section,
+                    "mean_kinetic_energy_file",
+                    String,
+                    "yield.mean_kinetic_energy_file",
+                ),
+                "yield.mean_kinetic_energy_file",
             ),
             kinetic_energies,
             system.compound.A;
-            width = width,
+            dispersion = dispersion,
             total = total,
         )
     end
 
     domain = fragmentation_domain(
         system,
-        polarization,
+        charge_distribution,
         heavy_masses;
         charges_per_mass = charges_per_mass,
     )
-    return build_fragment_yields(domain, polarization, experimental; total = total)
+    return build_fragment_yield(domain, charge_distribution, measured; total = total)
 end
 
 function _load_spectrum(document::AbstractDict)
@@ -549,20 +564,19 @@ function _load_spectrum(document::AbstractDict)
     return 10 .^ range(log10(lower), log10(upper); length = points), maxwellian
 end
 
+# `[output] subdirectory` is gone. It named the directory a run wrote to, and with the entrance
+# channel in the file that directory follows from `target_A`, `target_Z` and `channel` through
+# `system_label` — so the key could only repeat what the system section already says, or
+# contradict it. It existed because a thermal and a resonance run of one target could not
+# otherwise be told apart; the channel is what tells them apart now.
 function _load_output(document::AbstractDict)
     section = _section(document, "output")
-    digits = Int(
+    return Int(
         _bounded(
-            _value(section, "digits", Int, "output.digits", 8),
-            "output.digits";
+            _value(section, "significant_digits", Int, "output.significant_digits", 8),
+            "output.significant_digits";
             min = 1,
             max = 15,
         ),
     )
-    subdirectory = _value(section, "subdirectory", String, "output.subdirectory")
-    isempty(subdirectory) && throw(ArgumentError("output.subdirectory must not be empty"))
-    occursin('/', subdirectory) || occursin('\\', subdirectory) ?
-    throw(ArgumentError("output.subdirectory is one directory name, not a path, \
-                       got $(repr(subdirectory))")) : nothing
-    return digits, subdirectory
 end

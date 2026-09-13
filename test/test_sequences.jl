@@ -59,16 +59,16 @@ end
 @testset "sequential emission against the archived runs" for (label, file, method) in [
     (
         "E*_H/TXE (A_H)",
-        "CF52_sequences_PARAM.dat",
+        "sequences_excitation_ratio.dat",
         ExcitationEnergyRatio(
-            JointedSegments([(126, 0.5), (130, 0.14), (150, 0.607), (174, 0.865)]),
+            SegmentedCurve([(126, 0.5), (130, 0.14), (150, 0.607), (174, 0.865)]),
         ),
     ),
     (
         "R_T (A_H)",
-        "CF52_sequences_RT.dat",
+        "sequences_temperature_ratio.dat",
         TemperatureRatio(
-            JointedSegments([
+            SegmentedCurve([
                 (126, 1.0),
                 (130, 1.734),
                 (134, 1.28),
@@ -169,7 +169,7 @@ end
     model = BackShiftedFermiGas(table)
     cross_section = VariableCrossSection()
     method = ExcitationEnergyRatio(
-        JointedSegments([(126, 0.5), (130, 0.14), (150, 0.607), (174, 0.865)]),
+        SegmentedCurve([(126, 0.5), (130, 0.14), (150, 0.607), (174, 0.865)]),
     )
 
     # A_H = 134, Z_H = 52 at TKE = 150 MeV: the archive writes zeros for the light fragment.

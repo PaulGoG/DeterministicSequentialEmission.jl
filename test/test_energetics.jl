@@ -6,7 +6,7 @@
     @test uncertainty(compound_nucleus_excitation(table, CF252)) == 0.0
 
     # Thermal neutron capture leaves essentially Sₙ of the compound nucleus.
-    pu = neutron_induced_fission(Nuclide(94, 239), 2.53e-8)
+    pu = neutron_induced_fission(Nuclide(94, 239), 2.53e-8, "nth")
     E = compound_nucleus_excitation(table, pu)
     @test value(E) ≈ value(neutron_separation_energy(table, Nuclide(94, 240))) + 2.53e-8
     @test 5.0 < value(E) < 8.0
@@ -41,7 +41,7 @@ end
     @test energetics(table, CF252, entry, 400.0) === nothing
 end
 
-POLARIZATION_AVAILABLE && @testset "the kinetic energy grid is validated" begin
+CHARGE_DISTRIBUTION_AVAILABLE && @testset "the kinetic energy grid is validated" begin
     table = mass_table()
     domain = cf252_domain()
 
@@ -66,7 +66,7 @@ POLARIZATION_AVAILABLE && @testset "the kinetic energy grid is validated" begin
     @test !isempty(accepted)
 end
 
-POLARIZATION_AVAILABLE && @testset "sweeping the domain" begin
+CHARGE_DISTRIBUTION_AVAILABLE && @testset "sweeping the domain" begin
     table = mass_table()
     domain = cf252_domain()
     accepted, excluded = sweep_energetics(table, CF252, domain, CF252_TKE)

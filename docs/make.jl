@@ -23,6 +23,7 @@ makedocs(;
     pages = [
         "Home" => "index.md",
         "Running a case" => "running.md",
+        "Naming" => "naming.md",
         "System and inputs" => "system.md",
         "Fragmentation and charge" => "fragmentation.md",
         "Energetics and partition" => "energetics.md",

@@ -1,0 +1,46 @@
+# Thermal-neutron-induced fission of 235-U.
+
+[system]
+target_A = 235                    # mass number of the target nuclide, 2 to 400
+target_Z = 92                     # charge number of the target nuclide, 1 to 118
+channel = "nth"                   # one of: "sf" | "nth" | "nres" | "nfast"
+incident_energy = 2.53e-8           # MeV, 0 to 20; must be zero for "sf"
+
+[fragmentation]
+charges_per_mass = 5                                       # charge numbers per mass, odd, 1 to 15
+heavy_mass_min = 118                                       # at or above A0/2
+heavy_mass_max = 160                                       # below A0
+charge_distribution_file = "U235_nth/charge_distribution_vs_A.dat"       # under the data directory, or "wahl" | "mean"
+
+[energetics]
+mass_excess_file = "reference/mass_excess_ame2020.dat"  # under the data directory
+kinetic_energy_min = 100.0                              # MeV, above 0
+kinetic_energy_max = 200.0                              # MeV, above kinetic_energy_min
+kinetic_energy_step = 1.0                               # MeV, above 0 to 50
+
+[level_density]
+model = "BSFG"                                                            # one of: "BSFG" | "GC"
+shell_correction_file = "reference/shell_corrections_gilbert_cameron.dat"  # required by "GC"
+deformed_branch = true                                                    # "GC" only: c = 0.120 rather than 0.142
+
+[evaporation]
+cross_section = "variable"        # one of: "variable" | "constant"
+maximum_temperature = 2.0         # MeV, above 0 to 10; the bracket the temperature is solved in
+
+[partition]
+method = "temperature_ratio"                                          # one of: "temperature_ratio" | "excitation_ratio" | "scission"
+segmented_curve_file = "U235_nth/R_T_vs_A_H_systematic_trend.csv"        # required by the two ratio methods
+
+[yield]
+mass_energy_yield_file = "U235_nth/Y_vs_A_TKE.dat"   # optional; omit the section to weight by p(Z,A) alone
+total = 200.0                                        # percent the yield sums to, above 0
+
+[spectrum]
+enabled = true                    # solve the laboratory prompt neutron spectrum
+energy_min = 0.05                 # MeV, above 0 to 100
+energy_max = 20.0                 # MeV, above energy_min to 100
+points = 300                      # logarithmic grid points, 8 to 4000
+maxwellian_temperature = 1.42     # MeV, above 0 to 5; the reference the ratio is taken against
+
+[output]
+significant_digits = 8            # significant figures in tabulated output, 1 to 15

@@ -1,20 +1,21 @@
 # Validation figures: the model against measurement.
 #
-#   julia --project=plotting plotting/figures.jl [results directory] [experimental directory]
+#   julia --project=plotting plotting/figures.jl [results directory] [data directory]
 #
 # Nothing is solved here. The model side is read from what scripts/run.jl wrote under results/,
 # so a figure is redrawn from tables rather than by running the model again, and the numbers on
 # the page are the numbers in the files. Run the pipeline first:
 #
-#   julia --project scripts/run.jl config/Cf252_0f.toml
+#   julia --project scripts/run.jl config/Cf252_sf.toml
 #
 # The measured side is retrieved from EXFOR with ExforFissionData.jl and laid out as
 #
-#   <experimental>/multiplicity/<system>/*.dat     A ν [σν]
-#   <experimental>/spectrum_ratio/<system>/*.dat   E N(E)/M(E,T_M) [σ]
+#   <data>/<system>/nu_vs_A/*.dat                            A nu nu_uncertainty
+#   <data>/<system>/spectrum_maxwellian_ratio_vs_E/*.dat     E spectrum_maxwellian_ratio [...]
 #
-# which is the layout that package writes. Both directories default to beside the project and
-# neither is version-controlled; nothing here knows where yours lives.
+# which is the layout that package writes. Columns are taken by position, not by header text.
+# Both directories default to beside the project and neither is version-controlled; nothing here
+# knows where yours lives.
 
 include(joinpath(@__DIR__, "activate.jl"))
 
@@ -24,25 +25,29 @@ using Printf
 const ROOT = dirname(@__DIR__)
 const FIGURES = joinpath(ROOT, "figures")
 const RESULTS = length(ARGS) >= 1 ? ARGS[1] : joinpath(ROOT, "results")
-const EXPERIMENTAL = length(ARGS) >= 2 ? ARGS[2] : joinpath(ROOT, "data", "experimental")
+const MEASURED = length(ARGS) >= 2 ? ARGS[2] : joinpath(ROOT, "data")
 
 """
-One fissioning system: the label it is drawn under, the results directory it is read from, and
-the evaluated total multiplicity it is compared against — ENDF/B-VIII.0 for the induced systems
-and the Axton standard for 252-Cf.
+One fissioning system: the token that names its directories, the typeset notation it is drawn
+under, and the evaluated total multiplicity it is compared against — ENDF/B-VIII.0 for the
+induced systems and the Axton standard for 252-Cf.
+
+`label` is the system token, as `system_label` returns it; `notation` is the typeset form, as
+`system_notation` returns it. One name may not mean both. They are written out here rather than
+called, because this environment draws from tables and does not load the package.
 """
 struct Case
-    label::Any
-    identifier::String
+    label::String
+    notation::Any
     compound_mass::Int
     measured::Float64
 end
 
 const CASES = [
-    Case(L"$^{252}$Cf(sf)", "Cf252_0f", 252, 3.7573),
-    Case(L"$^{235}$U(n$_\mathrm{th}$,f)", "U235_nf", 236, 2.4140),
-    Case(L"$^{239}$Pu(n$_\mathrm{th}$,f)", "Pu239_nf", 240, 2.8750),
-    Case(L"$^{233}$U(n$_\mathrm{th}$,f)", "U233_nf", 234, 2.4968),
+    Case("Cf252_sf", L"$^{252}$Cf(sf)", 252, 3.7573),
+    Case("U235_nth", L"$^{235}$U(nth,f)", 236, 2.4140),
+    Case("Pu239_nth", L"$^{239}$Pu(nth,f)", 240, 2.8750),
+    Case("U233_nth", L"$^{233}$U(nth,f)", 234, 2.4968),
 ]
 
 # One common abscissa, so the panels can be read against each other and the inner tick labels
@@ -95,9 +100,26 @@ function read_columns(path)
     return x, y, σ
 end
 
+"""
+The directory of the run to draw for one system, or `nothing` when none has been written.
+
+A run writes to `results/<system>/<run identifier>`, so a system may hold several. The most
+recently written one is drawn, and which that was is stated on the terminal rather than left to
+be inferred from the figure.
+"""
+function run_directory(case::Case)
+    system = joinpath(RESULTS, case.label)
+    isdir(system) || return nothing
+    runs = filter(isdir, readdir(system; join = true))
+    isempty(runs) && return nothing
+    return last(sort(runs; by = mtime))
+end
+
 "The totals a run wrote, by name."
 function read_totals(case::Case)
-    path = joinpath(RESULTS, case.identifier, "totals.dat")
+    directory = run_directory(case)
+    directory === nothing && return Dict{String, Float64}()
+    path = joinpath(directory, "totals.dat")
     totals = Dict{String, Float64}()
     isfile(path) || return totals
     for (index, line) in enumerate(eachline(path))
@@ -109,10 +131,10 @@ function read_totals(case::Case)
     return totals
 end
 
-curve(case::Case, name) = read_columns(joinpath(RESULTS, case.identifier, name))
+curve(case::Case, name) = read_columns(joinpath(run_directory(case), name))
 
-function measured_sets(kind, system)
-    directory = joinpath(EXPERIMENTAL, kind, system)
+function measured_sets(system, observable)
+    directory = joinpath(MEASURED, system, observable)
     isdir(directory) || return Tuple{String, String}[]
     files = sort(filter(name -> endswith(name, ".dat"), readdir(directory)))
     return [(_author(name), joinpath(directory, name)) for name in files]
@@ -128,11 +150,14 @@ function _author(name)
 end
 
 function _available(case::Case)
-    path = joinpath(RESULTS, case.identifier, "multiplicity_A.dat")
-    isfile(path) && return true
+    directory = run_directory(case)
+    if directory !== nothing && isfile(joinpath(directory, "nu_vs_A.dat"))
+        println("  ", rpad(case.label, 10), " ", basename(directory))
+        return true
+    end
     @warn """
         no run to draw; solve it first with `julia --project scripts/run.jl \
-        config/$(case.identifier).toml`.""" expected = path
+        config/$(case.label).toml`.""" expected = joinpath(RESULTS, case.label)
     return false
 end
 
@@ -145,14 +170,14 @@ function figure_multiplicity()
     summary = String[]
 
     for (row, case) in pairs(drawable)
-        A, ν, _ = curve(case, "multiplicity_A.dat")
+        A, ν, _ = curve(case, "nu_vs_A.dat")
         totals = read_totals(case)
-        modelled = get(totals, "multiplicity_per_fission", NaN)
+        modelled = get(totals, "nu_per_fission", NaN)
         push!(
             summary,
             @sprintf(
                 "%-24s ⟨ν⟩ = %.4f   evaluated %.4f   %+.1f %%",
-                string(case.label),
+                string(case.notation),
                 modelled,
                 case.measured,
                 100 * (modelled - case.measured) / case.measured
@@ -169,7 +194,7 @@ function figure_multiplicity()
 
         handles = []
         labels = Any[]
-        for (index, (author, path)) in pairs(measured_sets("multiplicity", case.identifier))
+        for (index, (author, path)) in pairs(measured_sets(case.label, "nu_vs_A"))
             index > length(PALETTE) && break
             A_measured, ν_measured, σ = read_columns(path)
             keep = first(MASS_RANGE) .<= A_measured .<= last(MASS_RANGE)
@@ -211,7 +236,7 @@ function figure_multiplicity()
             axis,
             last(MASS_RANGE) - 2,
             0.1;
-            text = case.label,
+            text = case.notation,
             fontsize = 9,
             align = (:right, :bottom),
         )
@@ -258,7 +283,8 @@ const T_M = 1.42     # the Maxwellian temperature every retrieved set is reporte
 function figure_spectrum()
     set_theme!(THEME)
     case = first(CASES)
-    path = joinpath(RESULTS, case.identifier, "spectrum_E.dat")
+    directory = run_directory(case)
+    path = directory === nothing ? "" : joinpath(directory, "spectrum_vs_E.dat")
     if !isfile(path)
         @warn "no spectrum to draw" expected = path
         return nothing
@@ -267,7 +293,7 @@ function figure_spectrum()
     totals = read_totals(case)
     @printf(
         "⟨E⟩ = %.4f MeV against a Maxwellian at T_M = %.2f MeV\n",
-        get(totals, "mean_neutron_laboratory_energy", NaN),
+        get(totals, "mean_E", NaN),
         T_M
     )
 
@@ -284,7 +310,8 @@ function figure_spectrum()
 
     handles = []
     labels = Any[]
-    for (index, (author, file)) in pairs(measured_sets("spectrum_ratio", case.identifier))
+    for (index, (author, file)) in
+        pairs(measured_sets(case.label, "spectrum_maxwellian_ratio_vs_E"))
         index > length(PALETTE) && break
         energies, observed, σ = read_columns(file)
         keep = LOW .<= energies .<= HIGH
@@ -318,7 +345,7 @@ function figure_spectrum()
         axis,
         LOW * 1.04,
         0.635;
-        text = case.label,
+        text = case.notation,
         fontsize = 9,
         align = (:left, :bottom),
     )
@@ -371,10 +398,10 @@ function figure_residual_quantities()
     isempty(drawable) && return nothing
 
     panels = (
-        ("excitation_A.dat", L"E^*(A)\ [\mathrm{MeV}]"),
-        ("residual_energy_A.dat", L"\bar{E}_r(A)\ [\mathrm{MeV}]"),
-        ("temperature_A.dat", L"\langle T \rangle(A)\ [\mathrm{MeV}]"),
-        ("neutron_energy_A.dat", L"\langle \varepsilon \rangle(A)\ [\mathrm{MeV}]"),
+        ("E_star_vs_A.dat", L"E^*(A)\ [\mathrm{MeV}]"),
+        ("E_r_vs_A.dat", L"\bar{E}_r(A)\ [\mathrm{MeV}]"),
+        ("T_vs_A.dat", L"\langle T \rangle(A)\ [\mathrm{MeV}]"),
+        ("eps_vs_A.dat", L"\langle \varepsilon \rangle(A)\ [\mathrm{MeV}]"),
     )
 
     figure = Figure(size = (510, 340))
@@ -390,7 +417,9 @@ function figure_residual_quantities()
             xticklabelsvisible = row == 2,
         )
         for (position, case) in pairs(drawable)
-            path = joinpath(RESULTS, case.identifier, name)
+            directory = run_directory(case)
+            directory === nothing && continue
+            path = joinpath(directory, name)
             isfile(path) || continue
             A, quantity, _ = read_columns(path)
             handle = lines!(
@@ -403,7 +432,7 @@ function figure_residual_quantities()
             )
             if index == 1
                 push!(handles, handle)
-                push!(labels, case.label)
+                push!(labels, case.notation)
             end
         end
         xlims!(axis, MASS_RANGE...)
@@ -435,11 +464,12 @@ function main()
     mkpath(FIGURES)
     isdir(RESULTS) || @warn """
         no results directory; solve the systems first with \
-        `julia --project scripts/run.jl config/<case>.toml`.""" directory = RESULTS
-    isdir(EXPERIMENTAL) || @warn """
-        no experimental directory; the figures will carry the model curves alone. Retrieve the \
+        `julia --project scripts/run.jl config/<system>.toml`.""" directory = RESULTS
+    isdir(MEASURED) || @warn """
+        no data directory; the figures will carry the model curves alone. Retrieve the \
         measurements with ExforFissionData.jl and lay them out as described at the top of this \
-        file.""" directory = EXPERIMENTAL
+        file.""" directory = MEASURED
+    println("drawing from:")
     figure_multiplicity()
     figure_spectrum()
     figure_residual_quantities()

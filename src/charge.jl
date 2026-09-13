@@ -1,53 +1,50 @@
 """
-    ChargePolarization
+    ChargeDistribution
 
-Charge polarization `ΔZ(A)` and width `rms(A)` of the isobaric charge distribution, indexed by
-fragment mass number, with the values used where a mass is not tabulated.
+Charge polarization `ΔZ(A)` and dispersion `σ_Z(A)` of the isobaric charge distribution, indexed
+by fragment mass number, with the values used where a mass is not tabulated.
 
-The defaults `⟨ΔZ⟩ = -0.5` and `⟨rms⟩ = 0.6` are the conventional means applied when no `Zₚ`
+The defaults `⟨ΔZ⟩ = -0.5` and `⟨σ_Z⟩ = 0.6` are the conventional means applied when no `Zₚ`
 systematics is available for the fission case under study. `ΔZ` is quoted for the **heavy**
 fragment and carries the opposite sign for the light one.
 """
-struct ChargePolarization
-    polarization::Dict{Int, Float64}
-    width::Dict{Int, Float64}
-    default_polarization::Float64
-    default_width::Float64
+struct ChargeDistribution
+    ΔZ::Dict{Int, Float64}
+    σ_Z::Dict{Int, Float64}
+    default_ΔZ::Float64
+    default_σ_Z::Float64
     source::String
 
-    function ChargePolarization(
-        polarization::Dict{Int, Float64},
-        width::Dict{Int, Float64},
-        default_polarization::Real,
-        default_width::Real,
+    function ChargeDistribution(
+        ΔZ::Dict{Int, Float64},
+        σ_Z::Dict{Int, Float64},
+        default_ΔZ::Real,
+        default_σ_Z::Real,
         source::AbstractString,
     )
-        default_width > 0 ||
-            throw(ArgumentError("the default rms must be positive, got $default_width"))
-        return new(
-            polarization,
-            width,
-            Float64(default_polarization),
-            Float64(default_width),
-            String(source),
+        default_σ_Z > 0 || throw(
+            ArgumentError(
+                "the default charge dispersion must be positive, got $default_σ_Z",
+            ),
         )
+        return new(ΔZ, σ_Z, Float64(default_ΔZ), Float64(default_σ_Z), String(source))
     end
 end
 
 """
-    CHARGE_POLARIZATION_SPEC
+    CHARGE_DISTRIBUTION_SPEC
 
-Layout of the `ΔZ(A)`, `rms(A)` files: one header row, then `A ΔZ rms`.
+Layout of the `ΔZ(A)`, `σ_Z(A)` files: one header row, then `A dZ sigma_Z`.
 """
-const CHARGE_POLARIZATION_SPEC = TableSpec([:A, :polarization, :width]; skip = 1)
+const CHARGE_DISTRIBUTION_SPEC = TableSpec([:A, :dZ, :sigma_Z]; skip = 1)
 
-const DEFAULT_POLARIZATION = -0.5
-const DEFAULT_WIDTH = 0.6
+const DEFAULT_CHARGE_POLARIZATION = -0.5
+const DEFAULT_CHARGE_DISPERSION = 0.6
 
 # `p(Z,A)` is stored as the analytic Gaussian and is deliberately NOT renormalized over the
-# charges a domain retains. Summed over five charges at the tabulated Wahl widths it runs 0.984
-# to 1.076 across mass rows — the discrete-lattice ripple at small `rms`, not truncation, since
-# the tails beyond the retained charges are under 0.01 %.
+# charges a domain retains. Summed over five charges at the tabulated Wahl dispersions it runs
+# 0.984 to 1.076 across mass rows — the discrete-lattice ripple at small `σ_Z`, not truncation,
+# since the tails beyond the retained charges are under 0.01 %.
 #
 # Renormalizing would hide a real cost. Retaining too few charge numbers per mass should show up
 # as lost weight, and it does; dividing it away would make a three-charge domain look as complete
@@ -60,87 +57,94 @@ const DEFAULT_WIDTH = 0.6
 # chase.
 
 """
-    read_charge_polarization(path; spec, default_polarization, default_width) -> ChargePolarization
+    read_charge_distribution(path; spec, default_charge_polarization, default_charge_dispersion)
+        -> ChargeDistribution
 
-Read tabulated `ΔZ(A)` and `rms(A)`.
+Read a tabulated `ΔZ(A)`, `σ_Z(A)`.
+
+**Columns are taken by position**, not by header text: mass number, polarization, dispersion.
+Nothing here may be changed to a lookup by name, because that would couple this package to the
+header text of a file another package writes.
 """
-function read_charge_polarization(
+function read_charge_distribution(
     path::AbstractString;
-    spec::TableSpec = CHARGE_POLARIZATION_SPEC,
-    default_polarization::Real = DEFAULT_POLARIZATION,
-    default_width::Real = DEFAULT_WIDTH,
+    spec::TableSpec = CHARGE_DISTRIBUTION_SPEC,
+    default_charge_polarization::Real = DEFAULT_CHARGE_POLARIZATION,
+    default_charge_dispersion::Real = DEFAULT_CHARGE_DISPERSION,
 )
     table = read_table(path, spec)
     masses = integer_column(table, :A)
-    polarization = column(table, :polarization, Float64)
-    width = column(table, :width, Float64)
+    polarization = column(table, :dZ, Float64)
+    dispersion = column(table, :sigma_Z, Float64)
 
-    polarizations = Dict{Int, Float64}()
-    widths = Dict{Int, Float64}()
+    ΔZ = Dict{Int, Float64}()
+    σ_Z = Dict{Int, Float64}()
     for row in eachindex(masses)
-        width[row] > 0 || throw(
+        dispersion[row] > 0 || throw(
             ArgumentError(
-                "$(table.path) row $row: rms must be positive, got $(width[row]) for A = $(masses[row])",
+                "$(table.path) row $row: the charge dispersion must be positive, got \
+                 $(dispersion[row]) for A = $(masses[row])",
             ),
         )
-        polarizations[masses[row]] = polarization[row]
-        widths[masses[row]] = width[row]
+        ΔZ[masses[row]] = polarization[row]
+        σ_Z[masses[row]] = dispersion[row]
     end
-    return ChargePolarization(
-        polarizations,
-        widths,
-        Float64(default_polarization),
-        Float64(default_width),
+    return ChargeDistribution(
+        ΔZ,
+        σ_Z,
+        Float64(default_charge_polarization),
+        Float64(default_charge_dispersion),
         String(path),
     )
 end
 
 """
-    mean_charge_polarization(; default_polarization, default_width) -> ChargePolarization
+    mean_charge_distribution(; default_charge_polarization, default_charge_dispersion)
+        -> ChargeDistribution
 
-The fallback systematics with no tabulated values: every mass number takes the mean
-`ΔZ` and `rms`.
+The fallback systematics with no tabulated values: every mass number takes the mean `ΔZ` and
+`σ_Z`.
 """
-function mean_charge_polarization(;
-    default_polarization::Real = DEFAULT_POLARIZATION,
-    default_width::Real = DEFAULT_WIDTH,
+function mean_charge_distribution(;
+    default_charge_polarization::Real = DEFAULT_CHARGE_POLARIZATION,
+    default_charge_dispersion::Real = DEFAULT_CHARGE_DISPERSION,
 )
-    return ChargePolarization(
+    return ChargeDistribution(
         Dict{Int, Float64}(),
         Dict{Int, Float64}(),
-        Float64(default_polarization),
-        Float64(default_width),
+        Float64(default_charge_polarization),
+        Float64(default_charge_dispersion),
         "mean values",
     )
 end
 
-function Base.show(io::IO, polarization::ChargePolarization)
+function Base.show(io::IO, distribution::ChargeDistribution)
     print(
         io,
-        "ChargePolarization(",
-        length(polarization.polarization),
+        "ChargeDistribution(",
+        length(distribution.ΔZ),
         " masses from ",
-        basename(polarization.source),
+        basename(distribution.source),
         ")",
     )
     return nothing
 end
 
 """
-    polarization_at(polarization, A) -> Float64
+    charge_polarization(distribution, A) -> Float64
 
 Charge polarization `ΔZ` for heavy-fragment mass `A`, falling back to the mean value.
 """
-polarization_at(polarization::ChargePolarization, A::Integer) =
-    get(polarization.polarization, Int(A), polarization.default_polarization)
+charge_polarization(distribution::ChargeDistribution, A::Integer) =
+    get(distribution.ΔZ, Int(A), distribution.default_ΔZ)
 
 """
-    width_at(polarization, A) -> Float64
+    charge_dispersion(distribution, A) -> Float64
 
-Width `rms` of the isobaric charge distribution at mass `A`, falling back to the mean value.
+Dispersion `σ_Z` of the isobaric charge distribution at mass `A`, falling back to the mean value.
 """
-width_at(polarization::ChargePolarization, A::Integer) =
-    get(polarization.width, Int(A), polarization.default_width)
+charge_dispersion(distribution::ChargeDistribution, A::Integer) =
+    get(distribution.σ_Z, Int(A), distribution.default_σ_Z)
 
 """
     unchanged_charge_distribution(system, A) -> Float64
@@ -162,17 +166,17 @@ function most_probable_charge(system::FissioningSystem, A::Integer, ΔZ::Real)
 end
 
 """
-    charge_probability(Z, Zₚ, rms) -> Float64
+    charge_probability(Z, Zₚ, σ_Z) -> Float64
 
-The isobaric charge distribution, a Gaussian of width `rms` centred on `Zₚ`:
+The isobaric charge distribution, a Gaussian of dispersion `σ_Z` centred on `Zₚ`:
 
 ```
-p(Z, A) = exp(−(Z − Zₚ)² / 2 rms²) / (√(2π) rms)
+p(Z, A) = exp(−(Z − Zₚ)² / 2 σ_Z²) / (√(2π) σ_Z)
 ```
 """
-function charge_probability(Z::Real, Zₚ::Real, rms::Real)
-    rms > 0 || throw(ArgumentError("rms must be positive, got $rms"))
-    return exp(-(Z - Zₚ)^2 / (2 * rms^2)) / (sqrt(2π) * rms)
+function charge_probability(Z::Real, Zₚ::Real, σ_Z::Real)
+    σ_Z > 0 || throw(ArgumentError("the charge dispersion must be positive, got $σ_Z"))
+    return exp(-(Z - Zₚ)^2 / (2 * σ_Z^2)) / (sqrt(2π) * σ_Z)
 end
 
 """

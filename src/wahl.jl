@@ -41,7 +41,7 @@ mass-number boundaries that divide `A'` into wing, peak and near-symmetry region
 
 `A'` is the pre-neutron fragment mass, which is the mass number this package indexes fragments
 by, so `ΔZ` and `σ_Z` transfer without a shift. Both are quoted for the heavy fragment, the
-convention of [`ChargePolarization`](@ref) and of eqs. (9c) and (9d) of the report.
+convention of [`ChargeDistribution`](@ref) and of eqs. (9c) and (9d) of the report.
 
 The boundaries follow eq. (10). `Ba` and `Bb` are the ends of the steep interval where `Zₚ`
 crosses the `Z = 50` shell closure; the report prints `Ba = A'_max` and `Bb = A_F − A'_max`,
@@ -50,10 +50,10 @@ other way round, and only that reading is continuous with the peak regions on ei
 is the one used. `Bb` then lands within a mass unit of where the evaluated tables put the maximum
 of `ΔZ`, which is what it is defined to be; the constructor records the measurement.
 
-**A tabulated `ΔZ(A)`, `rms(A)` evaluated for the reaction at hand is the better object and takes
+**A tabulated `ΔZ(A)`, `σ_Z(A)` evaluated for the reaction at hand is the better object and takes
 precedence wherever one exists.** Fig. 18 quotes reduced `χ²` of 7.9 for these systematics against
 2.9 for a per-reaction least-squares fit of the same model, and the evaluated tables are the
-latter. This is the fallback for a system that has none, in place of a single mean `ΔZ` and `rms`
+latter. This is the fallback for a system that has none, in place of a single mean `ΔZ` and `σ_Z`
 applied at every mass.
 """
 struct WahlSystematics
@@ -167,19 +167,19 @@ The systematics for a fissioning system, taking the precursor excitation energy 
 compound nucleus: zero for spontaneous fission, `Sₙ + Eₙ` otherwise. Returns `nothing` when the
 mass table cannot form `Sₙ`.
 """
-function WahlSystematics(table::MassTable, system::FissioningSystem)
+function WahlSystematics(table::MassExcessTable, system::FissioningSystem)
     excitation = compound_nucleus_excitation(table, system)
     excitation === nothing && return nothing
     return WahlSystematics(system.compound.Z, system.compound.A, value(excitation))
 end
 
 _wahl_peak_polarization(w::WahlSystematics, A) = w.ΔZ140 + w.ΔZSL * (A - 140)
-_wahl_peak_width(w::WahlSystematics, A) = w.σZ140 + w.σZSL * (A - 140)
+_wahl_peak_dispersion(w::WahlSystematics, A) = w.σZ140 + w.σZSL * (A - 140)
 
 """
     wahl_polarization(systematics, A) -> Float64
 
-Charge polarization `ΔZ` of the heavy fragment at pre-neutron mass `A`, eqs. (11a), (12b),
+Charge distribution `ΔZ` of the heavy fragment at pre-neutron mass `A`, eqs. (11a), (12b),
 (12d), (12f), (13b) and (14b).
 
 Defined for `A ≥ A_F/2`. The light partner takes `−ΔZ` at its complement, which is how
@@ -202,7 +202,7 @@ function wahl_polarization(systematics::WahlSystematics, A::Real)
 end
 
 """
-    wahl_width(systematics, A) -> Float64
+    wahl_dispersion(systematics, A) -> Float64
 
 Dispersion `σ_Z` of the isobaric charge distribution at pre-neutron mass `A`, eqs. (11b), (12c),
 (12e), (12g), (13d) and (14c). Defined for `A ≥ A_F/2`.
@@ -212,14 +212,14 @@ adjoining the `Z = 50` crossing while the crossing itself keeps the peak value, 
 returns the far wing to `σ_Z(B5)` rather than continuing the wing slope. Fig. 18a, p. 31, draws
 both discontinuities.
 """
-function wahl_width(systematics::WahlSystematics, A::Real)
+function wahl_dispersion(systematics::WahlSystematics, A::Real)
     _wahl_check_heavy(systematics, A)
-    A >= systematics.B6 && return _wahl_peak_width(systematics, systematics.B5)
-    A >= systematics.B5 && return _wahl_peak_width(systematics, systematics.B5) +
+    A >= systematics.B6 && return _wahl_peak_dispersion(systematics, systematics.B5)
+    A >= systematics.B5 && return _wahl_peak_dispersion(systematics, systematics.B5) +
            systematics.σZSLW * (A - systematics.B5)
-    A >= systematics.B4 && return _wahl_peak_width(systematics, A)
+    A >= systematics.B4 && return _wahl_peak_dispersion(systematics, A)
     A >= systematics.Bb && return systematics.σZ50
-    return _wahl_peak_width(systematics, systematics.Bb)
+    return _wahl_peak_dispersion(systematics, systematics.Bb)
 end
 
 function _wahl_check_heavy(systematics::WahlSystematics, A::Real)
@@ -230,58 +230,58 @@ function _wahl_check_heavy(systematics::WahlSystematics, A::Real)
 end
 
 """
-    wahl_charge_polarization(systematics, masses) -> ChargePolarization
-    wahl_charge_polarization(table, system, masses) -> Union{ChargePolarization,Nothing}
+    wahl_charge_distribution(systematics, masses) -> ChargeDistribution
+    wahl_charge_distribution(table, system, masses) -> Union{ChargeDistribution,Nothing}
 
 Tabulate the `Zₚ` systematics over heavy-fragment masses `masses`, as the same
-[`ChargePolarization`](@ref) a measured table would produce. This is the route for a fissioning
-system with no evaluated `ΔZ(A)`, `rms(A)` of its own: it is a fitted systematics rather than a
+[`ChargeDistribution`](@ref) a measured table would produce. This is the route for a fissioning
+system with no evaluated `ΔZ(A)`, `σ_Z(A)` of its own: it is a fitted systematics rather than a
 measurement, but it carries the mass dependence a single mean value discards.
 
 ```julia
-polarization = wahl_charge_polarization(masses, spontaneous_fission(Nuclide(98, 252)), 126:174)
+distribution = wahl_charge_distribution(masses, spontaneous_fission(Nuclide(98, 252)), 126:174)
 ```
 """
-function wahl_charge_polarization(
+function wahl_charge_distribution(
     systematics::WahlSystematics,
     masses::AbstractVector{<:Integer},
 )
     isempty(masses) && throw(ArgumentError("no masses to tabulate the systematics over"))
-    polarization = Dict{Int, Float64}()
-    width = Dict{Int, Float64}()
+    distribution = Dict{Int, Float64}()
+    σ_Z = Dict{Int, Float64}()
     for A in masses
-        polarization[Int(A)] = wahl_polarization(systematics, A)
-        width[Int(A)] = wahl_width(systematics, A)
+        distribution[Int(A)] = wahl_polarization(systematics, A)
+        σ_Z[Int(A)] = wahl_dispersion(systematics, A)
     end
-    return ChargePolarization(
-        polarization,
-        width,
-        DEFAULT_POLARIZATION,
-        DEFAULT_WIDTH,
+    return ChargeDistribution(
+        distribution,
+        σ_Z,
+        DEFAULT_CHARGE_POLARIZATION,
+        DEFAULT_CHARGE_DISPERSION,
         "Wahl Zₚ systematics, LA-13928 (2002), " *
         "Z_F = $(systematics.Z_F), A_F = $(systematics.A_F), " *
         "PE = $(round(systematics.PE; digits = 3)) MeV",
     )
 end
 
-wahl_charge_polarization(systematics::WahlSystematics, masses::AbstractRange{<:Integer}) =
-    wahl_charge_polarization(systematics, collect(masses))
+wahl_charge_distribution(systematics::WahlSystematics, masses::AbstractRange{<:Integer}) =
+    wahl_charge_distribution(systematics, collect(masses))
 
-function wahl_charge_polarization(
-    table::MassTable,
+function wahl_charge_distribution(
+    table::MassExcessTable,
     system::FissioningSystem,
     masses::AbstractVector{<:Integer},
 )
     systematics = WahlSystematics(table, system)
     systematics === nothing && return nothing
-    return wahl_charge_polarization(systematics, masses)
+    return wahl_charge_distribution(systematics, masses)
 end
 
-wahl_charge_polarization(
-    table::MassTable,
+wahl_charge_distribution(
+    table::MassExcessTable,
     system::FissioningSystem,
     masses::AbstractRange{<:Integer},
-) = wahl_charge_polarization(table, system, collect(masses))
+) = wahl_charge_distribution(table, system, collect(masses))
 
 function Base.show(io::IO, systematics::WahlSystematics)
     print(

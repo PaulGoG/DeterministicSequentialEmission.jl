@@ -1,5 +1,5 @@
 """
-    ConfigurationValues
+    FragmentQuantity
 
 A model quantity tabulated over fragment configurations, `q(A, Z, TKE)`.
 
@@ -12,22 +12,21 @@ Values may be `Float64` or `Measurement{Float64}`. That choice is how a quantity
 carries an uncertainty, and it is the whole of the decision: everything downstream of the TXE
 partition has none to carry, and comes out bare without anyone writing a rule for it.
 """
-struct ConfigurationValues{T <: Union{Float64, Measurement{Float64}}}
+struct FragmentQuantity{T <: Union{Float64, Measurement{Float64}}}
     values::Dict{Tuple{Int, Int, Float64}, T}
 end
 
-ConfigurationValues{T}() where {T} =
-    ConfigurationValues(Dict{Tuple{Int, Int, Float64}, T}())
+FragmentQuantity{T}() where {T} = FragmentQuantity(Dict{Tuple{Int, Int, Float64}, T}())
 
-Base.length(q::ConfigurationValues) = length(q.values)
-Base.getindex(q::ConfigurationValues, key) = q.values[key]
-Base.get(q::ConfigurationValues, key, default) = get(q.values, key, default)
-Base.haskey(q::ConfigurationValues, key) = haskey(q.values, key)
-Base.setindex!(q::ConfigurationValues, value, key) = (q.values[key] = value)
-Base.keys(q::ConfigurationValues) = keys(q.values)
+Base.length(q::FragmentQuantity) = length(q.values)
+Base.getindex(q::FragmentQuantity, key) = q.values[key]
+Base.get(q::FragmentQuantity, key, default) = get(q.values, key, default)
+Base.haskey(q::FragmentQuantity, key) = haskey(q.values, key)
+Base.setindex!(q::FragmentQuantity, value, key) = (q.values[key] = value)
+Base.keys(q::FragmentQuantity) = keys(q.values)
 
-function Base.show(io::IO, q::ConfigurationValues{T}) where {T}
-    print(io, "ConfigurationValues{", T, "}(", length(q.values), " configurations)")
+function Base.show(io::IO, q::FragmentQuantity{T}) where {T}
+    print(io, "FragmentQuantity{", T, "}(", length(q.values), " configurations)")
     return nothing
 end
 
@@ -62,8 +61,8 @@ correlated where they share a source — `Y(A,Z,TKE)` cells at one `(A,TKE)` are
 single measurement, and treating them as independent understates the result by a third.
 """
 function average(
-    quantity::ConfigurationValues{Q},
-    weights::ConfigurationValues{W};
+    quantity::FragmentQuantity{Q},
+    weights::FragmentQuantity{W};
     over::NTuple{N, Symbol},
 ) where {Q, W, N}
     _validate_indices(over)
@@ -111,8 +110,8 @@ whole, which is a property of the grouping rather than an error.
 `nothing` when no configuration carries both a value and a weight.
 """
 function total_average(
-    quantity::ConfigurationValues{Q},
-    weights::ConfigurationValues{W};
+    quantity::FragmentQuantity{Q},
+    weights::FragmentQuantity{W};
     masses = nothing,
 ) where {Q, W}
     P = typeof(one(Q) * one(W))
@@ -159,14 +158,14 @@ function _kept_indices(over::NTuple{N, Symbol}) where {N}
 end
 
 """
-    weights_from(yields) -> ConfigurationValues
+    weights_from(yields) -> FragmentQuantity
 
 Use a fragment yield distribution as the weight of a contraction.
 """
-weights_from(yields::FragmentYields) = ConfigurationValues(copy(yields.values))
+weights_from(yields::FragmentYield) = FragmentQuantity(copy(yields.values))
 
 """
-    weights_from(domain, polarization, kinetic_energies) -> ConfigurationValues
+    weights_from(domain, distribution, kinetic_energies) -> FragmentQuantity
 
 Use the isobaric charge distribution as the weight, for a run with no experimental yield.
 
@@ -183,13 +182,13 @@ better weight than this.
 """
 function weights_from(
     domain::FragmentationDomain,
-    polarization::ChargePolarization,
+    distribution::ChargeDistribution,
     kinetic_energies,
 )
-    probabilities = fragment_charge_probabilities(domain, polarization)
+    probabilities = fragment_charge_probabilities(domain, distribution)
     weights = Dict{Tuple{Int, Int, Float64}, Float64}()
     for (nuclide, p) in probabilities, TKE in kinetic_energies
         weights[(nuclide.A, nuclide.Z, Float64(TKE))] = p
     end
-    return ConfigurationValues(weights)
+    return FragmentQuantity(weights)
 end

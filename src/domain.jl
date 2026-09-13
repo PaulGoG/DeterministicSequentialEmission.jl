@@ -78,7 +78,7 @@ function Base.show(io::IO, domain::FragmentationDomain)
 end
 
 """
-    fragmentation_domain(system, polarization, heavy_masses; charges_per_mass = 5)
+    fragmentation_domain(system, distribution, heavy_masses; charges_per_mass = 5)
         -> FragmentationDomain
 
 Build the fragmentation domain: heavy masses from symmetric fission to a maximum asymmetry in
@@ -94,7 +94,7 @@ agree only when the lower bound sits exactly at `A₀/2`.
 ```jldoctest
 julia> system = spontaneous_fission(Nuclide(98, 252));
 
-julia> domain = fragmentation_domain(system, mean_charge_polarization(), 126:174);
+julia> domain = fragmentation_domain(system, mean_charge_distribution(), 126:174);
 
 julia> length(domain)
 245
@@ -105,7 +105,7 @@ Nuclide(Z=46, A=126)
 """
 function fragmentation_domain(
     system::FissioningSystem,
-    polarization::ChargePolarization,
+    distribution::ChargeDistribution,
     heavy_masses::AbstractUnitRange{<:Integer};
     charges_per_mass::Integer = 5,
 )
@@ -135,8 +135,8 @@ function fragmentation_domain(
     entries = Fragmentation[]
     sizehint!(entries, length(heavy_masses) * charges_per_mass)
     for A_heavy in heavy_masses
-        ΔZ = polarization_at(polarization, A_heavy)
-        rms = width_at(polarization, A_heavy)
+        ΔZ = charge_polarization(distribution, A_heavy)
+        σ_Z = charge_dispersion(distribution, A_heavy)
         Zₚ = most_probable_charge(system, A_heavy, ΔZ)
         for Z_heavy in charge_numbers(Zₚ, charges_per_mass)
             # Both fragments have to be nuclei. Too many charge numbers per mass, or a Zₚ near
@@ -153,7 +153,7 @@ function fragmentation_domain(
             light = complementary_fragment(system, heavy)
             push!(
                 entries,
-                Fragmentation(heavy, light, charge_probability(Z_heavy, Zₚ, rms)),
+                Fragmentation(heavy, light, charge_probability(Z_heavy, Zₚ, σ_Z)),
             )
         end
     end
@@ -219,7 +219,7 @@ on iteration order.
 ```jldoctest
 julia> system = spontaneous_fission(Nuclide(98, 252));
 
-julia> domain = fragmentation_domain(system, mean_charge_polarization(), 126:174);
+julia> domain = fragmentation_domain(system, mean_charge_distribution(), 126:174);
 
 julia> length(domain), length(distinct_splits(domain))
 (245, 244)

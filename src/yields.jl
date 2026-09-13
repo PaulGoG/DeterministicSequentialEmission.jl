@@ -1,14 +1,14 @@
 """
-    EXPERIMENTAL_YIELD_SPEC
+    MASS_ENERGY_YIELD_SPEC
 
 Layout of the measured pre-neutron mass yields: one header row, then `A TKE Y` and an optional
 uncertainty column.
 """
-const EXPERIMENTAL_YIELD_SPEC =
+const MASS_ENERGY_YIELD_SPEC =
     TableSpec([:A, :TKE, :yield, :uncertainty]; skip = 1, optional = (:uncertainty,))
 
 """
-    ExperimentalYield
+    MassEnergyYield
 
 Measured pre-neutron fragment mass yield `Y(A, TKE)`, on the grid the measurement was reported
 on.
@@ -21,33 +21,33 @@ and [`coverage`](@ref) is what answers it.
 `A` runs over both fragments, light and heavy, so the distribution sums to 200 % rather than
 100 %.
 """
-struct ExperimentalYield
+struct MassEnergyYield
     values::Dict{Tuple{Int, Float64}, Float64}
     masses::Vector{Int}
     energies::Vector{Float64}
-    path::String
+    source::String
 end
 
-Base.length(y::ExperimentalYield) = length(y.values)
+Base.length(Y::MassEnergyYield) = length(Y.values)
 
-function Base.show(io::IO, y::ExperimentalYield)
+function Base.show(io::IO, Y::MassEnergyYield)
     print(
         io,
-        "ExperimentalYield(",
-        length(y.masses),
+        "MassEnergyYield(",
+        length(Y.masses),
         " masses × ",
-        length(y.energies),
+        length(Y.energies),
         " TKE, ",
-        length(y.values),
+        length(Y.values),
         " cells, from ",
-        basename(y.path),
+        basename(Y.source),
         ")",
     )
     return nothing
 end
 
 """
-    read_experimental_yield(path; spec = EXPERIMENTAL_YIELD_SPEC) -> ExperimentalYield
+    read_mass_energy_yield(path; spec = MASS_ENERGY_YIELD_SPEC) -> MassEnergyYield
 
 Read a measured `Y(A, TKE)` distribution.
 
@@ -60,9 +60,9 @@ values — the symmetric mass written from each side of the split — and it is 
 it is counted once. The prototype reaches the same result by iterating `unique(A)` and taking
 the first match. A repeat that disagrees is a real inconsistency in the file and says so.
 """
-function read_experimental_yield(
+function read_mass_energy_yield(
     path::AbstractString;
-    spec::TableSpec = EXPERIMENTAL_YIELD_SPEC,
+    spec::TableSpec = MASS_ENERGY_YIELD_SPEC,
 )
     table = read_table(path, spec)
     masses = integer_column(table, :A)
@@ -85,7 +85,7 @@ function read_experimental_yield(
         values[key] = measured[row]
     end
     isempty(values) && throw(ArgumentError("$(table.path) holds no finite yields"))
-    return ExperimentalYield(
+    return MassEnergyYield(
         values,
         sort(unique(masses)),
         sort(unique(energies)),
@@ -109,7 +109,7 @@ const MEAN_KINETIC_ENERGY_SPEC =
     TableSpec([:A, :TKE, :uncertainty]; skip = 1, optional = (:uncertainty,))
 
 """
-    factorized_yield(mass_yield_path, kinetic_energy_path, energies; width, spread) -> ExperimentalYield
+    factorized_yield(mass_yield_path, kinetic_energy_path, energies; dispersion) -> MassEnergyYield
 
 Reconstruct `Y(A, TKE)` from the two marginals that were measured, where the joint distribution
 was not:
@@ -130,10 +130,9 @@ replacing the measured `Y(A,TKE)` of 235-U(n_th,f) with a mass-independent Gauss
 `⟨TKE⟩ = 170.5 MeV` takes `ν(160)` from 2.02 down to 0.73 and `⟨ν⟩` from 2.524 to 2.280. Keeping
 the mass dependence is what the factorization is for.
 
-What it cannot recover is the correlation the joint distribution carries: the width of `P(TKE|A)`
-varies with mass and is taken here as the constant `width`, 10 MeV by default, with `spread` mass
-units of Gaussian smearing applied to `⟨TKE⟩(A)` where the table is sparse. Both are stated
-rather than fitted.
+What it cannot recover is the correlation the joint distribution carries: the dispersion of
+`P(TKE|A)` varies with mass and is taken here as the constant `dispersion`, 10 MeV by default.
+It is stated rather than fitted.
 
 A mass without a tabulated `⟨TKE⟩` is dropped: extrapolating the quantity whose mass dependence
 is the point of the exercise would defeat it. Complementary masses inherit the mean of their
@@ -144,11 +143,12 @@ function factorized_yield(
     kinetic_energy_path::AbstractString,
     energies,
     compound_mass::Integer;
-    width::Real = 10.0,
+    dispersion::Real = 10.0,
     total::Real = DEFAULT_YIELD_TOTAL,
 )
-    width > 0 ||
-        throw(ArgumentError("the kinetic energy width must be positive, got $width"))
+    dispersion > 0 || throw(
+        ArgumentError("the kinetic energy dispersion must be positive, got $dispersion"),
+    )
     grid = sort(unique(Float64.(collect(energies))))
     isempty(grid) && throw(ArgumentError("the kinetic energy grid is empty"))
 
@@ -181,7 +181,7 @@ function factorized_yield(
         isfinite(Y) && Y > 0 || continue
         mean = get(mean_by_mass, A, nothing)
         mean === nothing && continue
-        shape = [exp(-(TKE - mean)^2 / (2 * width^2)) for TKE in grid]
+        shape = [exp(-(TKE - mean)^2 / (2 * dispersion^2)) for TKE in grid]
         norm = sum(shape)
         norm > 0 || continue
         push!(kept, A)
@@ -201,7 +201,7 @@ function factorized_yield(
     for key in keys(values)
         values[key] *= scale
     end
-    return ExperimentalYield(
+    return MassEnergyYield(
         values,
         sort(kept),
         grid,
@@ -210,7 +210,7 @@ function factorized_yield(
 end
 
 """
-    fragment_charge_probabilities(domain, polarization) -> Dict{Nuclide,Float64}
+    fragment_charge_probabilities(domain, distribution) -> Dict{Nuclide,Float64}
 
 The isobaric charge probability `p(Z,A)` of every fragment the domain produces.
 
@@ -230,7 +230,7 @@ often the domain produces it.
 """
 function fragment_charge_probabilities(
     domain::FragmentationDomain,
-    polarization::ChargePolarization,
+    distribution::ChargeDistribution,
 )
     system = domain.system
     symmetric = system.compound.A
@@ -239,37 +239,37 @@ function fragment_charge_probabilities(
         for fragment in (entry.light, entry.heavy)
             haskey(probabilities, fragment) && continue
             A_heavy = max(fragment.A, symmetric - fragment.A)
-            ΔZ = polarization_at(polarization, A_heavy)
-            rms = width_at(polarization, A_heavy)
+            ΔZ = charge_polarization(distribution, A_heavy)
+            σ_Z = charge_dispersion(distribution, A_heavy)
             Zₚ_heavy = most_probable_charge(system, A_heavy, ΔZ)
             Zₚ = fragment.A == A_heavy ? Zₚ_heavy : system.compound.Z - Zₚ_heavy
-            probabilities[fragment] = charge_probability(fragment.Z, Zₚ, rms)
+            probabilities[fragment] = charge_probability(fragment.Z, Zₚ, σ_Z)
         end
     end
     return probabilities
 end
 
 """
-    FragmentYields
+    FragmentYield
 
 The yield of every fragment configuration, `Y(A, Z, TKE)`, normalized so the whole distribution
 sums to `total`.
 """
-struct FragmentYields
+struct FragmentYield
     values::Dict{Tuple{Int, Int, Float64}, Float64}
     total::Float64
 end
 
-Base.length(y::FragmentYields) = length(y.values)
-Base.sum(y::FragmentYields) = sum(values(y.values))
+Base.length(Y::FragmentYield) = length(Y.values)
+Base.sum(Y::FragmentYield) = sum(values(Y.values))
 
-function Base.show(io::IO, y::FragmentYields)
+function Base.show(io::IO, Y::FragmentYield)
     print(
         io,
-        "FragmentYields(",
-        length(y.values),
+        "FragmentYield(",
+        length(Y.values),
         " cells, Σ = ",
-        round(y.total; digits = 4),
+        round(Y.total; digits = 4),
         ")",
     )
     return nothing
@@ -287,8 +287,8 @@ should be visible where it is applied.
 const DEFAULT_YIELD_TOTAL = 200.0
 
 """
-    build_fragment_yields(domain, polarization, experimental; total = DEFAULT_YIELD_TOTAL)
-        -> FragmentYields
+    build_fragment_yield(domain, distribution, experimental; total = DEFAULT_YIELD_TOTAL)
+        -> FragmentYield
 
 Spread the measured `Y(A, TKE)` over charge numbers,
 
@@ -306,15 +306,15 @@ distribution summing to 200, but the shape it summed from is the honest one.
 Cells are taken on the **measurement's** `TKE` grid, not the model's. Use [`coverage`](@ref)
 before averaging a model quantity over these yields.
 """
-function build_fragment_yields(
+function build_fragment_yield(
     domain::FragmentationDomain,
-    polarization::ChargePolarization,
-    experimental::ExperimentalYield;
+    distribution::ChargeDistribution,
+    experimental::MassEnergyYield;
     total::Real = DEFAULT_YIELD_TOTAL,
 )
     total > 0 ||
         throw(ArgumentError("the yield normalization must be positive, got $total"))
-    probabilities = fragment_charge_probabilities(domain, polarization)
+    probabilities = fragment_charge_probabilities(domain, distribution)
 
     values = Dict{Tuple{Int, Int, Float64}, Float64}()
     running = 0.0
@@ -333,7 +333,7 @@ function build_fragment_yields(
     for key in keys(values)
         values[key] *= scale
     end
-    return FragmentYields(values, Float64(total))
+    return FragmentYield(values, Float64(total))
 end
 
 """
@@ -353,7 +353,7 @@ For the archived ²⁵²Cf runs, whose measurement is tabulated every 1 MeV and 
 ```jldoctest
 julia> using DeterministicSequentialEmission
 
-julia> yields = FragmentYields(Dict((140, 54, 170.0) => 3.0, (140, 54, 171.0) => 1.0), 4.0);
+julia> yields = FragmentYield(Dict((140, 54, 170.0) => 3.0, (140, 54, 171.0) => 1.0), 4.0);
 
 julia> report = coverage(yields, 170.0:2.0:174.0);
 
@@ -361,14 +361,14 @@ julia> report.reached
 0.75
 ```
 """
-function coverage(yields::FragmentYields, energies)
+function coverage(yields::FragmentYield, energies)
     wanted = Set(Float64.(energies))
     on = 0.0
     off = 0.0
     present = Set{Float64}()
-    for ((_, _, TKE), y) in yields.values
+    for ((_, _, TKE), Y) in yields.values
         push!(present, TKE)
-        TKE in wanted ? (on += y) : (off += y)
+        TKE in wanted ? (on += Y) : (off += Y)
     end
     whole = on + off
     return (
@@ -387,7 +387,7 @@ over the other two. Sorted by the argument.
 
 Each projection sums to the same total as the distribution it came from.
 """
-function yield_over(yields::FragmentYields, dimension::Symbol)
+function yield_over(yields::FragmentYield, dimension::Symbol)
     index = if dimension === :mass
         1
     elseif dimension === :charge
@@ -402,11 +402,11 @@ function yield_over(yields::FragmentYields, dimension::Symbol)
         )
     end
     projected = Dict{Float64, Float64}()
-    for (key, y) in yields.values
+    for (key, Y) in yields.values
         argument = Float64(key[index])
-        projected[argument] = get(projected, argument, 0.0) + y
+        projected[argument] = get(projected, argument, 0.0) + Y
     end
-    return sort!([(argument, y) for (argument, y) in projected]; by = first)
+    return sort!([(argument, Y) for (argument, Y) in projected]; by = first)
 end
 
 """
@@ -417,12 +417,12 @@ end
 Defined at every mass the distribution covers, light and heavy; the two halves carry the same
 information, since a fragmentation's `TKE` belongs to the pair rather than to either fragment.
 """
-function mean_kinetic_energy_by_mass(yields::FragmentYields)
+function mean_kinetic_energy_by_mass(yields::FragmentYield)
     weighted = Dict{Int, Float64}()
     total = Dict{Int, Float64}()
-    for ((A, _, TKE), y) in yields.values
-        weighted[A] = get(weighted, A, 0.0) + y * TKE
-        total[A] = get(total, A, 0.0) + y
+    for ((A, _, TKE), Y) in yields.values
+        weighted[A] = get(weighted, A, 0.0) + Y * TKE
+        total[A] = get(total, A, 0.0) + Y
     end
     return sort!(
         [(A, weighted[A] / total[A]) for A in keys(total) if total[A] > 0];

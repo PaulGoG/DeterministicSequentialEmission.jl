@@ -180,7 +180,7 @@ continues on `Sₙ` alone, counting the emissions that remain energetically poss
 sequences carry no temperature but do count towards `n`.
 """
 function emission_chain(
-    table::MassTable,
+    table::MassExcessTable,
     model::LevelDensityModel,
     cross_section::EvaporationCrossSection,
     fragment::Nuclide,

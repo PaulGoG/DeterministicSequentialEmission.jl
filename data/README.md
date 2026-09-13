@@ -6,36 +6,63 @@ parameter library, and experimental fragment mass yields. None of it originates 
 package, and the MIT licence covering the source code does not extend to it: each collection
 carries the terms and the attribution of its own source, recorded below.
 
-**The one exception is `mass_excess/ame2020.dat`**, which is shipped. It is an openly published
-evaluation, it is small, and keeping it means the tests pinned against the archived reference
-run — `Q`, the level density parameter, both TXE partitions, the emission sequences — execute on
-a bare clone. The tests that need any of the rest are skipped when it is absent, with a warning
-naming the file.
+**The one exception is `reference/mass_excess_ame2020.dat`**, which is shipped. It is an openly
+published evaluation, it is small, and keeping it means the tests pinned against the archived
+reference run — `Q`, the level density parameter, both TXE partitions, the emission sequences —
+execute on a bare clone. The tests that need any of the rest are skipped when it is absent, with a
+warning naming the file.
 
 ## Layout
 
-| Path | Content | Format |
-|---|---|---|
-| `mass_excess/ame2020.dat` | mass excesses, 3558 nuclides — **shipped** | header, then `Z A element Δ σΔ`, keV |
-| `level_density/shell_corrections_gilbert_cameron.dat` | `S(N)`, `S(Z)` against nucleon number, 11 … 150 | header, then `n S(N) S(Z)`, MeV |
-| `level_density/resonances_s_wave.dat` | s-wave average resonance parameters, the source of `S₀(A)` | commented header; `S₀` in units of 10⁻⁴ |
-| `charge_distribution/{Cf252,U235,Pu239}.dat` | charge polarization and Gaussian dispersion, evaluated per reaction | header, then `A ΔZ rms` |
-| `charge_distribution/U233_wahl_systematics.dat` | the same, from the `Zₚ` systematics rather than a fit — **generated, not a source table** | header, then `A ΔZ rms` |
-| `partition/<system>/R_T_systematic_trend.csv` | temperature ratio `R_T(A_H)` for the TXE partition | comma-delimited; header, then `A_H,value,uncertainty` |
-| `experimental/multiplicity/<system>/*.dat` | measured `ν(A)` per fragment | header, then `A ν [σν]` |
-| `experimental/spectrum_ratio/<system>/*.dat` | measured prompt neutron spectrum as a ratio to a Maxwellian | header, then `E N(E)/M(E,T_M) [σ]` |
-| `deformation/ground_state_beta2_moller.dat` | ground-state quadrupole deformations | header, then `Z A β₂` |
-| `deformation/extra_deformation_U235.dat` | `ΔE_def` for the scission-modelling partition | header, then `A Z ΔE_def`, MeV |
-| `yield/<nucleus>/*.dat` | pre-neutron fragment mass yields `Y(A,TKE)` | header, then `A TKE Y [σY]` |
-| `yield/U233/geltenbort_Y_A.dat` | pre-neutron mass yield `Y(A)`, a marginal | header, then `A Y [σY]` |
-| `yield/U233/geltenbort_TKE_A.dat` | mean total kinetic energy `⟨TKE⟩(A)`, the other marginal | header, then `A TKE [σ]` |
+One directory per fissioning system, named by the system token `<ElementSymbol><A>_<channel>`, and
+one directory for the evaluations that belong to no system. A system is one token and one tree:
+its yields, its charge distribution and its measured multiplicities sit together.
 
-All files are whitespace-separated with a single header line. Readers take columns by position,
-not by header text, and the uncertainty column may be omitted rather than zero-filled.
+```
+data/
+├── reference/                      evaluations that belong to no one system
+└── <system>/                       Cf252_sf, U235_nth, U235_nres, U233_nth, Pu239_nth
+    ├── charge_distribution_vs_A.dat
+    ├── R_T_vs_A_H_systematic_trend.csv
+    ├── Y_vs_A_TKE.dat
+    └── nu_vs_A/                    one file per measurement
+```
+
+| Path | Content | Header |
+|---|---|---|
+| `reference/mass_excess_ame2020.dat` | mass excesses, 3558 nuclides — **shipped** | `Z A element mass_excess mass_excess_uncertainty`, keV |
+| `reference/shell_corrections_gilbert_cameron.dat` | `S(N)`, `S(Z)` against nucleon number, 11 … 150 | `n S_N S_Z`, MeV |
+| `reference/s_wave_resonances_ripl3.dat` | s-wave average resonance parameters, the source of `S₀(A)` | as distributed: commented header, `S₀` in units of 10⁻⁴ |
+| `reference/ground_state_deformation_moller.dat` | ground-state quadrupole deformations | `Z A beta2` |
+| `<system>/charge_distribution_vs_A.dat` | charge polarization and Gaussian dispersion, evaluated per reaction | `A dZ sigma_Z` |
+| `U233_nth/charge_distribution_vs_A_wahl_systematics.dat` | the same, from the `Zₚ` systematics rather than a fit — **generated, not a source table** | `A dZ sigma_Z` |
+| `<system>/R_T_vs_A_H_systematic_trend.csv` | temperature ratio `R_T(A_H)` for the TXE partition | `A_H,R_T,R_T_uncertainty` |
+| `<system>/Y_vs_A_TKE.dat` | pre-neutron fragment mass yield `Y(A,TKE)` | `A TKE Y Y_uncertainty` |
+| `U235_nth/Y_vs_A_H_TKE.dat` | the same indexed by the heavy fragment alone | `A_H TKE Y Y_uncertainty` |
+| `U233_nth/Y_vs_A.dat` | pre-neutron mass yield `Y(A)`, a marginal | `A Y` |
+| `U233_nth/TKE_vs_A.dat` | mean total kinetic energy `⟨TKE⟩(A)`, the other marginal | `A TKE` |
+| `U235_nth/E_def_vs_A_Z.dat` | `ΔE_def` for the scission-modelling partition | `A Z E_def`, MeV |
+| `<system>/nu_vs_A/*.dat` | measured `ν(A)` per fragment | `A nu nu_uncertainty` |
+| `Cf252_sf/spectrum_maxwellian_ratio_vs_E/*.dat` | measured prompt neutron spectrum as a ratio to a Maxwellian | `E spectrum_maxwellian_ratio spectrum_maxwellian_ratio_uncertainty` |
+
+A file name is `<quantity>_vs_<abscissa>`, which is a statement rather than a list of symbols.
+Where a quantity was measured more than once, the directory carries the quantity and the file
+carries the provenance, `<accession>_<Author>_<year>.dat`. Where one table of a quantity is
+authoritative and another is an alternative, the first takes the plain name and the second carries
+a qualifier — `Y_vs_A_TKE.dat` and `Y_vs_A_TKE_chiba.dat`.
+
+All files are whitespace-separated with a single header line, except the `.csv` tables, which are
+comma-separated. **Readers take columns by position, not by header text**, and the uncertainty
+column may be omitted rather than zero-filled. Renaming a header is therefore a no-op for code,
+which is what made this layout safe to adopt.
 
 Nucleon-number columns are read through `integer_column`, which accepts an integral value
 written in floating point — some of these tables were emitted by a generator and write `118.0`
 where they mean `118`.
+
+`U235_nres` is the same target as `U235_nth` on the resonance channel. Its evaluated charge
+distribution, its `R_T(A_H)` trend and its yield are the thermal ones and are read from the
+`U235_nth` tree rather than copied; only its measured `ν(A)` is its own.
 
 ## Where to obtain it
 
@@ -44,76 +71,91 @@ write this layout directly, and both record the provenance of what they retrieve
 
 **Experimental fragment mass yields and prompt neutron multiplicities** —
 [`ExforFissionData.jl`](https://github.com/PaulGoG/ExforFissionData.jl) retrieves them from the
-IAEA EXFOR archive and writes them beside a `retrieval.toml` naming every dataset it kept or
-excluded, with the reason. A configuration and that package reproduce a retrieval exactly, since
-EXFOR entries are immutable once published.
+IAEA EXFOR archive into `data/<system>/<observable>/` and writes them beside a `retrieval.toml`
+naming every dataset it kept or excluded, with the reason. A configuration and that package
+reproduce a retrieval exactly, since EXFOR entries are immutable once published.
 
 ```bash
 git clone https://github.com/PaulGoG/ExforFissionData.jl
 cd ExforFissionData.jl
-julia --project scripts/retrieve.jl config/Cf252_0f_yield_A.toml
+julia --project scripts/retrieve.jl config/Cf252_sf_Y_vs_A.toml
 ```
 
 ```bash
-julia --project scripts/retrieve.jl config/Cf252_0f_nu_A.toml              # ν(A) per fragment
-julia --project scripts/retrieve.jl config/Cf252_0f_spectrumRatioMXW_E.toml  # spectrum ratio
+julia --project scripts/retrieve.jl config/Cf252_sf_nu_vs_A.toml
+julia --project scripts/retrieve.jl config/Cf252_sf_spectrum_maxwellian_ratio_vs_E.toml
 ```
 
 Read the `retrieval.toml` it writes before using what it retrieved. It records, per dataset, the
 reaction code, the units and the qualifiers the archive attached, and those qualifiers matter:
 `DERIV` marks a dataset derived from other data rather than measured, `SPA` one averaged over a
-fission spectrum rather than the thermal one it is filed under. The sets staged under
-`experimental/` here exclude both. A handful of `252-Cf` multiplicity subentries are miscoded in
-the archive — `MASS,PR,NU` without the `/FRG` that would mark them per fragment — and are
-included deliberately, having been established as per fragment from the complement invariance
-`ν(A) + ν(A₀−A) ≈ ν̄` in the data itself.
+fission spectrum rather than the thermal one it is filed under. The sets staged here exclude both.
+A handful of `252-Cf` multiplicity subentries are miscoded in the archive — `MASS,PR,NU` without
+the `/FRG` that would mark them per fragment — and are included deliberately, having been
+established as per fragment from the complement invariance `ν(A) + ν(A₀−A) ≈ ν̄` in the data
+itself. Those files hold `ν(A)` like every other file in `nu_vs_A/`, and their header now says so
+rather than naming the query they came from.
 
 **The temperature ratio `R_T(A_H)`** for the temperature-ratio TXE partition —
 [`FissionTemperatureRatio.jl`](https://github.com/PaulGoG/FissionTemperatureRatio.jl) extracts it
-from experimental `ν(A)` and tabulates it at every integer `A_H`. Feed the resulting
-`R_T_parameterized_<set>_<run>.csv` to `read_segments`, or stage it under
-`partition/<system>/`. Run it with `ratio_averaging = "mean_of_ratios"` for this consumer; the
-reason is in that function's docstring.
+from experimental `ν(A)` and tabulates it at every integer `A_H`. Read its `manifest_<run>.toml`
+first: it is the index, and it names the temperature-ratio file of each curve the run produced —
+not the multiplicity-ratio pivot file, which holds `r_ν` rather than `R_T`. Feed that file to
+`read_segmented_curve`, or stage it under `<system>/`. Run it with
+`ratio_averaging = "mean_of_ratios"` for this consumer; the reason is in that function's
+docstring.
 
 The remaining tables are one-off downloads:
 
-**`mass_excess/ame2020.dat`** — the 2020 atomic mass evaluation.
+**`reference/mass_excess_ame2020.dat`** — the 2020 atomic mass evaluation.
 W. J. Huang, M. Wang, F. G. Kondev, G. Audi, S. Naimi, *Chinese Physics C* **45**, 030002 (2021);
 M. Wang, W. J. Huang, F. G. Kondev, G. Audi, S. Naimi, *Chinese Physics C* **45**, 030003 (2021).
-Distributed by the Atomic Mass Data Center, <https://www-nds.iaea.org/amdc/>.
+Distributed by the Atomic Mass Data Center, <https://www-nds.iaea.org/amdc/>. The evaluation is
+distributed with no header line at all; `HEADERLESS_MASS_EXCESS_SPEC` reads it in that form, and
+the copy shipped here carries one.
 
-**`level_density/shell_corrections_gilbert_cameron.dat`** — shell corrections `S(N)` and `S(Z)`,
+**`reference/shell_corrections_gilbert_cameron.dat`** — shell corrections `S(N)` and `S(Z)`,
 Table III of A. Gilbert and A. G. W. Cameron, *Canadian Journal of Physics* **43**, 1446 (1965),
 pp. 1453–1455, as redistributed in the IAEA Reference Input Parameter Library. The paper
 tabulates `S(Z)` only to `Z = 98`; the file is rectangular and pads the column with zeros beyond
 that, which the reader discards rather than storing as a correction of zero.
 
-**`level_density/resonances_s_wave.dat`** — s-wave average resonance parameters.
+**`reference/s_wave_resonances_ripl3.dat`** — s-wave average resonance parameters.
 RIPL-3: R. Capote *et al.*, *Nuclear Data Sheets* **110**, 3107 (2009). The file is byte-identical
-to <https://www-nds.iaea.org/RIPL-3/resonances/resonances0.dat>. The IAEA also publishes the
-library as JSON at <https://github.com/IAEA-NDS/ripl3_json>, and RIPL-4 is in preparation at
-<https://github.com/IAEA-NDS/RIPL-4>; neither changes the numbers this file holds.
+to <https://www-nds.iaea.org/RIPL-3/resonances/resonances0.dat>, header included. The IAEA also
+publishes the library as JSON at <https://github.com/IAEA-NDS/ripl3_json>, and RIPL-4 is in
+preparation at <https://github.com/IAEA-NDS/RIPL-4>; neither changes the numbers this file holds.
 
-**`charge_distribution/*.dat`** — charge polarization `ΔZ(A)` and the dispersion `rms(A)` of the
-isobaric charge distribution. A. C. Wahl, *Atomic Data and Nuclear Data Tables* **38**, 1 (1988);
-the model is set out in full in Wahl, *Systematics of Fission-Product Yields*, LA-13928 (2002).
+**`<system>/charge_distribution_vs_A.dat`** — charge polarization `ΔZ(A)` and the dispersion
+`σ_Z(A)` of the isobaric charge distribution. A. C. Wahl, *Atomic Data and Nuclear Data Tables*
+**38**, 1 (1988); the model is set out in full in Wahl, *Systematics of Fission-Product Yields*,
+LA-13928 (2002).
 
-Two different objects share that format and must not be confused. The `Cf252`, `U235` and
-`Pu239` files are **per-reaction least-squares fits** of the `Zₚ` model to the data of each
+Two different objects share that format and must not be confused. The `Cf252_sf`, `U235_nth` and
+`Pu239_nth` files are **per-reaction least-squares fits** of the `Zₚ` model to the data of each
 reaction — Fig. 18 of LA-13928 quotes a reduced `χ²` of 2.9 for that against 7.9 for the
-systematics — and they are authoritative wherever they exist. `U233_wahl_systematics.dat` is
-**the systematics**, eq. (17) and Table 2 of the report evaluated by this package for a system
-that has no fit of its own; its header row says so, and `wahl_charge_polarization` produces it
-without a file. It replaces a single mean `ΔZ = −0.5`, `rms = 0.6` applied at every mass; it does
-not replace an evaluation.
+systematics — and they are authoritative wherever they exist.
+`U233_nth/charge_distribution_vs_A_wahl_systematics.dat` is **the systematics**, eq. (17) and
+Table 2 of the report evaluated by this package for a system that has no fit of its own; its name
+and its header row both say so, and `wahl_charge_distribution` produces it without a file. It
+replaces a single mean `ΔZ = −0.5`, `σ_Z = 0.6` applied at every mass; it does not replace an
+evaluation.
 
-**`deformation/ground_state_beta2_moller.dat`** — ground-state quadrupole deformations from the
-finite-range liquid-drop model. P. Möller, J. R. Nix, W. D. Myers, W. J. Swiatecki, *Atomic Data
-and Nuclear Data Tables* **59**, 185 (1995), via RIPL.
+**`reference/ground_state_deformation_moller.dat`** — ground-state quadrupole deformations from
+the finite-range liquid-drop model. P. Möller, J. R. Nix, W. D. Myers, W. J. Swiatecki, *Atomic
+Data and Nuclear Data Tables* **59**, 185 (1995), via RIPL.
 
-**`deformation/extra_deformation_U235.dat`** — not a source table. It is generated from the
-ground-state deformations and the deformation energies at scission, and is the input the
-scission-modelling partition needs.
+**`U235_nth/E_def_vs_A_Z.dat`** — not a source table. It is generated from the ground-state
+deformations and the deformation energies at scission, and is the input the scission-modelling
+partition needs.
+
+**The fragment mass yields.** `U235_nth/Y_vs_A_H_TKE.dat` is the ²³⁵U(n_th,f) measurement of
+C. Straede *et al.* and `Pu239_nth/Y_vs_A_TKE_chiba.dat` the ²³⁹Pu(n_th,f) Chiba set, as each
+file's own header records. `Cf252_sf/Y_vs_A_TKE.dat` is the ²⁵²Cf(SF) distribution behind every
+chapter 4 result of the thesis. The two tables the ²³⁵U and ²³⁹Pu configurations actually read,
+`U235_nth/Y_vs_A_TKE.dat` and `Pu239_nth/Y_vs_A_TKE.dat`, are carried on the whole `A` domain with
+an uncertainty column; **they carry no attribution, in the files or in the archived record, and
+none is invented for them here.** Neither is a rescaling of the author-named table beside it.
 
 ## Citing
 

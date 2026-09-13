@@ -1,16 +1,16 @@
-POLARIZATION_AVAILABLE && @testset "charge polarization" begin
-    polarization = cf252_polarization()
-    @test polarization_at(polarization, 126) ≈ 0.41847
-    @test width_at(polarization, 126) ≈ 0.50029
+CHARGE_DISTRIBUTION_AVAILABLE && @testset "charge distribution" begin
+    distribution = cf252_charge_distribution()
+    @test charge_polarization(distribution, 126) ≈ 0.41847
+    @test charge_dispersion(distribution, 126) ≈ 0.50029
 
     # A mass outside the tabulated range falls back to the conventional means, which is a
     # documented behaviour rather than a silent zero.
-    @test polarization_at(polarization, 300) == -0.5
-    @test width_at(polarization, 300) == 0.6
+    @test charge_polarization(distribution, 300) == -0.5
+    @test charge_dispersion(distribution, 300) == 0.6
 
-    mean = mean_charge_polarization()
-    @test polarization_at(mean, 126) == -0.5
-    @test width_at(mean, 126) == 0.6
+    mean = mean_charge_distribution()
+    @test charge_polarization(mean, 126) == -0.5
+    @test charge_dispersion(mean, 126) == 0.6
 end
 
 @testset "a mass column written in floating point still reads" begin
@@ -19,24 +19,24 @@ end
     # 235-U entirely. Checked against the shipped table where it is present, and against a
     # written fixture regardless, so the behaviour is pinned on a bare clone too.
     if U235_POLARIZATION_AVAILABLE
-        polarization = read_charge_polarization(U235_POLARIZATION_FILE)
-        @test polarization_at(polarization, 118) ≈ 0.00137468
-        @test width_at(polarization, 118) ≈ 0.62081
+        distribution = read_charge_distribution(U235_CHARGE_DISTRIBUTION_FILE)
+        @test charge_polarization(distribution, 118) ≈ 0.00137468
+        @test charge_dispersion(distribution, 118) ≈ 0.62081
     end
 
     mktempdir() do dir
         floating = joinpath(dir, "floating.dat")
         write(floating, "A ΔZ rms\n118.0 0.00137468 0.62081\n119.0 0.0766041 0.6204323\n")
-        polarization = read_charge_polarization(floating)
-        @test polarization_at(polarization, 118) ≈ 0.00137468
-        @test width_at(polarization, 118) ≈ 0.62081
+        distribution = read_charge_distribution(floating)
+        @test charge_polarization(distribution, 118) ≈ 0.00137468
+        @test charge_dispersion(distribution, 118) ≈ 0.62081
     end
 
     # A genuinely fractional nucleon number is still an error, and says what it could not read.
     mktempdir() do dir
         bad = joinpath(dir, "fractional.dat")
         write(bad, "A ΔZ rms\n118.5 0.1 0.6\n")
-        @test_throws ArgumentError read_charge_polarization(bad)
+        @test_throws ArgumentError read_charge_distribution(bad)
     end
 end
 

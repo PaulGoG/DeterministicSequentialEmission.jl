@@ -80,7 +80,7 @@ function Base.show(io::IO, result::RunResult)
     print(
         io,
         "RunResult(",
-        result.configuration.subdirectory,
+        system_label(result.configuration.system),
         ", ⟨ν⟩ = ",
         round(2 * result.total_multiplicity; digits = 4),
         " per fission, ",
@@ -104,24 +104,24 @@ reported so that the coverage of a run can be audited from its own output.
 function run_pipeline(configuration::Configuration; write::Bool = true)
     domain = fragmentation_domain(
         configuration.system,
-        configuration.polarization,
+        configuration.charge_distribution,
         configuration.heavy_masses;
         charges_per_mass = configuration.charges_per_mass,
     )
-    weights = if configuration.yields === nothing
-        weights_from(domain, configuration.polarization, configuration.kinetic_energies)
+    weights = if configuration.fragment_yield === nothing
+        weights_from(domain, configuration.charge_distribution, configuration.kinetic_energies)
     else
-        weights_from(configuration.yields)
+        weights_from(configuration.fragment_yield)
     end
     reached =
-        configuration.yields === nothing ? 1.0 :
-        coverage(configuration.yields, configuration.kinetic_energies).reached
+        configuration.fragment_yield === nothing ? 1.0 :
+        coverage(configuration.fragment_yield, configuration.kinetic_energies).reached
 
-    ν = ConfigurationValues{Float64}()
-    temperature = ConfigurationValues{Float64}()
-    excitation = ConfigurationValues{Float64}()
-    residual = ConfigurationValues{Float64}()
-    neutron_energy = ConfigurationValues{Float64}()
+    ν = FragmentQuantity{Float64}()
+    temperature = FragmentQuantity{Float64}()
+    excitation = FragmentQuantity{Float64}()
+    residual = FragmentQuantity{Float64}()
+    neutron_energy = FragmentQuantity{Float64}()
     chains = Vector{
         Tuple{Fragmentation, Float64, EmissionChain, EmissionChain, ExcitationEnergies},
     }()
@@ -130,12 +130,13 @@ function run_pipeline(configuration::Configuration; write::Bool = true)
     solved = 0
     for entry in domain.entries, TKE in configuration.kinetic_energies
         attempted += 1
-        balance = energetics(configuration.masses, configuration.system, entry, TKE)
+        balance =
+            energetics(configuration.mass_excess_table, configuration.system, entry, TKE)
         balance === nothing && continue
         split = partition(configuration.method, entry, value(balance.TXE))
         split === nothing && continue
         light = emission_chain(
-            configuration.masses,
+            configuration.mass_excess_table,
             configuration.model,
             configuration.cross_section,
             entry.light,
@@ -143,7 +144,7 @@ function run_pipeline(configuration::Configuration; write::Bool = true)
             maximum_temperature = configuration.maximum_temperature,
         )
         heavy = emission_chain(
-            configuration.masses,
+            configuration.mass_excess_table,
             configuration.model,
             configuration.cross_section,
             entry.heavy,
@@ -170,7 +171,7 @@ function run_pipeline(configuration::Configuration; write::Bool = true)
 
     solved > 0 || throw(
         ArgumentError(
-            "no configuration of $(configuration.subdirectory) could be solved; \
+            "no configuration of $(system_label(configuration.system)) could be solved; \
                        check the kinetic energy grid against the TXE the system has to share",
         ),
     )
@@ -186,8 +187,10 @@ function run_pipeline(configuration::Configuration; write::Bool = true)
     # `solved > 0` above guarantees this, but the contraction cannot say so in its return type.
     total = total_average(ν, weights)
     total === nothing && throw(
-        ArgumentError("no configuration of $(configuration.subdirectory) carries both a \
-                       multiplicity and a weight"),
+        ArgumentError(
+            "no configuration of $(system_label(configuration.system)) carries both a \
+                       multiplicity and a weight",
+        ),
     )
 
     result = RunResult(
@@ -230,7 +233,7 @@ end
 function _run_spectrum(
     configuration::Configuration,
     chains,
-    weights::ConfigurationValues{W},
+    weights::FragmentQuantity{W},
 ) where {W}
     grid = configuration.spectrum_grid
     grid === nothing && return Curve(), NaN
@@ -293,7 +296,7 @@ function _trapezoid(values::Curve, integrand)
     return accumulated
 end
 
-function _mean_kinetic_energy(weights::ConfigurationValues{W}) where {W}
+function _mean_kinetic_energy(weights::FragmentQuantity{W}) where {W}
     weighted = 0.0
     total = 0.0
     for ((_, _, TKE), w) in weights.values
@@ -305,10 +308,121 @@ function _mean_kinetic_energy(weights::ConfigurationValues{W}) where {W}
 end
 
 """
+    RUN_IDENTIFIER_ABBREVIATIONS
+
+The token each configuration key contributes to a run identifier.
+
+A token *is* the key it came from wherever that is short enough to carry; where it is not, the
+abbreviation is drawn from here and from nowhere else, so there is one place to look and a
+reader can get from a directory name back to a configuration without reading the source.
+[`run_identifier`](@ref) refuses a key with no entry rather than inventing a token.
+"""
+const RUN_IDENTIFIER_ABBREVIATIONS = Dict(
+    "incident_energy" => "En",
+    "heavy_mass_min" => "AHmin",
+    "heavy_mass_max" => "AHmax",
+    "charges_per_mass" => "nZ",
+    "kinetic_energy_min" => "TKEmin",
+    "kinetic_energy_max" => "TKEmax",
+    "kinetic_energy_step" => "TKEstep",
+    "model" => "ldm",
+    "deformed_branch" => "def",
+    "cross_section" => "sigma",
+    "maximum_temperature" => "Tmax",
+    "method" => "part",
+    "total" => "Ytot",
+)
+
+"""
+    run_identifier(configuration) -> String
+
+The token that names one run of one fissioning system, built from the configuration keys that
+change the result.
+
+Every token is a configuration key abbreviated through [`RUN_IDENTIFIER_ABBREVIATIONS`](@ref),
+and a key with no entry there throws rather than being given a token on the spot.
+
+**It covers the scalar and enumerated keys, and it says which rather than claiming all of them.**
+`deformed_branch` appears only under Gilbert-Cameron and `total` only where a yield was loaded,
+because those are the runs each has an effect on. `incident_energy` is covered: it changes the
+compound excitation and so every quantity downstream of it, and two runs of one system on one
+channel may differ in nothing else.
+
+Four things are deliberately **not** tokens and are written in full into the metadata beside the
+result instead. The input files — the mass evaluation, the charge distribution, the segmented
+curve, the yields — change the result but do not reduce to a savename token. The spectrum grid
+and `maxwellian_temperature` change the tabulation of an already-solved spectrum rather than the
+physics, though the grid does move the first moment reported in `totals.dat`, which is a property
+of what was written. `significant_digits` changes how a number is rendered. And the system is not
+a token either: it names the directory the identifier sits in.
+
+# Examples
+
+```jldoctest
+julia> RUN_IDENTIFIER_ABBREVIATIONS["heavy_mass_max"]
+"AHmax"
+
+julia> RUN_IDENTIFIER_ABBREVIATIONS["charges_per_mass"]
+"nZ"
+```
+"""
+function run_identifier(configuration::Configuration)
+    entries = Pair{String, Any}[
+        "incident_energy" => configuration.system.incident_energy,
+        "heavy_mass_min" => first(configuration.heavy_masses),
+        "heavy_mass_max" => last(configuration.heavy_masses),
+        "charges_per_mass" => configuration.charges_per_mass,
+        "kinetic_energy_min" => first(configuration.kinetic_energies),
+        "kinetic_energy_max" => last(configuration.kinetic_energies),
+        "kinetic_energy_step" => step(configuration.kinetic_energies),
+        "model" => _model_token(configuration.model),
+        "cross_section" => _cross_section_token(configuration.cross_section),
+        "maximum_temperature" => configuration.maximum_temperature,
+        "method" => _method_token(configuration.method),
+    ]
+    if configuration.model isa GilbertCameron
+        push!(entries, "deformed_branch" => configuration.model.deformed_branch)
+    end
+    fragment_yield = configuration.fragment_yield
+    fragment_yield === nothing || push!(entries, "total" => fragment_yield.total)
+
+    tokens = String[]
+    for (key, value) in entries
+        haskey(RUN_IDENTIFIER_ABBREVIATIONS, key) || throw(
+            ArgumentError(
+                "the run identifier uses the configuration key $(repr(key)), which has no \
+                 entry in RUN_IDENTIFIER_ABBREVIATIONS",
+            ),
+        )
+        push!(tokens, string(RUN_IDENTIFIER_ABBREVIATIONS[key], "=", _token(value)))
+    end
+    sort!(tokens)
+    return join(tokens, "_")
+end
+
+_token(x::Integer) = string(x)
+_token(x::Bool) = string(x)
+_token(x::AbstractString) = String(x)
+# Trailing zeros carry no information and would make two spellings of one grid.
+_token(x::Real) = isinteger(x) ? string(Int(round(x))) : string(x)
+
+_model_token(::BackShiftedFermiGas) = "BSFG"
+_model_token(::GilbertCameron) = "GC"
+_cross_section_token(::VariableCrossSection) = "variable"
+_cross_section_token(::ConstantCrossSection) = "constant"
+_method_token(::TemperatureRatio) = "temperature_ratio"
+_method_token(::ExcitationEnergyRatio) = "excitation_ratio"
+_method_token(::ScissionModelling) = "scission"
+
+"""
     write_results(result; directory) -> String
 
-Write a run to `directory/<subdirectory>`: one two-column file per curve, a table of totals, and
+Write a run to `directory/<system>/<run>`: one two-column file per curve, a table of totals, and
 a `metadata.toml` recording the configuration, the package version, the commit and the platform.
+
+The system is [`system_label`](@ref) and the run is [`run_identifier`](@ref), so two runs of one
+system that differ in anything the identifier covers land in different directories rather than
+one displacing the other, and a directory name states what produced it.
 
 Nothing is overwritten in place. A directory that already holds a run is moved aside with a
 numbered suffix first, so a second run of the same configuration cannot destroy the first.
@@ -317,20 +431,25 @@ function write_results(
     result::RunResult;
     directory::AbstractString = joinpath(PACKAGE_ROOT, "results"),
 )
-    destination = joinpath(directory, result.configuration.subdirectory)
+    configuration = result.configuration
+    destination = joinpath(
+        directory,
+        system_label(configuration.system),
+        run_identifier(configuration),
+    )
     _preserve(destination)
     mkpath(destination)
 
-    digits = result.configuration.digits
+    digits = configuration.significant_digits
     curves = (
-        ("multiplicity_A.dat", "A nu", result.multiplicity),
-        ("temperature_A.dat", "A T", result.temperature),
-        ("excitation_A.dat", "A E_excitation", result.excitation),
-        ("residual_energy_A.dat", "A E_residual", result.residual),
-        ("neutron_energy_A.dat", "A epsilon", result.mean_neutron_energy),
-        ("multiplicity_TKE.dat", "TKE nu", result.multiplicity_by_energy),
-        ("excitation_TKE.dat", "TKE E_excitation", result.excitation_by_energy),
-        ("spectrum_E.dat", "E N", result.spectrum),
+        ("nu_vs_A.dat", "A nu", result.multiplicity),
+        ("T_vs_A.dat", "A T", result.temperature),
+        ("E_star_vs_A.dat", "A E_star", result.excitation),
+        ("E_r_vs_A.dat", "A E_r", result.residual),
+        ("eps_vs_A.dat", "A eps", result.mean_neutron_energy),
+        ("nu_vs_TKE.dat", "TKE nu", result.multiplicity_by_energy),
+        ("E_star_vs_TKE.dat", "TKE E_star", result.excitation_by_energy),
+        ("spectrum_vs_E.dat", "E spectrum", result.spectrum),
     )
     for (name, header, values) in curves
         isempty(values) && continue
@@ -342,22 +461,22 @@ function write_results(
         end
     end
 
-    yields = result.configuration.yields
-    if yields !== nothing
-        for (name, dimension) in (
-            ("yield_A.dat", :mass),
-            ("yield_Z.dat", :charge),
-            ("yield_TKE.dat", :kinetic_energy),
+    fragment_yield = configuration.fragment_yield
+    if fragment_yield !== nothing
+        for (name, header, dimension) in (
+            ("Y_vs_A.dat", "A Y", :mass),
+            ("Y_vs_Z.dat", "Z Y", :charge),
+            ("Y_vs_TKE.dat", "TKE Y", :kinetic_energy),
         )
-            projection = yield_over(yields, dimension)
+            projection = yield_over(fragment_yield, dimension)
             open(joinpath(destination, name), "w") do io
-                println(io, dimension === :kinetic_energy ? "TKE Y" : "$(dimension) Y")
-                for (x, y) in projection
+                println(io, header)
+                for (x, Y) in projection
                     println(
                         io,
                         _significant(Float64(x), digits),
                         " ",
-                        _significant(y, digits),
+                        _significant(Y, digits),
                     )
                 end
             end
@@ -367,10 +486,10 @@ function write_results(
     open(joinpath(destination, "totals.dat"), "w") do io
         println(io, "quantity value")
         for (name, quantity) in (
-            ("multiplicity_per_fragment", result.total_multiplicity),
-            ("multiplicity_per_fission", 2 * result.total_multiplicity),
-            ("mean_total_kinetic_energy", result.mean_kinetic_energy),
-            ("mean_neutron_laboratory_energy", result.mean_neutron_lab_energy),
+            ("nu_per_fragment", result.total_multiplicity),
+            ("nu_per_fission", 2 * result.total_multiplicity),
+            ("mean_TKE", result.mean_kinetic_energy),
+            ("mean_E", result.mean_neutron_lab_energy),
             ("configurations_solved", Float64(result.configurations_solved)),
             ("configurations_attempted", Float64(result.configurations_attempted)),
             ("yield_reached", result.yield_reached),
@@ -414,6 +533,7 @@ function _write_metadata(io::IO, result::RunResult)
     println(io, "# and a machine without consulting anything outside this directory.")
     println(io)
     println(io, "[run]")
+    println(io, "identifier = ", repr(run_identifier(configuration)))
     println(io, "configuration = ", repr(configuration.source))
     println(io, "data_directory = ", repr(configuration.data_directory))
     println(io, "written = ", repr(string(Dates.now())))
@@ -421,10 +541,15 @@ function _write_metadata(io::IO, result::RunResult)
     println(io, "commit = ", repr(_git_commit()))
     println(io)
     println(io, "[system]")
-    println(io, "compound = ", repr(sprint(show, configuration.system.compound)))
-    println(io, "target = ", repr(sprint(show, configuration.system.target)))
-    println(io, "spontaneous = ", configuration.system.spontaneous)
-    println(io, "incident_energy_mev = ", configuration.system.incident_energy)
+    println(io, "label = ", repr(system_label(configuration.system)))
+    println(io, "notation = ", repr(system_notation(configuration.system)))
+    println(io, "target_A = ", configuration.system.target.A)
+    println(io, "target_Z = ", configuration.system.target.Z)
+    println(io, "channel = ", repr(configuration.system.channel))
+    println(io, "reaction = ", repr(reaction(configuration.system)))
+    println(io, "incident_energy_MeV = ", configuration.system.incident_energy)
+    println(io, "compound_A = ", configuration.system.compound.A)
+    println(io, "compound_Z = ", configuration.system.compound.Z)
     println(io)
     println(io, "[model]")
     println(
@@ -438,7 +563,7 @@ function _write_metadata(io::IO, result::RunResult)
     println(io, "charges_per_mass = ", configuration.charges_per_mass)
     println(
         io,
-        "kinetic_energies_mev = [",
+        "kinetic_energies_MeV = [",
         first(configuration.kinetic_energies),
         ", ",
         step(configuration.kinetic_energies),
@@ -448,16 +573,30 @@ function _write_metadata(io::IO, result::RunResult)
     )
     println(io, "level_density = ", repr(sprint(show, configuration.model)))
     println(io, "cross_section = ", repr(sprint(show, configuration.cross_section)))
-    println(io, "maximum_temperature_mev = ", configuration.maximum_temperature)
+    println(io, "maximum_temperature_MeV = ", configuration.maximum_temperature)
     println(io, "partition = ", repr(sprint(show, configuration.method)))
-    println(io, "charge_distribution = ", repr(configuration.polarization.source))
-    yields = configuration.yields
-    println(io, "yields = ", repr(yields === nothing ? "none" : sprint(show, yields)))
+    println(io, "charge_distribution = ", repr(configuration.charge_distribution.source))
+    println(io, "mass_excess = ", repr(configuration.mass_excess_table.source))
+    println(io, "significant_digits = ", configuration.significant_digits)
+    println(io, "maxwellian_temperature_MeV = ", configuration.maxwellian_temperature)
+    grid = configuration.spectrum_grid
+    println(
+        io,
+        "spectrum_grid_MeV = ",
+        grid === nothing ? repr("none") :
+        string("[", first(grid), ", ", last(grid), ", ", length(grid), "]"),
+    )
+    fragment_yield = configuration.fragment_yield
+    println(
+        io,
+        "yield = ",
+        repr(fragment_yield === nothing ? "none" : sprint(show, fragment_yield)),
+    )
     println(io)
     println(io, "[result]")
-    println(io, "multiplicity_per_fission = ", 2 * result.total_multiplicity)
-    println(io, "mean_total_kinetic_energy_mev = ", result.mean_kinetic_energy)
-    println(io, "mean_neutron_laboratory_energy_mev = ", result.mean_neutron_lab_energy)
+    println(io, "nu_per_fission = ", 2 * result.total_multiplicity)
+    println(io, "mean_TKE_MeV = ", result.mean_kinetic_energy)
+    println(io, "mean_E_MeV = ", result.mean_neutron_lab_energy)
     println(io, "configurations_solved = ", result.configurations_solved)
     println(io, "configurations_attempted = ", result.configurations_attempted)
     println(io, "yield_reached = ", result.yield_reached)

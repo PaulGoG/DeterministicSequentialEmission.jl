@@ -30,7 +30,7 @@ end
 
 @testset "Q values against the archived run" begin
     table = mass_table()
-    reference = read_reference("CF52_Q_AH_Z.dat", [:A_H, :Z, :Q], 2)
+    reference = read_reference("Q_vs_A_H_Z_H.dat", [:A_H, :Z_H, :Q], 2)
     @test length(reference) == 245
 
     checked = 0
