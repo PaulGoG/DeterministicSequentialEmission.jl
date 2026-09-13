@@ -46,12 +46,21 @@ export Energetics,
     compound_nucleus_excitation,
     total_excitation_energy,
     kinetic_energy
+export LevelDensityModel,
+    ShellCorrections,
+    read_shell_corrections,
+    GilbertCameron,
+    BackShiftedFermiGas,
+    level_density_parameter,
+    shell_correction,
+    liquid_drop_energy
 
 include("nuclides.jl")
 include("tables.jl")
 include("masses.jl")
 include("charge.jl")
 include("domain.jl")
+include("leveldensity.jl")
 include("energetics.jl")
 
 end

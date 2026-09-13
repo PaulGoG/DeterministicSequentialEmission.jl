@@ -13,6 +13,7 @@ include("physics.jl")
     include("test_masses.jl")
     include("test_charge.jl")
     include("test_domain.jl")
+    include("test_leveldensity.jl")
     include("test_energetics.jl")
 
     @testset "quality" begin
