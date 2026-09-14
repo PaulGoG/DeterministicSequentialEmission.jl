@@ -23,6 +23,9 @@
         @test parameters.ΔZ140 < 0
         @test parameters.ΔZSL < 0
         @test all(in((:σZ50, :F_N, :ΔA_Z, :ΔZmax)), parameters.assumed)
+        # Every entry says which entrance channels its fit covers.
+        @test !isempty(parameters.channels)
+        @test all(in(CHANNELS), parameters.channels)
     end
 
     # U235T is the reaction with the most data, so nothing in it was assumed.
@@ -30,12 +33,26 @@
     # CF252S is the sparsest, and the table marks four of its parameters as assumed.
     @test length(WAHL_PER_REACTION[(98, 252)].assumed) == 4
 
-    # Matched on the fissioning nucleus, so the entrance channel does not matter.
+    # Matched on the fissioning nucleus and the entrance channel. The resonance channel differs
+    # from thermal by the incident energy alone, so it takes the thermal fit.
     thermal = neutron_induced_fission(Nuclide(92, 235), 2.53e-8, "nth")
     resonance = neutron_induced_fission(Nuclide(92, 235), 5.8013e-4, "nres")
     @test wahl_reaction_parameters(thermal).label == "U235T"
     @test wahl_reaction_parameters(resonance).label == "U235T"
     @test wahl_reaction_parameters(spontaneous_fission(Nuclide(98, 252))).label == "CF252S"
+
+    # The nucleus alone is not enough. 240-Pu(sf) reaches 239-Pu(nth,f)'s compound nucleus
+    # 6.5 MeV lower, where the fitted parameters do not hold, so it gets none and falls through.
+    @test wahl_reaction_parameters(spontaneous_fission(Nuclide(94, 240))) === nothing
+    # Nor does a fast-neutron channel on a nucleus the table covers.
+    @test wahl_reaction_parameters(
+        neutron_induced_fission(Nuclide(92, 235), 2.0, "nfast"),
+    ) === nothing
+    # And 252-Cf's fit is spontaneous, so a neutron-induced route to the same nucleus is not it.
+    @test wahl_reaction_parameters(
+        neutron_induced_fission(Nuclide(98, 251), 2.53e-8, "nth"),
+    ) === nothing
+
     # A reaction the evaluation does not cover has none.
     @test wahl_reaction_parameters(spontaneous_fission(Nuclide(100, 256))) === nothing
 end

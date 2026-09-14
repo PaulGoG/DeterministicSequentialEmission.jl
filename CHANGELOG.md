@@ -15,11 +15,17 @@ here. This changelog begins with the rewrite.
   taking the systematics, through the new `build_charge_distribution`. `WAHL_PER_REACTION`
   transcribes Table A of the 1988 evaluation — the parameters fitted by least squares to the
   measured fractional independent yields of ²³⁵U(n_th,f), ²³³U(n_th,f), ²³⁹Pu(n_th,f) and
-  ²⁵²Cf(sf) — and `wahl_reaction_parameters` matches a system to them on the fissioning nucleus,
-  so the resonance channel of ²³⁵U finds the thermal fit. A reaction Table A does not cover falls
-  through to the systematics of eq. (17), and a nucleus outside its fitted range to the
-  conventional means. The layer that answered is written into the distribution's `source` and so
-  into the run metadata.
+  ²⁵²Cf(sf) — and `wahl_reaction_parameters` matches a system to them on the fissioning nucleus
+  and the entrance channel, so the resonance channel of ²³⁵U finds the thermal fit while
+  ²⁴⁰Pu(sf) does not take ²³⁹Pu(n_th,f)'s. A reaction Table A does not cover falls through to the
+  systematics of eq. (17), and a nucleus outside its fitted range to the conventional means. The
+  layer that answered is written into the distribution's `source` and so into the run metadata.
+
+  The channel is part of the match because the nucleus alone is not enough. ²⁴⁰Pu(sf) and
+  ²³⁹Pu(n_th,f) reach the same compound nucleus 6.53 MeV apart, and over that gap eq. (17) moves
+  `σ_Z` by 0.071 — twelve times the uncertainty Table A quotes on the fitted value. `nres` joins
+  `nth` on the same test and passes it: at the 580 eV resonance ²³⁵U's compound excitation is
+  6.546097 MeV against 6.545517 MeV at thermal.
 
   The motivation is that the two layers are the same model differing only in where its parameters
   came from, and Fig. 18 of LA-13928 puts that difference at a reduced `χ²` of 2.9 against 7.9.

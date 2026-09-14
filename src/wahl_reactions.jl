@@ -9,12 +9,16 @@ which fits the model to the evaluated fractional independent yields of that reac
 names the parameters the evaluation could not determine and fixed by assumption, which the table
 marks with parentheses; they carry no uncertainty and should not be read as measurements.
 
+`channels` are the entrance channels the fit covers, which is what keeps a reaction reaching the
+same compound nucleus at a different excitation energy from claiming these parameters.
+
 `shell` is where the narrow dispersion `σ_Z(50)` applies and `symmetric` where the even-odd
 factors are set to one, both as footnotes a and c of that table give them. Each covers the `Z = 50`
 closure and its complement by mass, so both legs of the range appear where the table gives two.
 """
 struct WahlReactionParameters
     label::String
+    channels::Vector{String}
     Z_F::Int
     A_F::Int
     ΔZ140::Float64
@@ -33,6 +37,7 @@ struct WahlReactionParameters
     # exactly these types and inference never has to consider a conversion that cannot happen.
     function WahlReactionParameters(
         label::String,
+        channels::Vector{String},
         Z_F::Int,
         A_F::Int,
         ΔZ140::Float64,
@@ -49,6 +54,7 @@ struct WahlReactionParameters
     )
         return new(
             label,
+            channels,
             Z_F,
             A_F,
             ΔZ140,
@@ -110,6 +116,7 @@ eq. (8) before returning a [`ChargeDistribution`](@ref).
 const WAHL_PER_REACTION = Dict(
     (92, 236) => WahlReactionParameters(
         "U235T",
+        ["nth", "nres"],
         92,
         236,
         -0.511,
@@ -126,6 +133,7 @@ const WAHL_PER_REACTION = Dict(
     ),
     (92, 234) => WahlReactionParameters(
         "U233T",
+        ["nth", "nres"],
         92,
         234,
         -0.519,
@@ -142,6 +150,7 @@ const WAHL_PER_REACTION = Dict(
     ),
     (94, 240) => WahlReactionParameters(
         "PU239T",
+        ["nth", "nres"],
         94,
         240,
         -0.544,
@@ -158,6 +167,7 @@ const WAHL_PER_REACTION = Dict(
     ),
     (98, 252) => WahlReactionParameters(
         "CF252S",
+        ["sf"],
         98,
         252,
         -0.420,
@@ -180,12 +190,21 @@ const WAHL_PER_REACTION = Dict(
 The per-reaction `Zₚ` parameters for a fissioning system, or `nothing` where the 1988 evaluation
 covers no such reaction.
 
-Matched on the fissioning nucleus, so a system reaching the same compound nucleus by another
-entrance channel would match — which is what complementarity of the evaluated data implies, and
-is why the resonance channel of ²³⁵U finds ²³⁵U(n_th,f)'s parameters.
+Matched on the fissioning nucleus **and** the entrance channel. The nucleus alone is not enough:
+²⁴⁰Pu(sf) and ²³⁹Pu(n_th,f) reach the same compound nucleus 6.53 MeV apart, and over that gap
+eq. (17) moves `σ_Z` by 0.071 — twelve times the uncertainty Table A quotes on the fitted value.
+A reaction that far from the one a fit was made for is better served by the systematics, which at
+least takes the excitation energy as an argument.
+
+The channels each entry admits are the ones its fit covers. `nres` joins `nth` because the two
+differ by the incident energy alone: at the 580 eV resonance ²³⁵U's compound excitation is
+6.546097 MeV against 6.545517 MeV at thermal, which moves no parameter in the sixth decimal.
 """
-wahl_reaction_parameters(system::FissioningSystem) =
-    get(WAHL_PER_REACTION, (system.compound.Z, system.compound.A), nothing)
+function wahl_reaction_parameters(system::FissioningSystem)
+    parameters = get(WAHL_PER_REACTION, (system.compound.Z, system.compound.A), nothing)
+    parameters === nothing && return nothing
+    return system.channel in parameters.channels ? parameters : nothing
+end
 
 """
     WahlSystematics(parameters, PE) -> WahlSystematics
