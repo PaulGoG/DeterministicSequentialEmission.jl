@@ -125,8 +125,9 @@ CHARGE_DISTRIBUTION_AVAILABLE &&
                 WahlSystematics(configuration.mass_excess_table, configuration.system)
             @test charge_polarization(model, 130) ≈ wahl_polarization(reference, 130) atol =
                 1e-7
-            @test charge_dispersion(model, 130) ≈ wahl_dispersion(reference, 130) atol =
-                1e-7
+            # On the lattice footing of Wahl eq. (8), as every charge dispersion here is.
+            @test charge_dispersion(model, 130) ≈
+                  sqrt(wahl_dispersion(reference, 130)^2 + 1 / 12) atol = 1e-7
 
             # The run metadata names the resolved curve, so the partition input is traceable too.
             metadata = read(joinpath(destination, "metadata.toml"), String)

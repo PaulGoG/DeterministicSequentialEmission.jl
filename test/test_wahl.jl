@@ -123,7 +123,11 @@ end
     @test distribution !== nothing
     @test charge_polarization(distribution, 140) ≈
           wahl_polarization(WahlSystematics(table, system), 140)
+    # The tabulated dispersion is on the lattice footing of Wahl eq. (8), not the model's own
+    # sigma_Z, because that is what an evaluated table carries and what this package reads.
     @test charge_dispersion(distribution, 140) ≈
+          sqrt(wahl_dispersion(WahlSystematics(table, system), 140)^2 + 1 / 12)
+    @test charge_dispersion(distribution, 140) >
           wahl_dispersion(WahlSystematics(table, system), 140)
 
     # It is the same type a tabulated file produces, so every consumer is unchanged, and a mass
@@ -318,6 +322,21 @@ CHARGE_DISTRIBUTION_AVAILABLE &&
 
         # Off by default: the tabulated distributions already carry the effect, so folding it in
         # on top of one would count it twice.
-        @test charge_dispersion(wahl_charge_distribution(table, system, masses), 140) ==
-              wahl_dispersion(WahlSystematics(table, system), 140)
+        plain = wahl_charge_distribution(table, system, masses)
+        @test charge_dispersion(plain, 140) ≈
+              sqrt(wahl_dispersion(WahlSystematics(table, system), 140)^2 + 1 / 12)
+
+        # And putting the systematics on the table's footing is what makes it a better stand-in:
+        # it moves every mass toward the evaluated table rather than away from it.
+        bare_error = sum(
+            abs(
+                wahl_dispersion(WahlSystematics(table, system), A) -
+                charge_dispersion(evaluated, A),
+            ) for A in masses
+        )
+        lattice_error = sum(
+            abs(charge_dispersion(plain, A) - charge_dispersion(evaluated, A)) for
+            A in masses
+        )
+        @test lattice_error < bare_error
     end

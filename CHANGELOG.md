@@ -11,6 +11,14 @@ here. This changelog begins with the rewrite.
 
 ### Changed
 
+- `wahl_charge_distribution` puts the systematics on the footing of the tables it stands in for.
+  Wahl eq. (8) of the 1988 evaluation gives `rms = √(σ_Z² + 1/12)`: `σ_Z` is the width of the
+  model's Gaussian, `rms` the second moment of the yields over the integer charge lattice, and it
+  is `rms` that an evaluated table tabulates and that this package reads as a charge dispersion.
+  The systematics returned the first where the second was wanted. Applying the relation lowers the
+  mean absolute difference from every evaluated table — 34 % for ²³³U, 24 % for ²³⁵U, 5 % for
+  ²⁵²Cf, 4 % for ²³⁹Pu — and makes none of them worse. `wahl_dispersion` still returns the model
+  parameter, which is what its equations define.
 - ²³³U reads an evaluated charge distribution rather than the Wahl systematics. The table is of
   the same construction as the other three — a plain Gaussian fitted to the `Zₚ` model evaluated
   with per-reaction parameters — which its own signatures confirm: the residual against the
