@@ -98,6 +98,18 @@ here. This changelog begins with the rewrite.
 
 ### Added
 
+- A run writes the isobaric charge distribution it was weighted by, beside the two it could have
+  taken instead: `charge_distribution_vs_A.dat`, `charge_distribution_vs_A_wahl_systematics.dat`
+  where `is_wahl_applicable` says the system is inside the fitted range, and
+  `charge_distribution_vs_A_mean.dat`. Each is the three-column `A dZ sigma_Z` table an
+  evaluation is supplied in, over exactly the heavy masses swept, so the three are directly
+  comparable and the plotting stage needs nothing but a reader. `plotting/figures.jl` draws them
+  as `figures/charge_distribution`.
+  - Which distribution a run used has a measurable effect on `ν(A)` and was recorded only as a
+    path in a configuration. The diagnostic also shows where a sweep runs past the end of its
+    evaluated table onto the flat fallback, which ²⁵²Cf does for `A_H` 170 to 174.
+- `is_wahl_applicable`, so a caller offering the systematics as one option among several can
+  leave it out where the system is outside `WAHL_VALIDITY` rather than catching the constructor.
 - `TemperatureRatioManifest`, `ManifestCurve`, `ManifestSystem`,
   `read_temperature_ratio_manifest`, `staged_manifest`, `curve_labels`, `manifest_curve` and
   `temperature_ratio_path`: the run record of a temperature-ratio extraction, and the resolution

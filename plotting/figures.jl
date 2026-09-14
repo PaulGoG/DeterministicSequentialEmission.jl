@@ -54,6 +54,10 @@ const CASES = [
 # dropped. Nothing is plotted outside it.
 const MASS_RANGE = (76.0, 176.0)
 
+# The heavy branch alone, which is where a charge distribution is tabulated. Wide enough for the
+# widest window any shipped system sweeps.
+const CHARGE_MASS_RANGE = (115.0, 176.0)
+
 const THEME = Theme(
     fonts = (; regular = texfont(:text), bold = texfont(:bold), italic = texfont(:italic)),
     fontsize = 9,
@@ -460,6 +464,102 @@ function figure_residual_quantities()
     return nothing
 end
 
+"""
+The isobaric charge distribution each run was weighted by, against the two alternatives it could
+have taken: the Wahl `Zₚ` systematics, and the conventional means that carry no mass dependence.
+
+Every run writes all three, so this draws tables rather than recomputing anything. Read it as a
+diagnostic of the *input*: where the evaluated table and the systematics part company is where a
+system without an evaluation inherits its uncertainty, and the flat fallback is the floor both
+improve on.
+"""
+function figure_charge_distribution()
+    set_theme!(THEME)
+    drawable = filter(_available, CASES)
+    isempty(drawable) && return nothing
+
+    sources = (
+        ("charge_distribution_vs_A.dat", "Used by the run", :solid, :black),
+        (
+            "charge_distribution_vs_A_wahl_systematics.dat",
+            L"Wahl $Z_p$ systematics",
+            :dash,
+            PALETTE[1],
+        ),
+        ("charge_distribution_vs_A_mean.dat", "Mean values", :dot, PALETTE[4]),
+    )
+
+    figure = Figure(size = (510, 40 + 105 * length(drawable)))
+    handles = []
+    labels = Any[]
+    for (row, case) in pairs(drawable)
+        directory = run_directory(case)
+        directory === nothing && continue
+        bottom = row == length(drawable)
+        for (column, (ylabel, index)) in pairs(((L"\Delta Z(A)", 2), (L"\sigma_Z(A)", 3)))
+            axis = Axis(
+                figure[row + 1, column];
+                ylabel = ylabel,
+                xlabel = bottom ? L"Heavy fragment mass $A_H$" : "",
+                xticklabelsvisible = bottom,
+            )
+            for (name, label, style, colour) in sources
+                path = joinpath(directory, name)
+                isfile(path) || continue
+                A, second, third = read_columns(path)
+                handle = lines!(
+                    axis,
+                    A,
+                    index == 2 ? second : third;
+                    color = colour,
+                    linestyle = style,
+                    linewidth = index == 2 ? 1.4 : 1.2,
+                )
+                if row == 1 && index == 2
+                    push!(handles, handle)
+                    push!(labels, label)
+                end
+            end
+            column == 2 && text!(
+                axis,
+                0.97,
+                0.06;
+                text = case.notation,
+                fontsize = 8.5,
+                align = (:right, :bottom),
+                space = :relative,
+            )
+            # One range for every panel. The systems sweep different heavy-mass windows, and
+            # letting each autoscale while only the bottom row carries tick labels would leave
+            # the upper panels read against the wrong axis.
+            xlims!(axis, CHARGE_MASS_RANGE...)
+        end
+    end
+
+    Legend(
+        figure[1, 1:2],
+        handles,
+        labels;
+        orientation = :horizontal,
+        framevisible = false,
+        padding = (0, 0, 0, 0),
+        colgap = 14,
+        patchsize = (16, 2),
+        labelsize = 7.5,
+    )
+    rowgap!(figure.layout, 1, 4)
+    for gap in 2:(size(figure.layout)[1] - 1)
+        rowgap!(figure.layout, gap, 6)
+    end
+    colgap!(figure.layout, 1, 16)
+
+    path = joinpath(FIGURES, "charge_distribution")
+    save(path * ".pdf", figure)
+    save(path * ".png", figure; px_per_unit = 3)
+    println("wrote ", path, ".pdf")
+    return nothing
+end
+
 function main()
     mkpath(FIGURES)
     isdir(RESULTS) || @warn """
@@ -473,6 +573,7 @@ function main()
     figure_multiplicity()
     figure_spectrum()
     figure_residual_quantities()
+    figure_charge_distribution()
     return nothing
 end
 

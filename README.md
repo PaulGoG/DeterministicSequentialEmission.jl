@@ -79,9 +79,18 @@ Redraw the figures from what those runs wrote, without solving anything again:
 julia --project=plotting plotting/figures.jl
 ```
 
-That draws the two figures above from every system a run has written, and a third panel of the
-quantities internal to the emission chain — `E*(A)`, `Ē_r(A)`, `⟨T⟩(A)`, `⟨ε⟩(A)`. Those have no
-experimental counterpart, so the third figure is a diagnostic and is not tracked.
+That draws the two figures above from every system a run has written, a panel of the quantities
+internal to the emission chain — `E*(A)`, `Ē_r(A)`, `⟨T⟩(A)`, `⟨ε⟩(A)` — and a diagnostic of the
+charge distribution each run was weighted by, against the two it could have taken instead: the
+Wahl `Zₚ` systematics and the conventional means. Those have no experimental counterpart, so they
+are diagnostics and are not tracked.
+
+The charge-distribution diagnostic is worth reading whenever a system is investigated. It is what
+shows where an evaluated table and the systematics part company — which is the uncertainty a
+system without an evaluation inherits — and where a run has silently fallen off the end of its
+table onto the flat fallback. For ²⁵²Cf it does: the evaluation stops at `A_H = 169` while the
+sweep runs to 174, so five masses carry `ΔZ = −0.5`, `σ_Z = 0.6`. They hold 0.09 % of the yield,
+so nothing moves, but it was not visible before.
 
 Run the test suite, and build the documentation:
 

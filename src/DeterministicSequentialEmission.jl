@@ -58,6 +58,7 @@ export ChargeDistribution,
 export WahlSystematics,
     WAHL_LOW_ENERGY,
     WAHL_VALIDITY,
+    is_wahl_applicable,
     wahl_polarization,
     wahl_dispersion,
     wahl_charge_distribution

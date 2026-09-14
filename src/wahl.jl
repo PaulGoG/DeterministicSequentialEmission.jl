@@ -161,6 +161,25 @@ function WahlSystematics(Z_F::Integer, A_F::Integer, PE::Real)
 end
 
 """
+    is_wahl_applicable(table, system) -> Bool
+
+Whether the `Zₚ` systematics can be evaluated for a fissioning system at all: the compound
+nucleus inside the fitted `Z_F` and `A_F` ranges of [`WAHL_VALIDITY`](@ref), and a precursor
+excitation energy the mass table can form and the low-energy branch covers.
+
+Asked before constructing, so that a caller offering the systematics as one option among several
+can leave it out where it does not apply instead of catching the constructor's refusal.
+"""
+function is_wahl_applicable(table::MassExcessTable, system::FissioningSystem)
+    system.compound.Z in WAHL_VALIDITY.charge || return false
+    system.compound.A in WAHL_VALIDITY.mass || return false
+    excitation = compound_nucleus_excitation(table, system)
+    excitation === nothing && return false
+    PE = value(excitation)
+    return isfinite(PE) && 0 <= PE <= WAHL_VALIDITY.excitation
+end
+
+"""
     WahlSystematics(table, system) -> Union{WahlSystematics,Nothing}
 
 The systematics for a fissioning system, taking the precursor excitation energy from the

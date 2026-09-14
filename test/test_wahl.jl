@@ -71,6 +71,51 @@
     @test_throws ArgumentError wahl_dispersion(U236, 100)
 end
 
+@testset "where the systematics applies at all" begin
+    table = mass_table()
+    # Inside the fitted range: every shipped system is, which is what lets a run offer the
+    # systematics beside whatever it used.
+    @test is_wahl_applicable(table, spontaneous_fission(Nuclide(98, 252)))
+    @test is_wahl_applicable(
+        table,
+        neutron_induced_fission(Nuclide(92, 235), 2.53e-8, "nth"),
+    )
+    @test is_wahl_applicable(
+        table,
+        neutron_induced_fission(Nuclide(92, 233), 2.53e-8, "nth"),
+    )
+    @test is_wahl_applicable(
+        table,
+        neutron_induced_fission(Nuclide(94, 239), 2.53e-8, "nth"),
+    )
+
+    # Outside it, the predicate says so rather than leaving a caller to catch the constructor.
+    # 232-Th is a trap here and not a case: Z_F = 90 and A_F = 232 are both inside the fitted
+    # range, so it is applicable.
+    @test is_wahl_applicable(table, spontaneous_fission(Nuclide(90, 232)))
+    @test !is_wahl_applicable(table, spontaneous_fission(Nuclide(88, 226)))   # Z_F below 90
+    @test !is_wahl_applicable(table, spontaneous_fission(Nuclide(98, 254)))   # A_F above 252
+    @test !is_wahl_applicable(
+        table,
+        neutron_induced_fission(Nuclide(92, 235), 15.0, "nfast"),
+    )
+
+    # And it agrees with the constructor wherever the constructor has an opinion.
+    for system in (
+        spontaneous_fission(Nuclide(98, 252)),
+        neutron_induced_fission(Nuclide(92, 235), 2.53e-8, "nth"),
+        neutron_induced_fission(Nuclide(92, 235), 15.0, "nfast"),
+    )
+        constructed = try
+            WahlSystematics(table, system) !== nothing
+        catch err
+            err isa ArgumentError || rethrow()
+            false
+        end
+        @test is_wahl_applicable(table, system) == constructed
+    end
+end
+
 @testset "Wahl systematics as a charge distribution" begin
     table = mass_table()
     system = neutron_induced_fission(Nuclide(92, 235), 2.53e-8, "nth")

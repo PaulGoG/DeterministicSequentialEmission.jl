@@ -483,6 +483,8 @@ function write_results(
         end
     end
 
+    _write_charge_distributions(destination, configuration, digits)
+
     open(joinpath(destination, "totals.dat"), "w") do io
         println(io, "quantity value")
         for (name, quantity) in (
@@ -503,6 +505,82 @@ function write_results(
         _write_metadata(io, result)
     end
     return destination
+end
+
+"""
+    _write_charge_distributions(destination, configuration, digits)
+
+Write the isobaric charge distribution the run used, beside the two it could have used instead.
+
+Which `ΔZ(A)`, `σ_Z(A)` a run was weighted by is a choice with a measurable effect on `ν(A)`, and
+until it is written down the only record of it is a path in a configuration. Three tables, each in
+the same `A dZ sigma_Z` form an evaluation is supplied in, so the comparison needs nothing but a
+reader:
+
+- `charge_distribution_vs_A.dat` — what the run used, whatever `charge_distribution_file` selected.
+- `charge_distribution_vs_A_wahl_systematics.dat` — the Wahl `Zₚ` systematics over the same masses,
+  where [`is_wahl_applicable`](@ref) says the system is inside the fitted range. Marked as
+  generated in its name, as a systematics table always is.
+- `charge_distribution_vs_A_mean.dat` — the conventional means, the fallback that carries no mass
+  dependence at all.
+
+Where the run already took the systematics, the first two coincide, and that is the honest
+picture rather than a redundancy to suppress.
+"""
+function _write_charge_distributions(
+    destination::AbstractString,
+    configuration::Configuration,
+    digits::Integer,
+)
+    masses = configuration.heavy_masses
+    _write_charge_distribution(
+        joinpath(destination, "charge_distribution_vs_A.dat"),
+        configuration.charge_distribution,
+        masses,
+        digits,
+    )
+    if is_wahl_applicable(configuration.mass_excess_table, configuration.system)
+        systematics = wahl_charge_distribution(
+            configuration.mass_excess_table,
+            configuration.system,
+            masses,
+        )
+        systematics === nothing || _write_charge_distribution(
+            joinpath(destination, "charge_distribution_vs_A_wahl_systematics.dat"),
+            systematics,
+            masses,
+            digits,
+        )
+    end
+    _write_charge_distribution(
+        joinpath(destination, "charge_distribution_vs_A_mean.dat"),
+        mean_charge_distribution(),
+        masses,
+        digits,
+    )
+    return nothing
+end
+
+function _write_charge_distribution(
+    path::AbstractString,
+    distribution::ChargeDistribution,
+    masses,
+    digits::Integer,
+)
+    open(path, "w") do io
+        println(io, "A dZ sigma_Z")
+        for A in masses
+            println(
+                io,
+                A,
+                " ",
+                _significant(charge_polarization(distribution, A), digits),
+                " ",
+                _significant(charge_dispersion(distribution, A), digits),
+            )
+        end
+    end
+    return path
 end
 
 # Never overwrite a run. The previous one moves to <name>#1, <name>#2, … in the manner of
