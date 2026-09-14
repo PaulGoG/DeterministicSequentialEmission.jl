@@ -120,6 +120,12 @@ export EvaporationCrossSection,
     residual_temperature,
     MINIMUM_TEMPERATURE
 export FragmentQuantity, average, total_average, weights_from
+export KineticEnergyDispersion,
+    KINETIC_ENERGY_DISPERSION_SPEC,
+    DEFAULT_KINETIC_ENERGY_DISPERSION,
+    read_kinetic_energy_dispersion,
+    uniform_kinetic_energy_dispersion,
+    kinetic_energy_dispersion
 export MassEnergyYield,
     MASS_ENERGY_YIELD_SPEC,
     MASS_YIELD_SPEC,

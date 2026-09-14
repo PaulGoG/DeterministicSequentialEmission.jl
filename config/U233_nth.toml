@@ -1,8 +1,7 @@
 # Thermal-neutron-induced fission of 233-U.
 #
-# No evaluated charge distribution exists for this system and EXFOR holds no Y(A, TKE)
-# for it either, so both are supplied by systematics rather than by measurement: the Wahl
-# Zp model for the charge distribution, and the two measured marginals for the yield.
+# EXFOR holds no joint Y(A, TKE) for this system, so the yield is reconstructed from the two
+# marginals that were measured, with the measured mass dependence of the TKE dispersion.
 
 [system]
 target_A = 233                    # mass number of the target nuclide, 2 to 400
@@ -14,7 +13,7 @@ incident_energy = 2.53e-8           # MeV, 0 to 20; must be zero for "sf"
 charges_per_mass = 5                                       # charge numbers per mass, odd, 1 to 15
 heavy_mass_min = 117                                       # at or above A0/2
 heavy_mass_max = 159                                       # below A0
-charge_distribution_file = "wahl"                                        # under the data directory, or "wahl" | "mean"
+charge_distribution_file = "U233_nth/charge_distribution_vs_A.dat"   # under the data directory, or "wahl" | "mean"
 
 [energetics]
 mass_excess_file = "reference/mass_excess_ame2020.dat"  # under the data directory
@@ -39,10 +38,11 @@ curve_label = "systematic_trend"                            # required by "tempe
 [yield]
 # No Y(A, TKE) exists for this system, so it is reconstructed from the two marginals that do:
 # Y(A) and <TKE>(A), both from the same experiment.
-mass_yield_file = "U233_nth/Y_vs_A.dat"              # A Y [uncertainty]; alternative to mass_energy_yield_file
-mean_kinetic_energy_file = "U233_nth/TKE_vs_A.dat"   # A TKE [uncertainty]; required with it
-kinetic_energy_dispersion = 10.0                     # MeV, above 0 to 100
-total = 200.0                                        # percent the yield sums to, above 0
+mass_yield_file = "U233_nth/Y_vs_A/21981005_P.Geltenbort_1985.dat"         # A Y [uncertainty]; alternative to mass_energy_yield_file
+mean_kinetic_energy_file = "U233_nth/TKE_vs_A/21981008_P.Geltenbort_1985.dat"  # A TKE [uncertainty]; required with it
+kinetic_energy_dispersion_file = "U233_nth/sigma_TKE_vs_A_baba.dat"        # optional; A sigma_TKE, MeV
+kinetic_energy_dispersion = 10.0                                           # MeV, above 0 to 100; used where the file does not reach
+total = 200.0                                                              # percent the yield sums to, above 0
 
 [spectrum]
 enabled = true                    # solve the laboratory prompt neutron spectrum

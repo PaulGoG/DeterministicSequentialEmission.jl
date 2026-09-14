@@ -35,12 +35,13 @@ data/
 | `reference/s_wave_resonances_ripl3.dat` | s-wave average resonance parameters, the source of `S₀(A)` | as distributed: commented header, `S₀` in units of 10⁻⁴ |
 | `reference/ground_state_deformation_moller.dat` | ground-state quadrupole deformations | `Z A beta2` |
 | `<system>/charge_distribution_vs_A.dat` | charge polarization and Gaussian dispersion, evaluated per reaction | `A dZ sigma_Z` |
-| `U233_nth/charge_distribution_vs_A_wahl_systematics.dat` | the same, from the `Zₚ` systematics rather than a fit — **generated, not a source table** | `A dZ sigma_Z` |
+| `U233_nth/charge_distribution_vs_A_wahl_systematics.dat` | the same, from the `Zₚ` systematics rather than a fit — **generated, and superseded by the table beside it** | `A dZ sigma_Z` |
 | `<system>/R_T_vs_A_H_systematic_trend.csv` | temperature ratio `R_T(A_H)` for the TXE partition | `A_H,R_T,R_T_uncertainty` |
 | `<system>/Y_vs_A_TKE.dat` | pre-neutron fragment mass yield `Y(A,TKE)` | `A TKE Y Y_uncertainty` |
 | `U235_nth/Y_vs_A_H_TKE.dat` | the same indexed by the heavy fragment alone | `A_H TKE Y Y_uncertainty` |
-| `U233_nth/Y_vs_A.dat` | pre-neutron mass yield `Y(A)`, a marginal | `A Y` |
-| `U233_nth/TKE_vs_A.dat` | mean total kinetic energy `⟨TKE⟩(A)`, the other marginal | `A TKE` |
+| `U233_nth/Y_vs_A/*.dat` | pre-neutron mass yield `Y(A)`, a marginal | `A Y` |
+| `U233_nth/TKE_vs_A/*.dat` | mean total kinetic energy `⟨TKE⟩(A)`, the other marginal | `A TKE` |
+| `U233_nth/sigma_TKE_vs_A_*.dat` | dispersion of `P(TKE|A)`, for the reconstruction | `A sigma_TKE`, MeV |
 | `U235_nth/E_def_vs_A_Z.dat` | `ΔE_def` for the scission-modelling partition | `A Z E_def`, MeV |
 | `<system>/nu_vs_A/*.dat` | measured `ν(A)` per fragment | `A nu nu_uncertainty` |
 | `Cf252_sf/spectrum_maxwellian_ratio_vs_E/*.dat` | measured prompt neutron spectrum as a ratio to a Maxwellian | `E spectrum_maxwellian_ratio spectrum_maxwellian_ratio_uncertainty` |
@@ -59,6 +60,12 @@ which is what made this layout safe to adopt.
 Nucleon-number columns are read through `integer_column`, which accepts an integral value
 written in floating point — some of these tables were emitted by a generator and write `118.0`
 where they mean `118`.
+
+²³³U now carries an evaluated charge distribution of the same construction as the other three, so
+it no longer runs on the systematics. Its two marginals sit under their EXFOR accession numbers,
+21981005 and 21981008, both Geltenbort 1985, and `Y(A)` is in percent as every other yield here
+is. Its `σ_TKE(A)` comes in two processed sets, Baba and Asghar; the configuration reads the first
+and the second is staged beside it for comparison.
 
 `U235_nres` is the same target as `U235_nth` on the resonance channel. Its evaluated charge
 distribution, its `R_T(A_H)` trend and its yield are the thermal ones and are read from the

@@ -112,6 +112,109 @@ const MEAN_KINETIC_ENERGY_SPEC =
     TableSpec([:A, :TKE, :TKE_uncertainty]; skip = 1, optional = (:TKE_uncertainty,))
 
 """
+    KINETIC_ENERGY_DISPERSION_SPEC
+
+Layout of a tabulated `σ_TKE(A)`: one header row, then `A sigma_TKE`, in MeV.
+"""
+const KINETIC_ENERGY_DISPERSION_SPEC = TableSpec([:A, :sigma_TKE]; skip = 1)
+
+"""
+    KineticEnergyDispersion
+
+The dispersion `σ_TKE(A)` of `P(TKE|A)`, indexed by fragment mass, with the value used where a
+mass is not tabulated.
+
+The same shape as [`ChargeDistribution`](@ref), and for the same reason: a measured table covers
+the masses the measurement reached, and a reconstruction has to say what it does elsewhere rather
+than stopping. `default` carries the conventional single width.
+"""
+struct KineticEnergyDispersion
+    σ_TKE::Dict{Int, Float64}
+    default::Float64
+    source::String
+
+    function KineticEnergyDispersion(
+        σ_TKE::Dict{Int, Float64},
+        default::Real,
+        source::AbstractString,
+    )
+        default > 0 || throw(
+            ArgumentError(
+                "the default kinetic energy dispersion must be positive, got $default",
+            ),
+        )
+        return new(σ_TKE, Float64(default), String(source))
+    end
+end
+
+"""
+    DEFAULT_KINETIC_ENERGY_DISPERSION
+
+The single width `P(TKE|A)` is given where no table says otherwise, in MeV. Stated rather than
+fitted, and close to what the measured tables carry: yield-weighted, the joint distributions of
+the shipped systems run 7.9 to 9.6 MeV.
+"""
+const DEFAULT_KINETIC_ENERGY_DISPERSION = 10.0
+
+"""
+    read_kinetic_energy_dispersion(path; spec, default) -> KineticEnergyDispersion
+
+Read a tabulated `σ_TKE(A)`.
+
+**Columns are taken by position**, not by header text: mass number, then dispersion.
+"""
+function read_kinetic_energy_dispersion(
+    path::AbstractString;
+    spec::TableSpec = KINETIC_ENERGY_DISPERSION_SPEC,
+    default::Real = DEFAULT_KINETIC_ENERGY_DISPERSION,
+)
+    table = read_delimited_table(path, spec)
+    masses = integer_column(table, :A)
+    dispersions = column(table, :sigma_TKE, Float64)
+    σ_TKE = Dict{Int, Float64}()
+    for row in eachindex(masses)
+        dispersions[row] > 0 || throw(
+            ArgumentError(
+                "$(table.path) row $row: the kinetic energy dispersion must be positive, got \
+                 $(dispersions[row]) for A = $(masses[row])",
+            ),
+        )
+        σ_TKE[masses[row]] = dispersions[row]
+    end
+    return KineticEnergyDispersion(σ_TKE, default, String(path))
+end
+
+"""
+    uniform_kinetic_energy_dispersion(σ_TKE) -> KineticEnergyDispersion
+
+One width at every mass, which is what a reconstruction falls back on with no table.
+"""
+uniform_kinetic_energy_dispersion(σ_TKE::Real = DEFAULT_KINETIC_ENERGY_DISPERSION) =
+    KineticEnergyDispersion(Dict{Int, Float64}(), σ_TKE, "uniform")
+
+"""
+    kinetic_energy_dispersion(dispersion, A) -> Float64
+
+`σ_TKE` at fragment mass `A`, falling back to the single value where the table does not reach.
+"""
+kinetic_energy_dispersion(dispersion::KineticEnergyDispersion, A::Integer) =
+    get(dispersion.σ_TKE, Int(A), dispersion.default)
+
+function Base.show(io::IO, dispersion::KineticEnergyDispersion)
+    print(
+        io,
+        "KineticEnergyDispersion(",
+        length(dispersion.σ_TKE),
+        " masses, default ",
+        dispersion.default,
+        " MeV, from ",
+        basename(dispersion.source),
+        ")",
+    )
+    return nothing
+end
+
+"""
     factorized_yield(mass_yield_path, kinetic_energy_path, energies; dispersion) -> MassEnergyYield
 
 Reconstruct `Y(A, TKE)` from the two marginals that were measured, where the joint distribution
@@ -133,9 +236,12 @@ replacing the measured `Y(A,TKE)` of 235-U(n_th,f) with a mass-independent Gauss
 `⟨TKE⟩ = 170.5 MeV` takes `ν(160)` from 2.02 down to 0.73 and `⟨ν⟩` from 2.524 to 2.280. Keeping
 the mass dependence is what the factorization is for.
 
-What it cannot recover is the correlation the joint distribution carries: the dispersion of
-`P(TKE|A)` varies with mass and is taken here as the constant `dispersion`, 10 MeV by default.
-It is stated rather than fitted.
+What it cannot recover is the correlation the joint distribution carries. The dispersion of
+`P(TKE|A)` varies with mass, and `dispersion` is either a measured
+[`KineticEnergyDispersion`](@ref) table or a single width applied everywhere. The mass dependence
+is worth supplying where it was measured: across the shipped systems the joint distributions carry
+a `σ_TKE(A)` running from about 6 to 13 MeV, so one width is a summary of a real spread rather
+than a property of the system.
 
 A mass without a tabulated `⟨TKE⟩` is dropped: extrapolating the quantity whose mass dependence
 is the point of the exercise would defeat it. Complementary masses inherit the mean of their
@@ -149,12 +255,12 @@ function factorized_yield(
     kinetic_energy_path::AbstractString,
     energies,
     compound_mass::Integer;
-    dispersion::Real = 10.0,
+    dispersion::Union{Real, KineticEnergyDispersion} = DEFAULT_KINETIC_ENERGY_DISPERSION,
     total::Real = DEFAULT_YIELD_TOTAL,
 )
-    dispersion > 0 || throw(
-        ArgumentError("the kinetic energy dispersion must be positive, got $dispersion"),
-    )
+    widths =
+        dispersion isa KineticEnergyDispersion ? dispersion :
+        uniform_kinetic_energy_dispersion(dispersion)
     grid = sort(unique(Float64.(collect(energies))))
     isempty(grid) && throw(ArgumentError("the kinetic energy grid is empty"))
 
@@ -187,7 +293,8 @@ function factorized_yield(
         isfinite(Y) && Y > 0 || continue
         mean = get(mean_by_mass, A, nothing)
         mean === nothing && continue
-        shape = [exp(-(TKE - mean)^2 / (2 * dispersion^2)) for TKE in grid]
+        σ_TKE = kinetic_energy_dispersion(widths, A)
+        shape = [exp(-(TKE - mean)^2 / (2 * σ_TKE^2)) for TKE in grid]
         norm = sum(shape)
         norm > 0 || continue
         push!(kept, A)

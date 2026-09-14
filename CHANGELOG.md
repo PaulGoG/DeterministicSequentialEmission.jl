@@ -11,6 +11,15 @@ here. This changelog begins with the rewrite.
 
 ### Changed
 
+- ²³³U reads an evaluated charge distribution rather than the Wahl systematics. The table is of
+  the same construction as the other three — a plain Gaussian fitted to the `Zₚ` model evaluated
+  with per-reaction parameters — which its own signatures confirm: the residual against the
+  systematics peaks at lag 5, matching `2A_F/Z_F = 5.09`, and the yield-weighted averages are
+  `⟨ΔZ⟩ = −0.499` and `⟨σ_Z⟩ = 0.616`. It restores the even-odd effect the systematics cannot
+  carry.
+- The ²³³U marginals are named for the EXFOR accessions they came from, 21981005 and 21981008,
+  both Geltenbort 1985, and `Y(A)` is in percent rather than a fraction. The reconstruction
+  renormalises, so no number moved; what changed is that the measurement is now citable.
 - A temperature-ratio curve is taken through the producing run's own record, not through a path
   named in a configuration. `[partition] segmented_curve_file` is replaced, for
   `method = "temperature_ratio"`, by `[partition] subdirectory` — the staged run, under the data
@@ -98,6 +107,11 @@ here. This changelog begins with the rewrite.
 
 ### Added
 
+- `factorized_yield` takes a measured `σ_TKE(A)` instead of one width everywhere, through
+  `[yield] kinetic_energy_dispersion_file` and the new `KineticEnergyDispersion`, which falls back
+  to `kinetic_energy_dispersion` at masses the table does not reach — the same tabulated-with-a-
+  fallback shape `ChargeDistribution` has. The dispersion of `P(TKE|A)` runs from about 6 to 13
+  MeV across a fragment range, so a single width was a summary of a real spread.
 - A run writes the isobaric charge distribution it was weighted by, beside the two it could have
   taken instead: `charge_distribution_vs_A.dat`, `charge_distribution_vs_A_wahl_systematics.dat`
   where `is_wahl_applicable` says the system is inside the fitted range, and

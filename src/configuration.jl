@@ -490,14 +490,16 @@ function _load_yield(
             ),
         )
     else
-        dispersion = Float64(
+        # One width unless a measured table says otherwise, and the width is then what the
+        # table falls back on where it does not reach.
+        default = Float64(
             _bounded(
                 _value(
                     section,
                     "kinetic_energy_dispersion",
                     Real,
                     "yield.kinetic_energy_dispersion",
-                    10.0,
+                    DEFAULT_KINETIC_ENERGY_DISPERSION,
                 ),
                 "yield.kinetic_energy_dispersion";
                 min = 0,
@@ -505,6 +507,23 @@ function _load_yield(
                 exclusive_min = true,
             ),
         )
+        dispersion = if haskey(section, "kinetic_energy_dispersion_file")
+            read_kinetic_energy_dispersion(
+                _input(
+                    data_directory,
+                    _value(
+                        section,
+                        "kinetic_energy_dispersion_file",
+                        String,
+                        "yield.kinetic_energy_dispersion_file",
+                    ),
+                    "yield.kinetic_energy_dispersion_file",
+                );
+                default = default,
+            )
+        else
+            uniform_kinetic_energy_dispersion(default)
+        end
         factorized_yield(
             _input(
                 data_directory,

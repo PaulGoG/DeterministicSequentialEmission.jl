@@ -139,3 +139,76 @@ CHARGE_DISTRIBUTION_AVAILABLE &&
         :temperature,
     )
 end
+
+@testset "mass-dependent kinetic energy dispersion" begin
+    mktempdir() do directory
+        # A table that reaches only part of the mass range, so the fallback is exercised too.
+        path = joinpath(directory, "sigma_TKE_vs_A.dat")
+        write(path, "A sigma_TKE\n120 7.0\n121 13.0\n122 9.0\n")
+        dispersion = read_kinetic_energy_dispersion(path; default = 10.0)
+        @test kinetic_energy_dispersion(dispersion, 120) ≈ 7.0
+        @test kinetic_energy_dispersion(dispersion, 121) ≈ 13.0
+        # Outside the table it falls back, exactly as a charge distribution does.
+        @test kinetic_energy_dispersion(dispersion, 200) ≈ 10.0
+        @test dispersion.source == path
+
+        # Columns are taken by position, so the header text is irrelevant.
+        renamed = joinpath(directory, "renamed.dat")
+        write(renamed, "mass width\n120 7.0\n121 13.0\n")
+        @test kinetic_energy_dispersion(read_kinetic_energy_dispersion(renamed), 120) ≈ 7.0
+
+        # A non-positive width is refused rather than producing a degenerate Gaussian.
+        bad = joinpath(directory, "bad.dat")
+        write(bad, "A sigma_TKE\n120 0.0\n")
+        @test_throws ArgumentError read_kinetic_energy_dispersion(bad)
+        @test_throws ArgumentError uniform_kinetic_energy_dispersion(-1.0)
+
+        # One width everywhere is the no-table case, and it is what a bare number means.
+        uniform = uniform_kinetic_energy_dispersion(8.0)
+        @test all(kinetic_energy_dispersion(uniform, A) ≈ 8.0 for A in 100:160)
+    end
+end
+
+YIELD_AVAILABLE && @testset "the dispersion table reaches the reconstruction" begin
+    mktempdir() do directory
+        # Two marginals that overlap on three masses, reconstructed on a coarse grid.
+        write(joinpath(directory, "Y.dat"), "A Y\n118 10.0\n119 20.0\n120 30.0\n")
+        write(joinpath(directory, "TKE.dat"), "A TKE\n118 170.0\n119 170.0\n120 170.0\n")
+        grid = 150.0:5.0:190.0
+
+        narrow = factorized_yield(
+            joinpath(directory, "Y.dat"),
+            joinpath(directory, "TKE.dat"),
+            grid,
+            236;
+            dispersion = 5.0,
+        )
+        wide = factorized_yield(
+            joinpath(directory, "Y.dat"),
+            joinpath(directory, "TKE.dat"),
+            grid,
+            236;
+            dispersion = 15.0,
+        )
+        # A narrower width concentrates each mass row on the mean kinetic energy.
+        peak(y, A) = y.values[(A, 170.0)] / sum(y.values[(A, T)] for T in grid)
+        @test peak(narrow, 119) > peak(wide, 119)
+
+        # A table giving one mass the narrow width and another the wide one reproduces each.
+        write(joinpath(directory, "sigma.dat"), "A sigma_TKE\n118 5.0\n120 15.0\n")
+        mixed = factorized_yield(
+            joinpath(directory, "Y.dat"),
+            joinpath(directory, "TKE.dat"),
+            grid,
+            236;
+            dispersion = read_kinetic_energy_dispersion(
+                joinpath(directory, "sigma.dat");
+                default = 5.0,
+            ),
+        )
+        @test peak(mixed, 118) ≈ peak(narrow, 118)
+        @test peak(mixed, 120) ≈ peak(wide, 120)
+        # 119 is absent from the table and takes the fallback, which here is the narrow width.
+        @test peak(mixed, 119) ≈ peak(narrow, 119)
+    end
+end
