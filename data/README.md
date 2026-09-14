@@ -161,8 +161,10 @@ preparation at <https://github.com/IAEA-NDS/RIPL-4>; neither changes the numbers
 
 **`<system>/charge_distribution_vs_A.dat`** — charge polarization `ΔZ(A)` and the dispersion
 `σ_Z(A)` of the isobaric charge distribution. A. C. Wahl, *Atomic Data and Nuclear Data Tables*
-**38**, 1 (1988); the model is set out in full in Wahl, *Systematics of Fission-Product Yields*,
-LA-13928 (2002).
+**39**, 1 (1988); the model is set out in full in Wahl, *Systematics of Fission-Product Yields*,
+LA-13928 (2002), which is openly published by the Los Alamos National Laboratory. That report's
+own bibliography gives the 1988 paper as volume **39**, as does the reference list of
+IAEA-TECDOC-1168, in which Wahl's later account of the same models appears.
 
 Two different objects share that format and must not be confused. The `Cf252_sf`, `U235_nth` and
 `Pu239_nth` files are **per-reaction least-squares fits** of the `Zₚ` model to the data of each
