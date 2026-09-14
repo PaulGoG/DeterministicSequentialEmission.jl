@@ -107,6 +107,20 @@ here. This changelog begins with the rewrite.
 
 ### Added
 
+- `wahl_charge_distribution(...; even_odd = true)` folds in the even-odd factors `F_Z` and `F_N`
+  that the `Zₚ` model carries and this package otherwise omits, with `wahl_even_odd_factors` and
+  `wahl_charge_yield` exposing the pieces. `p(Z,A)` becomes a Gaussian modulated by `F(A)` and
+  renormalized — LA-13928 requires the renormalization once `F(A)` is present — and a plain
+  Gaussian is fitted to it per mass, which is how an evaluated table is constructed.
+  - It reproduces the ripple an evaluated table carries: amplitude 0.36 in `ΔZ` and 0.30 in
+    `σ_Z` against 0.32 and 0.30 present, correlating at 0.62 for ²³⁵U, 0.36 for ²³⁹Pu and 0.07 for
+    ²⁵²Cf, which follows the even-odd effect's own decline with the mass of the fissioning system.
+  - It does **not** close the gap to an evaluated table, because that gap is the systematics' own
+    parameter error rather than the missing factors — Fig. 18 of LA-13928 gives reduced `χ²` of
+    7.9 for the systematics against 2.9 for a per-reaction fit. Better of two estimates where no
+    table exists; not a route to reproducing one.
+  - Off by default: a tabulated distribution already carries the effect inside its fitted width,
+    so folding the factors in on top of one would count it twice.
 - `factorized_yield` takes a measured `σ_TKE(A)` instead of one width everywhere, through
   `[yield] kinetic_energy_dispersion_file` and the new `KineticEnergyDispersion`, which falls back
   to `kinetic_energy_dispersion` at masses the table does not reach — the same tabulated-with-a-

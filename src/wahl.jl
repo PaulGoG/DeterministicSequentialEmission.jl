@@ -8,10 +8,12 @@ Coefficients of the `Zₚ` model of A. C. Wahl, *Systematics of Fission-Product 
 Par = P₁ + P₂[Z_F − 92] + P₃[A_F − 236] + P₄[PE − 6.551] + P₅[A_F − 236]²
 ```
 
-The even-odd factors `F_Z` and `F_N` of that model are not carried: they modulate the charge
-distribution about `Zₚ` and this package treats the distribution as a plain Gaussian, so only the
-centroid `ΔZ` and the dispersion `σ_Z` enter. Adding them would change `p(Z,A)` at every mass,
-not only where they are tabulated, and is a separate decision from supplying a `Zₚ` systematics.
+The even-odd factors `F_Z` and `F_N` are carried but not applied by default; see
+[`wahl_charge_distribution`](@ref) for what turning them on does and does not buy.
+
+Table 2 also lists `FZ SL = 0.0030`, a slope of `F_Z` through the peak regions. Eq. (11d) as the
+report prints it makes `F_Z(A')` constant there, so no slope is applied, and the parameter is not
+carried. Footnote b gives the `F_N` slope as `−0.0006(10)`, consistent with zero.
 """
 const WAHL_LOW_ENERGY = (
     σZ140 = (0.566, 0.0, 0.0064, 0.0109, 0.0),
@@ -23,6 +25,10 @@ const WAHL_LOW_ENERGY = (
     ΔZmax = (0.699, 0.0, 0.0, 0.0, 0.0),
     σZSLW = (-0.045, 0.0094, 0.0, 0.0, 0.0),
     ΔZSLW = (0.0, -0.0045, 0.0, 0.0, 0.0),
+    FZ140 = (1.207, 0.0, -0.0420, 0.0, 0.0022),
+    FN140 = (1.076, 0.0, 0.0, 0.0, 0.0),
+    FZSLW = (0.159, -0.028, 0.0, 0.0, 0.0),
+    FNSLW = (0.039, 0.0, 0.0, 0.0, 0.0),
 )
 
 """
@@ -69,6 +75,10 @@ struct WahlSystematics
     ΔZmax::Float64
     σZSLW::Float64
     ΔZSLW::Float64
+    FZ140::Float64
+    FN140::Float64
+    FZSLW::Float64
+    FNSLW::Float64
     B2::Float64
     B4::Float64
     B5::Float64
@@ -121,6 +131,10 @@ function WahlSystematics(Z_F::Integer, A_F::Integer, PE::Real)
     ΔZmax = evaluate(:ΔZmax)
     σZSLW = evaluate(:σZSLW)
     ΔZSLW = evaluate(:ΔZSLW)
+    FZ140 = evaluate(:FZ140)
+    FN140 = evaluate(:FN140)
+    FZSLW = evaluate(:FZSLW)
+    FNSLW = evaluate(:FNSLW)
 
     # Eq. (12): the A' at which Zₚ reaches 50, blended from two estimates.
     #
@@ -151,6 +165,10 @@ function WahlSystematics(Z_F::Integer, A_F::Integer, PE::Real)
         ΔZmax,
         σZSLW,
         ΔZSLW,
+        FZ140,
+        FN140,
+        FZSLW,
+        FNSLW,
         B2,
         B4,
         A_F - B2,
@@ -241,6 +259,72 @@ function wahl_dispersion(systematics::WahlSystematics, A::Real)
     return _wahl_peak_dispersion(systematics, systematics.Bb)
 end
 
+"""
+    wahl_even_odd_factors(systematics, A) -> (F_Z, F_N)
+
+The even-odd proton and neutron factors at heavy-fragment mass `A`, eqs. (11d), (11e), (12a),
+(13f), (13h), (14d) and (14e).
+
+Both are `1` through the near-symmetry region, where eq. (12a) sets `F(A) = 1`, and both take
+their peak values through the peak and far-wing regions. Only the wing regions carry a slope.
+
+These are the factors the plain-Gaussian charge distribution of this package does **not** apply.
+[`wahl_charge_distribution`](@ref) can fold them in; what that is worth is set out there.
+"""
+function wahl_even_odd_factors(systematics::WahlSystematics, A::Real)
+    _wahl_check_heavy(systematics, A)
+    A >= systematics.B6 && return (systematics.FZ140, systematics.FN140)
+    A >= systematics.B5 && return (
+        systematics.FZ140 + systematics.FZSLW * (A - systematics.B5),
+        systematics.FN140 + systematics.FNSLW * (A - systematics.B5),
+    )
+    A >= systematics.B4 && return (systematics.FZ140, systematics.FN140)
+    return (1.0, 1.0)
+end
+
+"""
+    wahl_charge_yield(systematics, A, charges) -> (Vector{Int}, Vector{Float64})
+
+The fractional independent yields `FI(Z, A)` of the `charges` charge numbers nearest `Zₚ(A)`,
+Gaussian modulated by the even-odd factors and renormalized to sum to one.
+
+The renormalization is not optional and is not a truncation correction. LA-13928 p. 21: the factor
+"applied to achieve Σ(FI) = 1.00 for each A, is required because the even-odd factors, F(A),
+destroy the inherent normalization properties of Gaussian distributions". A plain Gaussian keeps
+its own normalization and needs none, which is why nothing else in this package renormalizes.
+
+`F(A)` is composed from the parities of `Z` and `N = A − Z`: `F_Z F_N` for even-even,
+`F_Z/F_N` for even-odd, `F_N/F_Z` for odd-even and `1/(F_Z F_N)` for odd-odd.
+"""
+function wahl_charge_yield(systematics::WahlSystematics, A::Integer, charges::Integer = 11)
+    charges > 0 || throw(ArgumentError("need at least one charge number, got $charges"))
+    F_Z, F_N = wahl_even_odd_factors(systematics, A)
+    ΔZ = wahl_polarization(systematics, A)
+    σ_Z = wahl_dispersion(systematics, A)
+    Zₚ = A * systematics.Z_F / systematics.A_F + ΔZ
+    half = charges ÷ 2
+    centre = round(Int, Zₚ)
+    numbers = (centre - half):(centre + half)
+    yields = Float64[]
+    for Z in numbers
+        N = A - Z
+        factor = if iseven(Z) && iseven(N)
+            F_Z * F_N
+        elseif iseven(Z)
+            F_Z / F_N
+        elseif iseven(N)
+            F_N / F_Z
+        else
+            1 / (F_Z * F_N)
+        end
+        push!(yields, charge_probability(Z, Zₚ, σ_Z) * factor)
+    end
+    total = sum(yields)
+    total > 0 || throw(ArgumentError("the charge yields at A = $A sum to $total"))
+    yields ./= total
+    return collect(numbers), yields
+end
+
 function _wahl_check_heavy(systematics::WahlSystematics, A::Real)
     2 * A >= systematics.A_F ||
         throw(ArgumentError("the Zₚ systematics is evaluated for the heavy fragment, \
@@ -260,17 +344,53 @@ measurement, but it carries the mass dependence a single mean value discards.
 ```julia
 distribution = wahl_charge_distribution(masses, spontaneous_fission(Nuclide(98, 252)), 126:174)
 ```
+
+# The even-odd option
+
+`even_odd = true` folds in the factors `F_Z` and `F_N` the model carries and this package
+otherwise omits: `p(Z,A)` is built by [`wahl_charge_yield`](@ref), which is a Gaussian modulated
+by `F(A)` and renormalized, and a plain Gaussian is then fitted to it at each mass by its first
+two moments. `ΔZ(A)` is that Gaussian's centre less `Z_UCD(A)`, and `σ_Z(A)` its width. `charges`
+is how many charge numbers the fit runs over.
+
+**This is the construction of the evaluated tables**, which are effective Gaussian parameters of
+exactly this kind rather than the model's own `σ_Z`. It is why those tables oscillate with a
+period of about five masses — `Zₚ` advances by `Z_F/A_F` per mass unit, so even-charge dominance
+recurs every `2A_F/Z_F ≈ 5.1` — and a smooth systematics cannot.
+
+**What it buys, measured against the three evaluated tables.** It reproduces the ripple: the
+modulation it introduces is `0.36` in `ΔZ` and `0.30` in `σ_Z`, against `0.32` and `0.30` actually
+present, and the two correlate at `0.62` for ²³⁵U, `0.36` for ²³⁹Pu and `0.07` for ²⁵²Cf —
+following the even-odd effect's own decline with the mass of the fissioning system.
+
+**What it does not buy.** The mean absolute difference from an evaluated table barely moves,
+because that difference is dominated by the systematics' own parameter error and not by the
+missing even-odd layer. Fig. 18 of LA-13928 quantifies it: reduced `χ²` of 7.9 for the systematics
+against 2.9 for a per-reaction least-squares fit. Eq. (17) predicts the parameters *on average
+across reactions*; an evaluated table was built from that reaction's own fitted parameters. So
+this is the better of two estimates where no table exists, and not a route to reproducing one.
+
+Off by default, because the tabulated distributions this package normally reads already carry the
+even-odd effect inside their fitted widths, and folding the factors in on top of one of those
+would count it twice.
 """
 function wahl_charge_distribution(
     systematics::WahlSystematics,
-    masses::AbstractVector{<:Integer},
+    masses::AbstractVector{<:Integer};
+    even_odd::Bool = false,
+    charges::Integer = 11,
 )
     isempty(masses) && throw(ArgumentError("no masses to tabulate the systematics over"))
     distribution = Dict{Int, Float64}()
     σ_Z = Dict{Int, Float64}()
     for A in masses
-        distribution[Int(A)] = wahl_polarization(systematics, A)
-        σ_Z[Int(A)] = wahl_dispersion(systematics, A)
+        if even_odd
+            distribution[Int(A)], σ_Z[Int(A)] =
+                _wahl_effective_gaussian(systematics, Int(A), charges)
+        else
+            distribution[Int(A)] = wahl_polarization(systematics, A)
+            σ_Z[Int(A)] = wahl_dispersion(systematics, A)
+        end
     end
     return ChargeDistribution(
         distribution,
@@ -278,29 +398,48 @@ function wahl_charge_distribution(
         DEFAULT_CHARGE_POLARIZATION,
         DEFAULT_CHARGE_DISPERSION,
         "Wahl Zₚ systematics, LA-13928 (2002), " *
+        (even_odd ? "even-odd factors folded in, " : "") *
         "Z_F = $(systematics.Z_F), A_F = $(systematics.A_F), " *
         "PE = $(round(systematics.PE; digits = 3)) MeV",
     )
 end
 
-wahl_charge_distribution(systematics::WahlSystematics, masses::AbstractRange{<:Integer}) =
-    wahl_charge_distribution(systematics, collect(masses))
+# The plain Gaussian that best represents the modulated distribution, by its first two moments.
+# Returns (ΔZ, σ_Z), the centre expressed against unchanged charge division.
+function _wahl_effective_gaussian(
+    systematics::WahlSystematics,
+    A::Integer,
+    charges::Integer,
+)
+    numbers, yields = wahl_charge_yield(systematics, A, charges)
+    centre = sum(Z * y for (Z, y) in zip(numbers, yields))
+    variance = sum((Z - centre)^2 * y for (Z, y) in zip(numbers, yields))
+    return centre - A * systematics.Z_F / systematics.A_F, sqrt(variance)
+end
+
+wahl_charge_distribution(
+    systematics::WahlSystematics,
+    masses::AbstractRange{<:Integer};
+    kwargs...,
+) = wahl_charge_distribution(systematics, collect(masses); kwargs...)
 
 function wahl_charge_distribution(
     table::MassExcessTable,
     system::FissioningSystem,
-    masses::AbstractVector{<:Integer},
+    masses::AbstractVector{<:Integer};
+    kwargs...,
 )
     systematics = WahlSystematics(table, system)
     systematics === nothing && return nothing
-    return wahl_charge_distribution(systematics, masses)
+    return wahl_charge_distribution(systematics, masses; kwargs...)
 end
 
 wahl_charge_distribution(
     table::MassExcessTable,
     system::FissioningSystem,
-    masses::AbstractRange{<:Integer},
-) = wahl_charge_distribution(table, system, collect(masses))
+    masses::AbstractRange{<:Integer};
+    kwargs...,
+) = wahl_charge_distribution(table, system, collect(masses); kwargs...)
 
 function Base.show(io::IO, systematics::WahlSystematics)
     print(

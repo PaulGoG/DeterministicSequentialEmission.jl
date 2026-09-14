@@ -235,3 +235,89 @@ CHARGE_DISTRIBUTION_AVAILABLE &&
                 1e-3
         end
     end
+
+@testset "even-odd factors" begin
+    table = mass_table()
+    system = neutron_induced_fission(Nuclide(92, 235), 2.53e-8, "nth")
+    w = WahlSystematics(table, system)
+
+    # Eq. (12a): F(A) = 1 through the near-symmetry region, so both factors are unity there.
+    @test wahl_even_odd_factors(w, (w.Ba + w.Bb) / 2) == (1.0, 1.0)
+    @test wahl_even_odd_factors(w, w.B4 - 1e-8) == (1.0, 1.0)
+
+    # Eqs. (11d), (11e): constant through the peak region, at the Table 2 values.
+    peak = wahl_even_odd_factors(w, 140)
+    @test peak == wahl_even_odd_factors(w, w.B4 + 1e-8)
+    @test peak[1] ≈ 1.207
+    @test peak[2] ≈ 1.076
+    # Both exceed unity, which is what an even-odd enhancement means.
+    @test all(>(1), peak)
+
+    # Eqs. (13f), (13h): the wing carries a slope, the far wing returns to the peak value.
+    @test wahl_even_odd_factors(w, w.B5 + 5)[1] > peak[1]
+    @test wahl_even_odd_factors(w, w.B6 + 1e-8) == peak
+
+    # The yields are a Gaussian modulated by F and renormalized, so they sum to one, and the
+    # modulation alternates with the parity of Z.
+    numbers, yields = wahl_charge_yield(w, 140, 11)
+    @test length(numbers) == 11
+    @test sum(yields) ≈ 1.0
+    @test all(>(0), yields)
+    plain = [
+        charge_probability(
+            Z,
+            140 * 92 / 236 + wahl_polarization(w, 140),
+            wahl_dispersion(w, 140),
+        ) for Z in numbers
+    ]
+    plain ./= sum(plain)
+    ratio = yields ./ plain
+    # Even Z is enhanced relative to the bare Gaussian and odd Z suppressed, at A even where
+    # the parities of Z and N move together.
+    @test all(ratio[i] > 1 for i in eachindex(numbers) if iseven(numbers[i]))
+    @test all(ratio[i] < 1 for i in eachindex(numbers) if isodd(numbers[i]))
+
+    @test_throws ArgumentError wahl_charge_yield(w, 140, 0)
+    @test_throws ArgumentError wahl_even_odd_factors(w, 100)
+end
+
+CHARGE_DISTRIBUTION_AVAILABLE &&
+    @testset "the even-odd option reproduces the ripple, not the baseline" begin
+        table = mass_table()
+        system = neutron_induced_fission(Nuclide(92, 235), 2.53e-8, "nth")
+        masses = 126:160
+        bare = wahl_charge_distribution(table, system, masses)
+        folded = wahl_charge_distribution(table, system, masses; even_odd = true)
+        evaluated = read_charge_distribution(U235_CHARGE_DISTRIBUTION_FILE)
+
+        # The bare systematics is smooth in each region; folding the factors in makes it ripple,
+        # with an amplitude close to what the evaluated table carries.
+        span(d) = begin
+            v = [charge_dispersion(d, A) - charge_dispersion(bare, A) for A in masses]
+            maximum(v) - minimum(v)
+        end
+        @test span(bare) == 0.0
+        @test span(folded) > 0.2
+        @test isapprox(span(folded), span(evaluated); rtol = 0.25)
+
+        # And it is the same ripple, not merely one of the same size: the residuals against the
+        # bare systematics are positively correlated over the peak region.
+        peak = [A for A in masses if A >= 134]
+        model = [charge_dispersion(folded, A) - charge_dispersion(bare, A) for A in peak]
+        truth = [charge_dispersion(evaluated, A) - charge_dispersion(bare, A) for A in peak]
+        centred(x) = x .- sum(x) / length(x)
+        correlation =
+            sum(centred(model) .* centred(truth)) /
+            sqrt(sum(abs2, centred(model)) * sum(abs2, centred(truth)))
+        @test correlation > 0.4
+
+        # It stays a ChargeDistribution, and says in its source that the factors were applied.
+        @test folded isa ChargeDistribution
+        @test occursin("even-odd", folded.source)
+        @test !occursin("even-odd", bare.source)
+
+        # Off by default: the tabulated distributions already carry the effect, so folding it in
+        # on top of one would count it twice.
+        @test charge_dispersion(wahl_charge_distribution(table, system, masses), 140) ==
+              wahl_dispersion(WahlSystematics(table, system), 140)
+    end

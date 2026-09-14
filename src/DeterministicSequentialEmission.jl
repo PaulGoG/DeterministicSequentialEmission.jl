@@ -61,6 +61,8 @@ export WahlSystematics,
     is_wahl_applicable,
     wahl_polarization,
     wahl_dispersion,
+    wahl_even_odd_factors,
+    wahl_charge_yield,
     wahl_charge_distribution
 export Fragmentation,
     FragmentationDomain,
