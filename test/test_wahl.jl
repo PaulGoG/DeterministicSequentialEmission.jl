@@ -131,11 +131,21 @@ CHARGE_DISTRIBUTION_AVAILABLE &&
             evaluated = read_charge_distribution(path)
             systematics = WahlSystematics(table, system)
 
-            # Mean absolute difference over the whole heavy branch. Held loosely: the two parameter
-            # sets place the Zₚ = 50 crossing a mass unit or two apart, and that is the steepest
-            # feature of the function, so a small horizontal offset costs a large pointwise
-            # difference where the physics agrees. 252-Cf is the worse of the two because SL50 is
-            # extrapolated 16 mass units past the data it was fitted on.
+            # Mean absolute difference over the whole heavy branch, held loosely because the two
+            # parameter sets are a systematics and a per-reaction fit of the same model and are
+            # not meant to coincide.
+            #
+            # Where the difference sits is not the same in every case, and it is worth not
+            # assuming. Measured over the shipped tables: for 252-Cf the Zₚ = 50 crossing
+            # dominates — the largest difference is 0.75 at A = 130 against Bb = 126.8, and the
+            # mean falls from 0.26 to 0.14 with the crossing region excluded — because SL50 is
+            # extrapolated 16 mass units past the data it was fitted on and a small horizontal
+            # offset costs a large pointwise difference on the steepest leg. For 235-U the
+            # largest difference is also at the crossing but the mean barely moves without it,
+            # 0.062 to 0.059: the disagreement is a broad offset across the branch. For 239-Pu
+            # the crossing is not where it lives at all — the largest difference, 0.25, is at
+            # A = 157, inside the peak-region leg, and excluding the crossing makes the mean
+            # worse rather than better.
             differences =
                 [abs(wahl_polarization(systematics, A) - ΔZ) for (A, ΔZ) in evaluated.ΔZ]
             @test sum(differences) / length(differences) < tolerance
