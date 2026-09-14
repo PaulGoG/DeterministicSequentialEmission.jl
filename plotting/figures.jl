@@ -465,13 +465,15 @@ function figure_residual_quantities()
 end
 
 """
-The isobaric charge distribution each run was weighted by, against the two alternatives it could
-have taken: the Wahl `Zₚ` systematics, and the conventional means that carry no mass dependence.
+The isobaric charge distribution each run was weighted by, against the alternatives it could have
+taken: the `Zₚ` model with the parameters fitted to this reaction, the same model with its
+parameters estimated from the systematics, and the conventional means that carry no mass
+dependence.
 
-Every run writes all three, so this draws tables rather than recomputing anything. Read it as a
-diagnostic of the *input*: where the evaluated table and the systematics part company is where a
-system without an evaluation inherits its uncertainty, and the flat fallback is the floor both
-improve on.
+Every run writes all of them, so this draws tables rather than recomputing anything. Read it as a
+diagnostic of the *input*. The gap between the fitted and the estimated parameters is what a
+system without a fit of its own inherits; the gap between either and the used table is what the
+model still misses; and the flat means are the floor all three improve on.
 """
 function figure_charge_distribution()
     set_theme!(THEME)
@@ -481,8 +483,14 @@ function figure_charge_distribution()
     sources = (
         ("charge_distribution_vs_A.dat", "Used by the run", :solid, :black),
         (
+            "charge_distribution_vs_A_wahl_per_reaction.dat",
+            L"$Z_p$ model, fitted parameters",
+            :dashdot,
+            PALETTE[2],
+        ),
+        (
             "charge_distribution_vs_A_wahl_systematics.dat",
-            L"Wahl $Z_p$ systematics",
+            L"$Z_p$ model, systematics",
             :dash,
             PALETTE[1],
         ),
@@ -490,8 +498,9 @@ function figure_charge_distribution()
     )
 
     figure = Figure(size = (510, 40 + 105 * length(drawable)))
-    handles = []
-    labels = Any[]
+    # Keyed by file name rather than taken from the first panel, so a source that only some
+    # systems have still reaches the legend.
+    entries = Dict{String, Any}()
     for (row, case) in pairs(drawable)
         directory = run_directory(case)
         directory === nothing && continue
@@ -515,10 +524,7 @@ function figure_charge_distribution()
                     linestyle = style,
                     linewidth = index == 2 ? 1.4 : 1.2,
                 )
-                if row == 1 && index == 2
-                    push!(handles, handle)
-                    push!(labels, label)
-                end
+                index == 2 && get!(entries, name, (handle, label))
             end
             column == 2 && text!(
                 axis,
@@ -536,10 +542,11 @@ function figure_charge_distribution()
         end
     end
 
+    present = [entries[name] for (name, _, _, _) in sources if haskey(entries, name)]
     Legend(
         figure[1, 1:2],
-        handles,
-        labels;
+        first.(present),
+        last.(present);
         orientation = :horizontal,
         framevisible = false,
         padding = (0, 0, 0, 0),

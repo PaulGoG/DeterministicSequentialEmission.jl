@@ -9,6 +9,55 @@ here. This changelog begins with the rewrite.
 
 ## [Unreleased]
 
+### Added
+
+- `charge_distribution_file = "wahl"` resolves the `Zₚ` model in three layers rather than always
+  taking the systematics, through the new `build_charge_distribution`. `WAHL_PER_REACTION`
+  transcribes Table A of the 1988 evaluation — the parameters fitted by least squares to the
+  measured fractional independent yields of ²³⁵U(n_th,f), ²³³U(n_th,f), ²³⁹Pu(n_th,f) and
+  ²⁵²Cf(sf) — and `wahl_reaction_parameters` matches a system to them on the fissioning nucleus,
+  so the resonance channel of ²³⁵U finds the thermal fit. A reaction Table A does not cover falls
+  through to the systematics of eq. (17), and a nucleus outside its fitted range to the
+  conventional means. The layer that answered is written into the distribution's `source` and so
+  into the run metadata.
+
+  The motivation is that the two layers are the same model differing only in where its parameters
+  came from, and Fig. 18 of LA-13928 puts that difference at a reduced `χ²` of 2.9 against 7.9.
+  Measured as the mean absolute difference from the four evaluated tables, the fitted parameters
+  give
+
+  | | `ΔZ` systematics → per-reaction | `σ_Z` systematics → per-reaction |
+  |---|---|---|
+  | ²³⁵U(n_th,f) | 0.0617 → 0.0591 | 0.0645 → 0.0483 |
+  | ²³³U(n_th,f) | 0.0540 → 0.0442 | 0.0581 → 0.0444 |
+  | ²³⁹Pu(n_th,f) | 0.1122 → 0.0443 | 0.0494 → 0.0281 |
+  | ²⁵²Cf(sf) | 0.2618 → 0.1193 | 0.1114 → 0.0173 |
+
+  No shipped configuration changes behaviour: the four reactions Table A covers are the four that
+  already read an evaluated table, and a table named in a configuration still outranks the model.
+  What changes is what a system without one gets.
+
+  The 1988 evaluation carries no slope on `σ_Z` — one average width outside the `Z = 50` shell
+  region and `σ_Z(50)` inside it — so the per-reaction constructor sets `σZSL = 0` and takes the
+  three parameters Table A does not carry, `SL50` and the two wing slopes, from the systematics.
+  Parameters the evaluation assumed rather than determined are listed in each entry's `assumed`
+  field, because they are not measurements and should not be read as such.
+
+  Table A also places its own regions, in footnotes a and c, and `WahlSystematics` now carries
+  `shell` and `symmetric` so that a source which supplies parameters can supply their regions with
+  them; the systematics leaves both empty and eq. (10) places the regions as before. The two
+  disagree most for ²⁵²Cf, where eq. (10) holds `σ_Z(50)` over `A' = 127–140` and the footnote
+  gives `119–129`: taking the footnote drops the `σ_Z` difference from that reaction's table by a
+  factor of 6.4. It costs a little on ²³³U and ²³⁹Pu, 0.0399 → 0.0444 and 0.0255 → 0.0281, which is
+  the price of using one reaction's published regions rather than boundaries fitted across
+  reactions, and is worth paying for parameters that are themselves per-reaction. The footnotes
+  quote fission-product mass while this package indexes pre-neutron fragment mass; the two differ
+  by `ν` at the sawtooth minimum, 0.2 to 0.7 neutrons here, so no shift is applied and a one-unit
+  shift would move the summed difference by 6 %.
+
+  Only the low-energy branch is implemented. The intermediate and high-energy branches of the 1980
+  and 2002 reports describe multiple-chance fission, which this model does not treat.
+
 ### Changed
 
 - `wahl_charge_distribution` puts the systematics on the footing of the tables it stands in for.

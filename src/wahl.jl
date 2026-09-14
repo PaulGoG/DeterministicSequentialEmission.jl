@@ -49,6 +49,11 @@ mass-number boundaries that divide `A'` into wing, peak and near-symmetry region
 by, so `ΔZ` and `σ_Z` transfer without a shift. Both are quoted for the heavy fragment, the
 convention of [`ChargeDistribution`](@ref) and of eqs. (9c) and (9d) of the report.
 
+`shell` and `symmetric` are empty for a systematics evaluation, which places both regions from the
+boundaries below. They are filled only where a source places them directly — Table A of the 1988
+evaluation does, in footnotes a and c — and then they take precedence: `σ_Z(50)` applies inside
+`shell` and the average width outside it, and the even-odd factors are unity inside `symmetric`.
+
 The boundaries follow eq. (10). `Ba` and `Bb` are the ends of the steep interval where `Zₚ`
 crosses the `Z = 50` shell closure; the report prints `Ba = A'_max` and `Bb = A_F − A'_max`,
 which puts the heavy-side crossing at the lower end. Figs. 18b, 19b and 20b place the labels the
@@ -56,11 +61,12 @@ other way round, and only that reading is continuous with the peak regions on ei
 is the one used. `Bb` then lands within a mass unit of where the evaluated tables put the maximum
 of `ΔZ`, which is what it is defined to be; the constructor records the measurement.
 
-**A tabulated `ΔZ(A)`, `σ_Z(A)` evaluated for the reaction at hand is the better object and takes
-precedence wherever one exists.** Fig. 18 quotes reduced `χ²` of 7.9 for these systematics against
-2.9 for a per-reaction least-squares fit of the same model, and the evaluated tables are the
-latter. This is the fallback for a system that has none, in place of a single mean `ΔZ` and `σ_Z`
-applied at every mass.
+**Parameters fitted to the reaction at hand are the better object and take precedence wherever they
+exist.** Fig. 18 quotes reduced `χ²` of 7.9 for these systematics against 2.9 for a per-reaction
+least-squares fit of the same model; the evaluated tables are the latter, and so is
+[`WAHL_PER_REACTION`](@ref). This is what stands in for them where a reaction has neither, in place
+of a single mean `ΔZ` and `σ_Z` applied at every mass. [`build_charge_distribution`](@ref) picks
+between the two.
 """
 struct WahlSystematics
     Z_F::Int
@@ -85,6 +91,64 @@ struct WahlSystematics
     B6::Float64
     Ba::Float64
     Bb::Float64
+    shell::Vector{UnitRange{Int}}
+    symmetric::UnitRange{Int}
+
+    # Spelled out rather than left to the default constructor, and converting at the boundary:
+    # every field is concrete inside the type however the caller arrived at its arguments.
+    function WahlSystematics(
+        Z_F::Integer,
+        A_F::Integer,
+        PE::Real,
+        σZ140::Real,
+        ΔZ140::Real,
+        σZSL::Real,
+        ΔZSL::Real,
+        SL50::Real,
+        σZ50::Real,
+        ΔZmax::Real,
+        σZSLW::Real,
+        ΔZSLW::Real,
+        FZ140::Real,
+        FN140::Real,
+        FZSLW::Real,
+        FNSLW::Real,
+        B2::Real,
+        B4::Real,
+        B5::Real,
+        B6::Real,
+        Ba::Real,
+        Bb::Real,
+        shell::Vector{UnitRange{Int}},
+        symmetric::UnitRange{Int},
+    )
+        return new(
+            Int(Z_F),
+            Int(A_F),
+            Float64(PE),
+            Float64(σZ140),
+            Float64(ΔZ140),
+            Float64(σZSL),
+            Float64(ΔZSL),
+            Float64(SL50),
+            Float64(σZ50),
+            Float64(ΔZmax),
+            Float64(σZSLW),
+            Float64(ΔZSLW),
+            Float64(FZ140),
+            Float64(FN140),
+            Float64(FZSLW),
+            Float64(FNSLW),
+            Float64(B2),
+            Float64(B4),
+            Float64(B5),
+            Float64(B6),
+            Float64(Ba),
+            Float64(Bb),
+            shell,
+            symmetric,
+        )
+    end
 end
 
 _wahl_parameter(coefficients, Z_F::Integer, A_F::Integer, PE::Real) =
@@ -175,6 +239,8 @@ function WahlSystematics(Z_F::Integer, A_F::Integer, PE::Real)
         A_F - 70.0,
         A_F - A_max,
         A_max,
+        UnitRange{Int}[],
+        1:0,
     )
 end
 
@@ -253,9 +319,17 @@ Unlike `ΔZ` this is a step function: eqs. (12c) and (12g) hold `σ_Z(50)` flat 
 adjoining the `Z = 50` crossing while the crossing itself keeps the peak value, and eq. (14c)
 returns the far wing to `σ_Z(B5)` rather than continuing the wing slope. Fig. 18a, p. 31, draws
 both discontinuities.
+
+Where `systematics.shell` is non-empty the regions it names replace all of that, because the
+source that supplied the parameters placed their regions too and the two belong together.
 """
 function wahl_dispersion(systematics::WahlSystematics, A::Real)
     _wahl_check_heavy(systematics, A)
+    if !isempty(systematics.shell)
+        # Table A places this region itself, and `σZ140` is then the single average width.
+        return any(A in range for range in systematics.shell) ? systematics.σZ50 :
+               systematics.σZ140
+    end
     A >= systematics.B6 && return _wahl_peak_dispersion(systematics, systematics.B5)
     A >= systematics.B5 && return _wahl_peak_dispersion(systematics, systematics.B5) +
            systematics.σZSLW * (A - systematics.B5)
@@ -273,11 +347,18 @@ The even-odd proton and neutron factors at heavy-fragment mass `A`, eqs. (11d), 
 Both are `1` through the near-symmetry region, where eq. (12a) sets `F(A) = 1`, and both take
 their peak values through the peak and far-wing regions. Only the wing regions carry a slope.
 
+Where `systematics.symmetric` is non-empty it names that region directly and there are no slopes,
+which is the 1988 evaluation's simpler statement of the same thing.
+
 These are the factors the plain-Gaussian charge distribution of this package does **not** apply.
 [`wahl_charge_distribution`](@ref) can fold them in; what that is worth is set out there.
 """
 function wahl_even_odd_factors(systematics::WahlSystematics, A::Real)
     _wahl_check_heavy(systematics, A)
+    if !isempty(systematics.symmetric)
+        return A in systematics.symmetric ? (1.0, 1.0) :
+               (systematics.FZ140, systematics.FN140)
+    end
     A >= systematics.B6 && return (systematics.FZ140, systematics.FN140)
     A >= systematics.B5 && return (
         systematics.FZ140 + systematics.FZSLW * (A - systematics.B5),
@@ -384,6 +465,7 @@ function wahl_charge_distribution(
     masses::AbstractVector{<:Integer};
     even_odd::Bool = false,
     charges::Integer = 11,
+    provenance::AbstractString = "Wahl Zₚ systematics, LA-13928 (2002)",
 )
     isempty(masses) && throw(ArgumentError("no masses to tabulate the systematics over"))
     distribution = Dict{Int, Float64}()
@@ -404,7 +486,8 @@ function wahl_charge_distribution(
         σ_Z,
         DEFAULT_CHARGE_POLARIZATION,
         DEFAULT_CHARGE_DISPERSION,
-        "Wahl Zₚ systematics, LA-13928 (2002), " *
+        provenance *
+        ", " *
         (even_odd ? "even-odd factors folded in, " : "") *
         "Z_F = $(systematics.Z_F), A_F = $(systematics.A_F), " *
         "PE = $(round(systematics.PE; digits = 3)) MeV",

@@ -211,6 +211,9 @@ the path.
 
 A generated table is marked as generated, in the name and in the header row —
 `charge_distribution_vs_A_wahl_systematics.dat` — so it can never be mistaken for an evaluation.
+Where several generations of one quantity sit beside each other the qualifier names the model that
+produced it and where its parameters came from, not its rank: `_wahl_per_reaction`,
+`_wahl_systematics`, `_mean`.
 
 One header line, ASCII, abscissae first, then the ordinate, then its uncertainty:
 

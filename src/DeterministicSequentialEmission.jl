@@ -63,7 +63,11 @@ export WahlSystematics,
     wahl_dispersion,
     wahl_even_odd_factors,
     wahl_charge_yield,
-    wahl_charge_distribution
+    wahl_charge_distribution,
+    WahlReactionParameters,
+    WAHL_PER_REACTION,
+    wahl_reaction_parameters,
+    build_charge_distribution
 export Fragmentation,
     FragmentationDomain,
     fragmentation_domain,
@@ -176,6 +180,7 @@ include("domain.jl")
 include("leveldensity.jl")
 include("energetics.jl")
 include("wahl.jl")
+include("wahl_reactions.jl")
 include("partition.jl")
 include("manifest.jl")
 include("evaporation.jl")

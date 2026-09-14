@@ -513,19 +513,23 @@ end
 Write the isobaric charge distribution the run used, beside the two it could have used instead.
 
 Which `ΔZ(A)`, `σ_Z(A)` a run was weighted by is a choice with a measurable effect on `ν(A)`, and
-until it is written down the only record of it is a path in a configuration. Three tables, each in
-the same `A dZ sigma_Z` form an evaluation is supplied in, so the comparison needs nothing but a
-reader:
+until it is written down the only record of it is a path in a configuration. Up to four tables,
+each in the same `A dZ sigma_Z` form an evaluation is supplied in, so the comparison needs nothing
+but a reader:
 
 - `charge_distribution_vs_A.dat` — what the run used, whatever `charge_distribution_file` selected.
-- `charge_distribution_vs_A_wahl_systematics.dat` — the Wahl `Zₚ` systematics over the same masses,
-  where [`is_wahl_applicable`](@ref) says the system is inside the fitted range. Marked as
-  generated in its name, as a systematics table always is.
+- `charge_distribution_vs_A_wahl_per_reaction.dat` — the `Zₚ` model carrying the parameters the
+  1988 evaluation fitted to this reaction, where [`WAHL_PER_REACTION`](@ref) covers it.
+- `charge_distribution_vs_A_wahl_systematics.dat` — the same model with its parameters estimated
+  from eq. (17) instead, where [`is_wahl_applicable`](@ref) says the system is inside the fitted
+  range. Marked as generated in its name, as a systematics table always is.
 - `charge_distribution_vs_A_mean.dat` — the conventional means, the fallback that carries no mass
   dependence at all.
 
-Where the run already took the systematics, the first two coincide, and that is the honest
-picture rather than a redundancy to suppress.
+Together they are the layers of [`build_charge_distribution`](@ref) laid side by side, so what a
+run gave up by taking one rather than another is visible in its own output directory. Where the
+run already took one of them, that file and the used one coincide, and that is the honest picture
+rather than a redundancy to suppress.
 """
 function _write_charge_distributions(
     destination::AbstractString,
@@ -539,6 +543,20 @@ function _write_charge_distributions(
         masses,
         digits,
     )
+    parameters = wahl_reaction_parameters(configuration.system)
+    excitation =
+        compound_nucleus_excitation(configuration.mass_excess_table, configuration.system)
+    if parameters !== nothing && excitation !== nothing
+        PE = value(excitation)
+        if 0 <= PE <= WAHL_VALIDITY.excitation
+            _write_charge_distribution(
+                joinpath(destination, "charge_distribution_vs_A_wahl_per_reaction.dat"),
+                wahl_charge_distribution(WahlSystematics(parameters, PE), collect(masses)),
+                masses,
+                digits,
+            )
+        end
+    end
     if is_wahl_applicable(configuration.mass_excess_table, configuration.system)
         systematics = wahl_charge_distribution(
             configuration.mass_excess_table,

@@ -271,16 +271,11 @@ function _load_fragmentation(
         "fragmentation.charge_distribution_file",
     )
     distribution = if source == "wahl"
-        # The Zₚ systematics rather than a table: the route for a system with no evaluated
-        # ΔZ(A), σ_Z(A) of its own. Tabulated over exactly the masses the domain will ask for.
-        systematics = WahlSystematics(mass_excess_table, system)
-        systematics === nothing && throw(
-            ArgumentError(
-                "fragmentation.charge_distribution_file = \"wahl\" needs Sₙ of the \
- compound nucleus, which the mass table cannot form",
-            ),
-        )
-        wahl_charge_distribution(systematics, lower:upper)
+        # The model rather than a table: the route for a system with no evaluated ΔZ(A), σ_Z(A)
+        # of its own. Resolved in layers — this reaction's own fitted parameters, else the
+        # systematics, else the conventional means — and the layer that answered is recorded in
+        # the distribution's source. Tabulated over exactly the masses the domain will ask for.
+        build_charge_distribution(mass_excess_table, system, lower:upper)
     elseif source == "mean"
         mean_charge_distribution()
     else

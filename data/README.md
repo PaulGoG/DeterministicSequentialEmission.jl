@@ -176,12 +176,12 @@ IAEA-TECDOC-1168, in which Wahl's later account of the same models appears.
 Two different objects share that format and must not be confused, and the difference is not one
 of quality alone.
 
-The `Cf252_sf`, `U235_nth` and `Pu239_nth` files are **effective Gaussian parameters**: the `Zₚ`
-model is evaluated per reaction with its own least-squares parameters, *including* the even-odd
-factors `F_Z` and `F_N`, and a plain Gaussian is then fitted to the resulting `p(Z,A)` at each
-mass. `ΔZ(A)` is the centre of that fitted Gaussian less `Z_UCD(A)`, and `σ_Z(A)` is its width.
-Wahl's own least-squares `σ_Z` is a different quantity — a model parameter that carries no
-even-odd structure.
+The four `<system>/charge_distribution_vs_A.dat` files — `Cf252_sf`, `U235_nth`, `Pu239_nth` and
+`U233_nth` — are **effective Gaussian parameters**: the `Zₚ` model is evaluated per reaction with
+its own least-squares parameters, *including* the even-odd factors `F_Z` and `F_N`, and a plain
+Gaussian is then fitted to the resulting `p(Z,A)` at each mass. `ΔZ(A)` is the centre of that
+fitted Gaussian less `Z_UCD(A)`, and `σ_Z(A)` is its width. Wahl's own least-squares `σ_Z` is a
+different quantity — a model parameter that carries no even-odd structure.
 
 That is why these tables oscillate with a period of about five mass units while the systematics
 cannot: the even-odd effect is *inside* them. The period follows from the mechanism — `Zₚ`
@@ -190,18 +190,33 @@ every `2A_F/Z_F ≈ 5.1` masses.
 
 **So a plain Gaussian `p(Z,A)` is the right partner for these tables**, which is what this package
 uses: the even-odd modulation is already absorbed into the fitted width and centre, and nothing
-further has to be applied or renormalized away. Averaged over an experimental `Y(A)` they return
-`⟨ΔZ⟩ = −0.50, −0.51, −0.49` and `⟨σ_Z⟩ = 0.62, 0.61, 0.65` for the three systems, which is where
-the conventional fallbacks of `|0.5|` and `0.6` come from.
+further has to be applied or renormalized away. Averaged over each system's own measured `Y(A)`
+they return
 
-They are authoritative wherever they exist. For how well the bare systematics stands in for one,
-Fig. 18 of LA-13928 quotes a reduced `χ²` of 2.9 for a per-reaction least-squares fit against 7.9
-for the systematics, on ²³⁵U(n_th,f).
-`U233_nth/charge_distribution_vs_A_wahl_systematics.dat` is **the systematics**, eq. (17) and
-Table 2 of the report evaluated by this package for a system that has no fit of its own; its name
-and its header row both say so, and `wahl_charge_distribution` produces it without a file. It
-replaces a single mean `ΔZ = −0.5`, `σ_Z = 0.6` applied at every mass; it does not replace an
-evaluation.
+| | `⟨ΔZ⟩` | `⟨σ_Z⟩` | masses |
+|---|---|---|---|
+| ²⁵²Cf(sf) | −0.492 | 0.649 | 126–169 |
+| ²³⁵U(n_th,f) | −0.503 | 0.618 | 118–160 |
+| ²³⁹Pu(n_th,f) | −0.515 | 0.614 | 120–160 |
+| ²³³U(n_th,f) | −0.499 | 0.615 | 117–160 |
+
+which is where the conventional fallbacks of `|0.5|` and `0.6` come from, and is the sense in
+which those fallbacks are not arbitrary.
+
+They are authoritative wherever they exist, and where they do not, the package builds the same
+model rather than reaching for the means. It does so in two layers, and the difference between
+them is which reaction the parameters were fitted to. Table A of the 1988 paper carries
+least-squares parameters for exactly these four reactions; eq. (17) and Table 2 of LA-13928
+estimate the same parameters from `Z_F`, `A_F` and the excitation energy for any reaction in
+`90 ≤ Z_F ≤ 98`, `230 ≤ A_F ≤ 252`, `PE ≤ 8 MeV`. Fig. 18 of that report quotes a reduced `χ²` of
+2.9 for the first against 7.9 for the second, on ²³⁵U(n_th,f). Neither needs a file: both are in
+`src/wahl.jl` and `src/wahl_reactions.jl`, and `charge_distribution_file = "wahl"` selects
+whichever the system reaches.
+
+`U233_nth/charge_distribution_vs_A_wahl_systematics.dat` is **the systematics**, the second of
+those two layers, tabulated here as the comparison that shows what the first layer and the fitted
+table add. Its name and its header row both say so. It is generated, not measured, and it does not
+replace an evaluation.
 
 **`reference/ground_state_deformation_moller.dat`** — ground-state quadrupole deformations from
 the finite-range liquid-drop model. P. Möller, J. R. Nix, W. D. Myers, W. J. Swiatecki, *Atomic

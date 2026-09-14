@@ -113,12 +113,17 @@ end
             @test issorted(grid)
             @test grid[2] / grid[1] ≈ grid[end] / grid[end - 1]
 
-            # "wahl" builds the systematics in place of a table, over exactly the domain's masses.
+            # "wahl" builds the Zₚ model in place of a table, over exactly the domain's masses,
+            # taking the best layer the system reaches. ²⁵²Cf(sf) is one of the four reactions the
+            # 1988 evaluation fitted, so it reaches the first.
             systematic = _configuration(
                 directory,
                 "charge_distribution_file = \"mean\"" => "charge_distribution_file = \"wahl\"",
             )
-            @test occursin("LA-13928", systematic.charge_distribution.source)
+            @test occursin(
+                "per-reaction parameters for CF252S",
+                systematic.charge_distribution.source,
+            )
             @test haskey(systematic.charge_distribution.ΔZ, 126)
             @test haskey(systematic.charge_distribution.ΔZ, 174)
         end

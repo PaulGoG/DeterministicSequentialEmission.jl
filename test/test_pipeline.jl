@@ -89,16 +89,21 @@ CHARGE_DISTRIBUTION_AVAILABLE &&
             destination = write_results(result; directory = joinpath(root, "results"))
 
             used = joinpath(destination, "charge_distribution_vs_A.dat")
+            per_reaction =
+                joinpath(destination, "charge_distribution_vs_A_wahl_per_reaction.dat")
             systematics =
                 joinpath(destination, "charge_distribution_vs_A_wahl_systematics.dat")
             mean = joinpath(destination, "charge_distribution_vs_A_mean.dat")
             @test isfile(used)
+            # ²⁵²Cf(sf) is one of the four reactions Table A of the 1988 evaluation covers, so the
+            # first layer is written too.
+            @test isfile(per_reaction)
             @test isfile(systematics)
             @test isfile(mean)
 
             # Each is the same three-column form an evaluation is supplied in, over exactly the
-            # heavy masses the run swept, so the three are directly comparable.
-            for path in (used, systematics, mean)
+            # heavy masses the run swept, so the four are directly comparable.
+            for path in (used, per_reaction, systematics, mean)
                 table = read_charge_distribution(path)
                 @test sort(collect(keys(table.ΔZ))) == collect(126:140)
                 @test first(readlines(path)) == "A dZ sigma_Z"
@@ -128,6 +133,12 @@ CHARGE_DISTRIBUTION_AVAILABLE &&
             # On the lattice footing of Wahl eq. (8), as every charge dispersion here is.
             @test charge_dispersion(model, 130) ≈
                   sqrt(wahl_dispersion(reference, 130)^2 + 1 / 12) atol = 1e-7
+
+            # And the per-reaction layer is neither of the other two: Table A's parameters are
+            # narrower than the systematics estimates them to be for this reaction.
+            fitted = read_charge_distribution(per_reaction)
+            @test charge_dispersion(fitted, 130) < charge_dispersion(model, 130)
+            @test charge_polarization(fitted, 130) != charge_polarization(model, 130)
 
             # The run metadata names the resolved curve, so the partition input is traceable too.
             metadata = read(joinpath(destination, "metadata.toml"), String)

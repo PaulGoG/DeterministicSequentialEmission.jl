@@ -82,7 +82,7 @@ julia --project=plotting plotting/figures.jl
 That draws the two figures above from every system a run has written, a panel of the quantities
 internal to the emission chain — `E*(A)`, `Ē_r(A)`, `⟨T⟩(A)`, `⟨ε⟩(A)` — and a diagnostic of the
 charge distribution each run was weighted by, against the two it could have taken instead: the
-Wahl `Zₚ` systematics and the conventional means. Those have no experimental counterpart, so they
+`Zₚ` model built without a table, and the conventional means. Those have no experimental counterpart, so they
 are diagnostics and are not tracked.
 
 The charge-distribution diagnostic is worth reading whenever a system is investigated. It is what
@@ -123,7 +123,7 @@ that cannot be honoured fails on load, naming the key.
 | ²⁵²Cf(sf) | `Cf252_sf.toml` | the archived thesis run's system |
 | ²³⁵U(nth,f) | `U235_nth.toml` | |
 | ²³⁹Pu(nth,f) | `Pu239_nth.toml` | |
-| ²³³U(nth,f) | `U233_nth.toml` | no evaluated charge distribution and no `Y(A,TKE)`; both from systematics |
+| ²³³U(nth,f) | `U233_nth.toml` | no joint `Y(A,TKE)` exists, so it is reconstructed from two marginals |
 | ²³⁵U(nres,f) at 580 eV | `U235_nres.toml` | the resonance-region beam the GELINA measurements use |
 
 A system is named `<ElementSymbol><A>_<entrance channel>` — the channel as the field spells it, not
@@ -131,11 +131,10 @@ as EXFOR codes it — and that one token names the configuration, the input tree
 the output tree under `results/`. It is also what separates the thermal run of ²³⁵U from the
 resonance one, which the reaction code `n,f` alone cannot.
 
-The last two are where the data runs out rather than where the model does. ²³³U has neither an
-evaluated `ΔZ(A)`, `σ_Z(A)` nor a joint `Y(A, TKE)` anywhere in EXFOR, so the charge distribution
-comes from the Wahl `Zₚ` systematics and the yield is reconstructed from the two marginals that
-were measured, `Y(A)` and `⟨TKE⟩(A)`, from the same experiment. Both substitutions are named in
-the configuration rather than assumed.
+The last two are where the data runs out rather than where the model does. No joint `Y(A, TKE)`
+for ²³³U exists anywhere in EXFOR, so the yield is reconstructed from the two marginals that were
+measured, `Y(A)` and `⟨TKE⟩(A)`, from the same experiment, with a measured `σ_TKE(A)`. The
+substitution is named in the configuration rather than assumed.
 
 The resonance case exists to establish a null result. At 580 eV the compound excitation is
 5.8 × 10⁻⁴ MeV above thermal out of 6.5 MeV, and `ν(A)` moves by at most 5 × 10⁻⁴ neutrons, the
@@ -157,6 +156,24 @@ Tests needing anything else announce themselves as skipped rather than passing v
 joint distribution is reconstructed by `factorized_yield` from the two marginals it does hold,
 `Y(A)` and `⟨TKE⟩(A)`, which is the route ²³³U takes; a staged table is the last resort.
 `data/README.md` says which systems sit where.
+
+The isobaric charge distribution is the one input that cannot be retrieved. EXFOR holds the
+independent yields it is fitted to — 608 points in 30 subentries for ²³³U — but only four of the
+43 heavy masses carry three or more distinct `Z`, which is too sparse to fit a Gaussian per mass
+and is precisely why the `Zₚ` model exists. So the model stands in for the measurement, with its
+parameters taken from the best-founded source the system reaches:
+
+1. **this reaction's own least-squares parameters**, for the four reactions Table A of the 1988
+   evaluation covers — ²³⁵U(n_th,f), ²³³U(n_th,f), ²³⁹Pu(n_th,f), ²⁵²Cf(sf);
+2. **the systematics**, eq. (17) of LA-13928, which estimates the same parameters from `Z_F`,
+   `A_F` and the excitation energy, for any nucleus in its fitted range;
+3. **the conventional means**, `ΔZ = −0.5` and `σ_Z = 0.6` at every mass.
+
+`charge_distribution_file = "wahl"` takes the first of those three that answers, and the run
+metadata records which one did. An evaluated table named in the configuration outranks all three.
+Everything here is fitted to spontaneous, thermal and resonance fission; above roughly 8 MeV
+multiple-chance fission opens and the model's separate high-energy branches, which this package
+does not implement, would be needed.
 
 ## Companion packages
 
@@ -234,7 +251,7 @@ second moment — over the whole domain.
 | Tabular input contract, `ExforFissionData.jl`-compatible | done |
 | Mass data, `Q`, `S_n`, `TXE` with uncertainties | done |
 | Fragmentation domain, `Z_p(A)`, `p(Z,A)` | done |
-| Charge distribution — evaluated tables, Wahl `Zₚ` systematics as fallback | done |
+| Charge distribution — evaluated tables, then `Zₚ` per-reaction, systematics, means | done |
 | One name per quantity, from configuration key to column header (`docs/src/naming.md`) | done |
 | Level density parameter — Gilbert-Cameron, Egidy-Bucurescu BSFG | done |
 | TXE partition — scission modelling, `E*_H/TXE (A_H)`, `R_T (A_H)` | done |
