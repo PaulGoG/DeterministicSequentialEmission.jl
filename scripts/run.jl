@@ -1,4 +1,4 @@
-# Entry point: julia --project scripts/run.jl config/<case>.toml [data directory]
+# Entry point: julia scripts/run.jl config/<case>.toml [data directory]
 #
 # Solves every configuration the domain and the kinetic energy grid span, contracts the results
 # against the yield weights, and writes the tables under results/<system>/<run>. Nothing is
@@ -12,9 +12,7 @@ using Printf
 
 function main(arguments::Vector{String})
     if !(1 <= length(arguments) <= 2)
-        println(
-            "usage: julia --project scripts/run.jl <configuration.toml> [data directory]",
-        )
+        println("usage: julia scripts/run.jl <configuration.toml> [data directory]")
         return 1
     end
     root = dirname(@__DIR__)
@@ -23,13 +21,8 @@ function main(arguments::Vector{String})
 
     configuration = load_configuration(path; data_directory = data)
     println(configuration)
-    result = run_pipeline(configuration)
-    destination = joinpath(
-        root,
-        "results",
-        system_label(configuration.system),
-        run_identifier(configuration),
-    )
+    result = run_pipeline(configuration; write = false)
+    destination = write_results(result)
 
     @printf(
         "  %d of %d configurations solved (%.1f %%)\n",
