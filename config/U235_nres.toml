@@ -1,8 +1,4 @@
-# Resonance-neutron-induced fission of 235-U, at the 580 eV spectrum-averaged energy of the
-# GELINA measurements.
-#
-# The same target as U235_nth.toml on the resonance channel, so the evaluated charge
-# distribution and the R_T trend are the thermal ones and are read from that system's tree.
+# Resonance-neutron-induced fission of 235-U.
 
 [system]
 target_A = 235                    # mass number of the target nuclide, 2 to 400

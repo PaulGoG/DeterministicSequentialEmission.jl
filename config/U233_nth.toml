@@ -1,7 +1,4 @@
 # Thermal-neutron-induced fission of 233-U.
-#
-# EXFOR holds no joint Y(A, TKE) for this system, so the yield is reconstructed from the two
-# marginals that were measured, with the measured mass dependence of the TKE dispersion.
 
 [system]
 target_A = 233                    # mass number of the target nuclide, 2 to 400
@@ -36,8 +33,6 @@ subdirectory = "U233_nth"                                   # required by "tempe
 curve_label = "systematic_trend"                            # required by "temperature_ratio": which [[segmented_curve]] of its manifest to take
 
 [yield]
-# No Y(A, TKE) exists for this system, so it is reconstructed from the two marginals that do:
-# Y(A) and <TKE>(A), both from the same experiment.
 mass_yield_file = "U233_nth/Y_vs_A/21981005_P.Geltenbort_1985.dat"         # A Y [uncertainty]; alternative to mass_energy_yield_file
 mean_kinetic_energy_file = "U233_nth/TKE_vs_A/21981008_P.Geltenbort_1985.dat"  # A TKE [uncertainty]; required with it
 kinetic_energy_dispersion_file = "U233_nth/sigma_TKE_vs_A_baba.dat"        # optional; A sigma_TKE, MeV
