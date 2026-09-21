@@ -8,7 +8,7 @@ One TOML file states everything a run needs, and is validated in full before any
 solved.
 
 ```
-julia --project scripts/run.jl config/Cf252_sf.toml
+julia scripts/run.jl config/Cf252_sf.toml
 ```
 
 `config/Cf252_sf.toml` is the annotated reference. Each key carries its allowed values or its

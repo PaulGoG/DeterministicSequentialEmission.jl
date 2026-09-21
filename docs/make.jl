@@ -1,3 +1,5 @@
+include(joinpath(@__DIR__, "activate.jl"))
+
 using DeterministicSequentialEmission
 using Documenter
 
@@ -12,8 +14,6 @@ makedocs(;
     modules = [DeterministicSequentialEmission],
     authors = "Paul-Adrian Gogîță",
     sitename = "DeterministicSequentialEmission.jl",
-    # Stated explicitly: the repository is local-only until release, so Documenter cannot
-    # infer the remote from a configured origin.
     repo = Documenter.Remotes.GitHub("PaulGoG", "DeterministicSequentialEmission.jl"),
     format = Documenter.HTML(;
         canonical = "https://PaulGoG.github.io/DeterministicSequentialEmission.jl",

@@ -62,7 +62,7 @@ julia plotting/activate.jl             # plotting environment
 Solve one fissioning system:
 
 ```
-julia --project scripts/run.jl config/Cf252_sf.toml
+julia scripts/run.jl config/Cf252_sf.toml
 ```
 
 That writes `results/Cf252_sf/<run>/`: `nu_vs_A.dat`, `T_vs_A.dat`, `E_star_vs_A.dat`, the
@@ -76,7 +76,7 @@ directory that already holds a run is moved aside with a numbered suffix first.
 Redraw the figures from what those runs wrote, without solving anything again:
 
 ```
-julia --project=plotting plotting/figures.jl
+julia plotting/figures.jl
 ```
 
 That draws the two figures above from every system a run has written, a panel of the quantities
@@ -95,12 +95,12 @@ so nothing moves, but it was not visible before.
 Run the test suite, and build the documentation:
 
 ```
-julia --project -e 'using Pkg; Pkg.test()'
-julia --project=docs docs/make.jl
+julia check.jl --check
+julia docs/make.jl
 ```
 
-`Pkg.test()` resolves `test/Project.toml` itself, so it is run from the root environment, not
-from the test one.
+`check.jl --check` verifies the formatting without rewriting anything, then runs the test suite
+with its static analysis.
 
 Before committing, apply the gate CI applies — format against `.JuliaFormatter.toml` with the
 pinned formatter, then run the tests:

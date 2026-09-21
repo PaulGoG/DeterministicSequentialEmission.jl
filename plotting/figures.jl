@@ -1,12 +1,12 @@
 # Validation figures: the model against measurement.
 #
-#   julia --project=plotting plotting/figures.jl [results directory] [data directory]
+#   julia plotting/figures.jl [results directory] [data directory]
 #
 # Nothing is solved here. The model side is read from what scripts/run.jl wrote under results/,
 # so a figure is redrawn from tables rather than by running the model again, and the numbers on
 # the page are the numbers in the files. Run the pipeline first:
 #
-#   julia --project scripts/run.jl config/Cf252_sf.toml
+#   julia scripts/run.jl config/Cf252_sf.toml
 #
 # The measured side is retrieved from EXFOR with ExforFissionData.jl and laid out as
 #
@@ -160,7 +160,7 @@ function _available(case::Case)
         return true
     end
     @warn """
-        no run to draw; solve it first with `julia --project scripts/run.jl \
+        no run to draw; solve it first with `julia scripts/run.jl \
         config/$(case.label).toml`.""" expected = joinpath(RESULTS, case.label)
     return false
 end
@@ -571,7 +571,7 @@ function main()
     mkpath(FIGURES)
     isdir(RESULTS) || @warn """
         no results directory; solve the systems first with \
-        `julia --project scripts/run.jl config/<system>.toml`.""" directory = RESULTS
+        `julia scripts/run.jl config/<system>.toml`.""" directory = RESULTS
     isdir(MEASURED) || @warn """
         no data directory; the figures will carry the model curves alone. Retrieve the \
         measurements with ExforFissionData.jl and lay them out as described at the top of this \
