@@ -8,9 +8,9 @@
 # Keeping it means the reference tests run on a bare clone.
 /data/*
 !/data/README.md
-!/data/mass_excess/
-/data/mass_excess/*
-!/data/mass_excess/ame2020.dat
+!/data/reference/
+/data/reference/*
+!/data/reference/mass_excess_ame2020.dat
 
 # Pipeline output. Each run writes its tables and metadata under its own system directory; the
 # two figures the README shows are tracked, and everything else a run draws is not.
@@ -22,7 +22,7 @@
 !/figures/prompt_neutron_spectrum.pdf
 
 # Libraries do not pin a manifest; each environment resolves against [compat].
-Manifest.toml
+Manifest*.toml
 
 # Julia artifacts
 /docs/build/
