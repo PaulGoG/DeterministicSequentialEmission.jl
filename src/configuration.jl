@@ -4,9 +4,9 @@
 A complete run: the fissioning system, the fragmentation domain, the level density and
 evaporation models, the TXE partition, and the yield weights.
 
-Built by [`load_configuration`](@ref) from a TOML file. Every field is validated on load, so a
-pipeline cannot start from a configuration it is unable to honour, and the values that reach the
-model are the ones the file states rather than defaults filled in silently along the way.
+Built by [`load_configuration`](@ref) from a TOML file. Every field is validated on load, and a
+section or key outside [`CONFIGURATION_KEYS`](@ref) is refused, so a pipeline cannot start from a
+configuration it is unable to honour.
 
 Where the results go is not a field, because it is not a key: a run writes to the directory
 [`system_label`](@ref) names, under the run identifier [`run_identifier`](@ref) builds.
@@ -45,6 +45,68 @@ function Base.show(io::IO, configuration::Configuration)
         last(configuration.kinetic_energies),
         " MeV)",
     )
+    return nothing
+end
+
+"""
+    CONFIGURATION_KEYS
+
+The sections a configuration may hold and the keys each may carry. Anything else is refused on
+load: a misspelt optional key would otherwise take its default without a word.
+"""
+const CONFIGURATION_KEYS = Dict(
+    "system" => ("target_A", "target_Z", "channel", "incident_energy"),
+    "energetics" => (
+        "mass_excess_file",
+        "kinetic_energy_min",
+        "kinetic_energy_max",
+        "kinetic_energy_step",
+    ),
+    "fragmentation" => (
+        "charges_per_mass",
+        "heavy_mass_min",
+        "heavy_mass_max",
+        "charge_distribution_file",
+    ),
+    "level_density" => ("model", "shell_correction_file", "deformed_branch"),
+    "evaporation" => ("cross_section", "maximum_temperature"),
+    "partition" => (
+        "method",
+        "subdirectory",
+        "curve_label",
+        "excitation_ratio_file",
+        "deformation_energy_file",
+    ),
+    "yield" => (
+        "total",
+        "mass_energy_yield_file",
+        "mass_yield_file",
+        "mean_kinetic_energy_file",
+        "kinetic_energy_dispersion",
+        "kinetic_energy_dispersion_file",
+    ),
+    "spectrum" =>
+        ("enabled", "maxwellian_temperature", "energy_min", "energy_max", "points"),
+    "output" => ("significant_digits",),
+)
+
+function _reject_unknown_keys(document::AbstractDict)
+    for (name, section) in document
+        haskey(CONFIGURATION_KEYS, name) || throw(
+            ArgumentError(
+                "the configuration has an unknown section [$name]; expected one of \
+                 $(join(sort!(collect(keys(CONFIGURATION_KEYS))), ", "))",
+            ),
+        )
+        section isa AbstractDict || continue
+        allowed = CONFIGURATION_KEYS[name]
+        for key in keys(section)
+            key in allowed || throw(
+                ArgumentError("$name.$key is not a configuration key; [$name] takes \
+                     $(join(allowed, ", "))"),
+            )
+        end
+    end
     return nothing
 end
 
@@ -133,6 +195,7 @@ function load_configuration(
 )
     isfile(path) || throw(ArgumentError("no configuration at $path"))
     document = TOML.parsefile(path)
+    _reject_unknown_keys(document)
 
     system = _load_system(document)
     energetics_section = _section(document, "energetics")
@@ -603,11 +666,6 @@ function _load_spectrum(document::AbstractDict)
     return 10 .^ range(log10(lower), log10(upper); length = points), maxwellian
 end
 
-# `[output] subdirectory` is gone. It named the directory a run wrote to, and with the entrance
-# channel in the file that directory follows from `target_A`, `target_Z` and `channel` through
-# `system_label` — so the key could only repeat what the system section already says, or
-# contradict it. It existed because a thermal and a resonance run of one target could not
-# otherwise be told apart; the channel is what tells them apart now.
 function _load_output(document::AbstractDict)
     section = _section(document, "output")
     return Int(

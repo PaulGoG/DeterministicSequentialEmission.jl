@@ -192,6 +192,14 @@ end
             "excitation_ratio_file = \"SEGMENTS\"" => "excitation_ratio_file = \"ABSENT\"",
         )
 
+        # A misspelt optional key would otherwise take its default; so would a misspelt section.
+        @test _rejects(
+            directory,
+            "evaporation.maximum_temprature",
+            "maximum_temperature = 2.0" => "maximum_temprature = 1.5",
+        )
+        @test _rejects(directory, "[evaporaton]", "[evaporation]" => "[evaporaton]")
+
         # A missing section, and a missing required key within one.
         @test_throws ArgumentError begin
             path = joinpath(directory, "headless.toml")
