@@ -303,12 +303,26 @@ julia> first(report.uncovered), last(report.uncovered)
 (151, 174)
 ```
 """
-function segment_coverage(method::PartitionMethod, heavy_masses)
+function segment_coverage(
+    method::Union{ExcitationEnergyRatio, TemperatureRatio},
+    heavy_masses,
+)
+    return _coverage(A -> method.curve(A) !== nothing, heavy_masses)
+end
+
+# No curve to cover the range here: a heavy mass is reached where the extra-deformation table
+# holds a nuclide of that mass.
+function segment_coverage(method::ScissionModelling, heavy_masses)
+    tabulated = Set(nuclide.A for nuclide in keys(method.deformation))
+    return _coverage(A -> A in tabulated, heavy_masses)
+end
+
+function _coverage(is_covered, heavy_masses)
     uncovered = Int[]
     total = 0
     for A in heavy_masses
         total += 1
-        method.curve(A) === nothing && push!(uncovered, A)
+        is_covered(A) || push!(uncovered, A)
     end
     return (
         covered = total == 0 ? 0.0 : (total - length(uncovered)) / total,

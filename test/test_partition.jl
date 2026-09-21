@@ -60,6 +60,14 @@ end
     full = segment_coverage(whole, 126:174)
     @test isempty(full.uncovered)
     @test full.covered == 1.0
+
+    # Modelling at scission has no curve; the extra-deformation table sets the reach instead.
+    deformation =
+        Dict(Nuclide(50, 130) => 1.2, Nuclide(51, 130) => 1.0, Nuclide(52, 132) => 0.8)
+    scission = ScissionModelling(deformation, BackShiftedFermiGas(mass_table()))
+    reached = segment_coverage(scission, 130:133)
+    @test reached.uncovered == [131, 133]
+    @test reached.covered == 0.5
 end
 
 @testset "reading a tabulated curve" begin
