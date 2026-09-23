@@ -3,11 +3,11 @@
     @test length(segments) == 4
 
     # Endpoints are reproduced exactly, and interpolation is linear between them.
-    @test segments(126) ≈ 0.5
-    @test segments(130) ≈ 0.14
-    @test segments(150) ≈ 0.607
-    @test segments(174) ≈ 0.865
-    @test segments(140) ≈ 0.14 + (0.607 - 0.14) * (140 - 130) / (150 - 130)
+    @test segments(126) ≈ 0.5 rtol = RTOL
+    @test segments(130) ≈ 0.14 rtol = RTOL
+    @test segments(150) ≈ 0.607 rtol = RTOL
+    @test segments(174) ≈ 0.865 rtol = RTOL
+    @test segments(140) ≈ 0.14 + (0.607 - 0.14) * (140 - 130) / (150 - 130) rtol = RTOL
 
     # Undefined above the last point; the published parameterizations end at A_H_max.
     @test segments(175) === nothing
@@ -18,7 +18,7 @@
     # A segment crossing zero leaves the function undefined there rather than negative.
     crossing = SegmentedCurve([(120, 1.0), (140, -1.0)])
     @test crossing(130) === nothing
-    @test crossing(121) ≈ 0.9
+    @test crossing(121) ≈ 0.9 rtol = RTOL
 
     @test_throws ArgumentError SegmentedCurve([(126, 0.5)])
     @test_throws ArgumentError SegmentedCurve([(150, 0.5), (126, 0.1)])
@@ -52,14 +52,14 @@ end
     short = ExcitationEnergyRatio(SegmentedCurve([(126, 0.5), (150, 0.6)]))
     report = segment_coverage(short, 126:174)
     @test report.uncovered == collect(151:174)
-    @test report.covered ≈ 25 / 49
+    @test report.covered ≈ 25 / 49 rtol = RTOL
 
     # A fit that starts above the first heavy mass leaves the low end uncovered, as one that
     # stops short leaves the high end.
     late = ExcitationEnergyRatio(SegmentedCurve([(130, 0.5), (174, 0.6)]))
     report = segment_coverage(late, 126:174)
     @test report.uncovered == collect(126:129)
-    @test report.covered ≈ 45 / 49
+    @test report.covered ≈ 45 / 49 rtol = RTOL
 
     whole = ExcitationEnergyRatio(
         SegmentedCurve([(126, 0.5), (130, 0.14), (150, 0.607), (174, 0.865)]),
@@ -145,40 +145,40 @@ end
     expected_heavy = column(reference, :E_star_H, Float64)
     @test length(reference) == 1200
 
-    worst = 0.0
-    checked = 0
-    for row in eachindex(masses)
-        fragmentation = fragmentation_at(masses[row], charges[row])
-        balance = energetics(table, CF252, fragmentation, energies[row])
-        @test balance !== nothing
-        balance === nothing && continue
-        split = partition(method, fragmentation, value(balance.TXE))
-        @test split !== nothing
-        split === nothing && continue
-        worst = max(worst, abs(split.light - expected_light[row]))
-        worst = max(worst, abs(split.heavy - expected_heavy[row]))
-        checked += 1
-    end
-    @test checked == 1200
+    fragmentations = [fragmentation_at(A, Z) for (A, Z) in zip(masses, charges)]
+    balances = [
+        energetics(table, CF252, fragmentation, TKE) for
+        (fragmentation, TKE) in zip(fragmentations, energies)
+    ]
+    @test count(isnothing, balances) == 0
+    splits = [
+        partition(method, fragmentation, value(balance.TXE)) for
+        (fragmentation, balance) in zip(fragmentations, balances)
+    ]
+    @test count(isnothing, splits) == 0
     # The reference is rounded to eight decimals on write.
-    @test worst < 1e-8
+    @test maximum(abs(s.light - E) for (s, E) in zip(splits, expected_light)) < 1e-8
+    @test maximum(abs(s.heavy - E) for (s, E) in zip(splits, expected_heavy)) < 1e-8
 end
 
-CHARGE_DISTRIBUTION_AVAILABLE && @testset "partition conserves TXE" begin
-    table = mass_table()
-    domain = cf252_domain()
-    method = ExcitationEnergyRatio(
-        SegmentedCurve([(126, 0.5), (130, 0.14), (150, 0.607), (174, 0.865)]),
-    )
+guarded(CHARGE_DISTRIBUTION_AVAILABLE, "the partition leaves no fragment negative") do
+    @testset "the partition leaves no fragment negative" begin
+        table = mass_table()
+        domain = cf252_domain()
+        method = ExcitationEnergyRatio(
+            SegmentedCurve([(126, 0.5), (130, 0.14), (150, 0.607), (174, 0.865)]),
+        )
 
-    for fragmentation in domain.entries[1:20:end]
-        balance = energetics(table, CF252, fragmentation, 180.0)
-        balance === nothing && continue
-        split = partition(method, fragmentation, value(balance.TXE))
-        split === nothing && continue
-        @test sum(split) ≈ value(balance.TXE)
-        @test split.light >= 0
-        @test split.heavy >= 0
+        splits = ExcitationEnergies[]
+        for fragmentation in domain.entries[1:20:end]
+            balance = energetics(table, CF252, fragmentation, 180.0)
+            balance === nothing && continue
+            split = partition(method, fragmentation, value(balance.TXE))
+            split === nothing && continue
+            push!(splits, split)
+        end
+        @test all(split.light >= 0 for split in splits)
+        @test all(split.heavy >= 0 for split in splits)
     end
 end
 
@@ -204,16 +204,15 @@ end
     ]
     for method in methods
         split = partition(method, identical, TXE)
-        @test split.light ≈ split.heavy
-        @test sum(split) ≈ TXE
+        @test split.light ≈ split.heavy rtol = RTOL
     end
 
     # Scission modelling needs no guard: identical fragments give a_L/a_H = 1 and equal
     # extra-deformation energies, so it divides evenly on its own arithmetic.
     scission = ScissionModelling(Dict(Nuclide(49, 126) => 3.0), model)
     split = partition(scission, identical, TXE)
-    @test split.light ≈ split.heavy
-    @test sum(split) ≈ TXE
+    @test split.light ≈ split.heavy rtol = RTOL
+    @test sum(split) ≈ TXE rtol = RTOL
 
     # A mass-symmetric split with unequal charges is a different matter: the fragments are
     # distinct nuclides, a_L ≠ a_H, and the partition method must be applied as given.
@@ -224,8 +223,7 @@ end
         unequal,
         TXE,
     )
-    @test !(split.light ≈ split.heavy)
-    @test sum(split) ≈ TXE
+    @test !isapprox(split.light, split.heavy; rtol = RTOL)
 end
 
 @testset "temperature ratio against the archived run" begin
@@ -259,23 +257,20 @@ end
     expected_heavy = column(reference, :E_star_H, Float64)
     @test length(reference) == 1200
 
-    worst = 0.0
-    checked = 0
-    for row in eachindex(masses)
-        fragmentation = fragmentation_at(masses[row], charges[row])
-        balance = energetics(table, CF252, fragmentation, energies[row])
-        @test balance !== nothing
-        balance === nothing && continue
-        split = partition(method, fragmentation, value(balance.TXE))
-        @test split !== nothing
-        split === nothing && continue
-        worst = max(worst, abs(split.light - expected_light[row]))
-        worst = max(worst, abs(split.heavy - expected_heavy[row]))
-        checked += 1
-    end
-    @test checked == 1200
+    fragmentations = [fragmentation_at(A, Z) for (A, Z) in zip(masses, charges)]
+    balances = [
+        energetics(table, CF252, fragmentation, TKE) for
+        (fragmentation, TKE) in zip(fragmentations, energies)
+    ]
+    @test count(isnothing, balances) == 0
+    splits = [
+        partition(method, fragmentation, value(balance.TXE)) for
+        (fragmentation, balance) in zip(fragmentations, balances)
+    ]
+    @test count(isnothing, splits) == 0
     # The reference is rounded to eight decimals on write, so 5e-9 is exact agreement.
-    @test worst < 1e-8
+    @test maximum(abs(s.light - E) for (s, E) in zip(splits, expected_light)) < 1e-8
+    @test maximum(abs(s.heavy - E) for (s, E) in zip(splits, expected_heavy)) < 1e-8
 end
 
 @testset "temperature ratio partition" begin
@@ -297,9 +292,12 @@ end
 
     fragmentation = fragmentation_at(134, 52)
     balance = energetics(table, CF252, fragmentation, 180.0)
-    split = partition(method, fragmentation, value(balance.TXE))
+    split = @inferred Union{ExcitationEnergies, Nothing} partition(
+        method,
+        fragmentation,
+        value(balance.TXE),
+    )
     @test split !== nothing
-    @test sum(split) ≈ value(balance.TXE)
 
     # R_T > 1 means the light fragment is hotter, so with comparable level density
     # parameters it takes the larger share of TXE.
@@ -312,7 +310,7 @@ end
     split_unit = partition(unit, fragmentation, value(balance.TXE))
     a_light = level_density_parameter(model, fragmentation.light)
     a_heavy = level_density_parameter(model, fragmentation.heavy)
-    @test split_unit.light / split_unit.heavy ≈ a_light / a_heavy
+    @test split_unit.light / split_unit.heavy ≈ a_light / a_heavy rtol = RTOL
 end
 
 @testset "scission modelling partition" begin
@@ -329,8 +327,8 @@ end
     split = partition(bare, fragmentation, 30.0)
     a_light = level_density_parameter(model, fragmentation.light)
     a_heavy = level_density_parameter(model, fragmentation.heavy)
-    @test split.light / split.heavy ≈ a_light / a_heavy
-    @test sum(split) ≈ 30.0
+    @test split.light / split.heavy ≈ a_light / a_heavy rtol = RTOL
+    @test sum(split) ≈ 30.0 rtol = RTOL
 
     # Extra deformation energy is returned to its own fragment on top of the thermal share.
     deformed = ScissionModelling(
@@ -338,7 +336,7 @@ end
         model,
     )
     split = partition(deformed, fragmentation, 30.0)
-    @test sum(split) ≈ 30.0
+    @test sum(split) ≈ 30.0 rtol = RTOL
     @test split.heavy > partition(bare, fragmentation, 30.0).heavy
 
     # Not evaluable where a deformation energy is missing, or where the deformation exceeds

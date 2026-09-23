@@ -11,3 +11,11 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [sources]
 DeterministicSequentialEmission = {path = ".."}
+
+[compat]
+Aqua = "0.8"
+DrWatson = "2"
+ExplicitImports = "1.15"
+JET = "0.12"
+Measurements = "2.14"
+QuadGK = "2.11"

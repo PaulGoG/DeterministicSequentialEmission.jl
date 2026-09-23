@@ -78,7 +78,7 @@ end
         @test curve_labels(manifest) == ["Goeoek_2018", "systematic_trend"]
         @test manifest.system.label == "U235_nth"
         @test manifest.system.compound_A == 236
-        @test manifest.system.incident_energy_MeV ≈ 2.53e-8
+        @test manifest.system.incident_energy_MeV ≈ 2.53e-8 rtol = RTOL
 
         trend = manifest_curve(manifest, "systematic_trend")
         @test trend.kind == "systematic_trend"
@@ -95,8 +95,8 @@ end
         # And what it resolves to really is R_T rather than r_nu: the curve rises through unity,
         # where the pivots table beside it sits flat at one half.
         curve = read_segmented_curve(resolved)
-        @test curve(118) ≈ 1.0
-        @test curve(160) ≈ 1.4
+        @test curve(118) ≈ 1.0 rtol = RTOL
+        @test curve(160) ≈ 1.4 rtol = RTOL
         @test curve.source == resolved
 
         @test_throws ArgumentError manifest_curve(manifest, "absent")
@@ -240,7 +240,7 @@ end
         # Resolved through the manifest, and to the temperature-ratio table.
         @test occursin("R_T_vs_A_H_segmented", configuration.method.curve.source)
         @test !occursin("pivots", configuration.method.curve.source)
-        @test configuration.method.curve(140) ≈ 1.2
+        @test configuration.method.curve(140) ≈ 1.2 rtol = RTOL
 
         # A label the manifest does not list is refused, naming the key at fault.
         thrown = try

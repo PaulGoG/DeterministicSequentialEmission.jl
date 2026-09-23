@@ -8,7 +8,7 @@
     end
 
     # Reducing over two indices leaves the third, ascending.
-    by_mass = average(q, w; over = (:charge, :kinetic_energy))
+    by_mass = @inferred average(q, w; over = (:charge, :kinetic_energy))
     @test first.(by_mass) == [100.0, 140.0]
     @test length(by_mass) == 2
 
@@ -20,7 +20,7 @@
             3 * (100.40 + 0.170) +
             1 * (100.41 + 0.170)
         ) / 8
-    @test last(by_mass[1]) ≈ expected
+    @test last(by_mass[1]) ≈ expected rtol = RTOL
 
     by_charge = average(q, w; over = (:mass, :kinetic_energy))
     @test first.(by_charge) == [40.0, 41.0]
@@ -35,8 +35,9 @@
     # The total is the same contraction carried to a scalar, and restricting the masses is how
     # the light and heavy groups are separated.
     whole = total_average(q, w)
-    @test whole ≈ (sum(w[k] * q[k] for k in keys(q)) / sum(w[k] for k in keys(q)))
-    @test total_average(q, w; masses = 100:100) ≈ last(by_mass[1])
+    @test whole ≈ (sum(w[k] * q[k] for k in keys(q)) / sum(w[k] for k in keys(q))) rtol =
+        RTOL
+    @test total_average(q, w; masses = 100:100) ≈ last(by_mass[1]) rtol = RTOL
     @test total_average(q, w; masses = 200:300) === nothing
 end
 
@@ -53,8 +54,8 @@ end
     end
 
     # Averaging over the two cells that exist gives 3.0, not 2.0 as a diluted denominator would.
-    @test last(only(average(q, w; over = (:charge, :kinetic_energy)))) ≈ 3.0
-    @test total_average(q, w) ≈ 3.0
+    @test last(only(average(q, w; over = (:charge, :kinetic_energy)))) ≈ 3.0 rtol = RTOL
+    @test total_average(q, w) ≈ 3.0 rtol = RTOL
 
     # And a weight with no quantity contributes nothing at all.
     @test length(average(q, w; over = (:charge, :kinetic_energy))) == 1
@@ -70,7 +71,7 @@ end
     w[(140, 54, 170.0)] = measurement(3.0, 0.05)
 
     mean = total_average(q, w)
-    @test value(mean) ≈ 3.5
+    @test value(mean) ≈ 3.5 rtol = RTOL
 
     # Worked from the standard expression, both terms:
     #   δ² = Σ (Wᵢ/ΣW · δqᵢ)² + Σ ((qᵢ − ⟨q⟩)/ΣW · δWᵢ)²
@@ -96,8 +97,10 @@ end
     @test isnan(uncertainty(blurred))
 end
 
-CHARGE_DISTRIBUTION_AVAILABLE &&
-    YIELD_AVAILABLE &&
+guarded(
+    CHARGE_DISTRIBUTION_AVAILABLE && YIELD_AVAILABLE,
+    "averaged quantities against the archived run",
+) do
     @testset "averaged quantities against the archived run" begin
         table = mass_table()
         distribution = cf252_charge_distribution()
@@ -154,14 +157,11 @@ CHARGE_DISTRIBUTION_AVAILABLE &&
             got = Dict(average(quantity, weights; over = over))
 
             @test length(got) == length(reference)
-            worst = 0.0
-            for row in eachindex(arguments)
-                @test haskey(got, arguments[row])
-                haskey(got, arguments[row]) || continue
-                worst = max(worst, abs(got[arguments[row]] - expected[row]))
-            end
+            @test issubset(arguments, keys(got))
             # Reproduced in double precision, not to a tolerance chosen to pass.
-            @test worst < 1e-11
+            @test maximum(
+                abs(get(got, x, NaN) - y) for (x, y) in zip(arguments, expected)
+            ) < 1e-11
         end
 
         # The total averages of the archive's own summary file. The light group runs to A₀/2
@@ -171,3 +171,4 @@ CHARGE_DISTRIBUTION_AVAILABLE &&
         @test total_average(ν, weights; masses = 126:174) ≈ 1.7010552393293843 rtol = 1e-9
         @test total_average(ν, weights) ≈ 1.7398212275804683 rtol = 1e-9
     end
+end

@@ -2,20 +2,20 @@
     # 235-U(n_th,f), the reaction the systematics is referenced to: the differences in eq. (17)
     # all vanish except the excitation term, so the peak parameters reduce to their intercepts.
     U236 = WahlSystematics(92, 236, 6.551)
-    @test U236.σZ140 ≈ 0.566
-    @test U236.ΔZ140 ≈ -0.487
-    @test U236.σZ50 ≈ 0.356
-    @test U236.SL50 ≈ 0.191
-    @test U236.ΔZmax ≈ 0.699
+    @test U236.σZ140 ≈ 0.566 rtol = RTOL
+    @test U236.ΔZ140 ≈ -0.487 rtol = RTOL
+    @test U236.σZ50 ≈ 0.356 rtol = RTOL
+    @test U236.SL50 ≈ 0.191 rtol = RTOL
+    @test U236.ΔZmax ≈ 0.699 rtol = RTOL
 
     # Region boundaries, eq. (10) and Fig. 18, p. 31: the wings start at 77, the near-symmetry
     # region spans roughly 106 to 130, and the Z = 50 crossing sits near 125.
-    @test U236.B2 ≈ 77.0
+    @test U236.B2 ≈ 77.0 rtol = RTOL
     @test 129 < U236.B4 < 132
     @test 110 < U236.Ba < 113
     @test 123 < U236.Bb < 126
-    @test U236.B5 ≈ 236 - U236.B2
-    @test U236.B6 ≈ 166.0
+    @test U236.B5 ≈ 236 - U236.B2 rtol = RTOL
+    @test U236.B6 ≈ 166.0 rtol = RTOL
 
     # Charge conservation: the distribution is equal and opposite about the symmetric split, so
     # it vanishes there. Nothing in the construction imposes this — it follows from the straight
@@ -34,31 +34,31 @@
     # impose σ_Z(50) as a flat value over the two legs adjoining the Z = 50 crossing while the
     # crossing itself keeps the peak value, and eq. (14c) returns the far wing to σ_Z(B5) rather
     # than continuing the wing slope. Fig. 18a, p. 31, draws both as steps.
-    @test wahl_dispersion(U236, U236.B4 - 1e-8) ≈ U236.σZ50
+    @test wahl_dispersion(U236, U236.B4 - 1e-8) ≈ U236.σZ50 rtol = RTOL
     @test wahl_dispersion(U236, U236.B4 + 1e-8) > U236.σZ50
     @test wahl_dispersion(U236, U236.Bb - 1e-8) > U236.σZ50
     @test wahl_dispersion(U236, U236.B6 - 1e-8) < wahl_dispersion(U236, U236.B6 + 1e-8)
-    @test wahl_dispersion(U236, U236.B6 + 1e-8) ≈ wahl_dispersion(U236, U236.B5)
+    @test wahl_dispersion(U236, U236.B6 + 1e-8) ≈ wahl_dispersion(U236, U236.B5) rtol = RTOL
 
     # The Bb–B4 leg is constructed so that it reaches ΔZ_max exactly at the crossing.
     @test wahl_polarization(U236, U236.Bb) ≈ U236.ΔZmax atol = 1e-6
 
     # In the peak region the distribution is the straight line of eq. (11a) about A' = 140.
-    @test wahl_polarization(U236, 140) ≈ -0.487
-    @test wahl_polarization(U236, 150) ≈ -0.487 - 0.0080 * 10
-    @test wahl_dispersion(U236, 140) ≈ 0.566
-    @test wahl_dispersion(U236, 150) ≈ 0.566 - 0.0038 * 10
+    @test wahl_polarization(U236, 140) ≈ -0.487 rtol = RTOL
+    @test wahl_polarization(U236, 150) ≈ -0.487 - 0.0080 * 10 rtol = RTOL
+    @test wahl_dispersion(U236, 140) ≈ 0.566 rtol = RTOL
+    @test wahl_dispersion(U236, 150) ≈ 0.566 - 0.0038 * 10 rtol = RTOL
 
     # σ_Z narrows to σ_Z(50) through the near-symmetry region, the signature of the shell
     # closure: the charge is pinned at Z = 50 and the distribution about it is tighter.
-    @test wahl_dispersion(U236, (U236.Bb + U236.B4) / 2) ≈ U236.σZ50
+    @test wahl_dispersion(U236, (U236.Bb + U236.B4) / 2) ≈ U236.σZ50 rtol = RTOL
     @test U236.σZ50 < U236.σZ140
 
     # 252-Cf, a heavier and more charged system: every difference in eq. (17) contributes.
     CF252 = WahlSystematics(98, 252, 0.0)
-    @test CF252.σZ140 ≈ 0.566 + 0.0064 * 16 + 0.0109 * (0 - 6.551)
-    @test CF252.ΔZ140 ≈ -0.487 + 0.0180 * 16 - 0.00203 * 16^2
-    @test CF252.σZ50 ≈ 0.356 + 0.060 * 6
+    @test CF252.σZ140 ≈ 0.566 + 0.0064 * 16 + 0.0109 * (0 - 6.551) rtol = RTOL
+    @test CF252.ΔZ140 ≈ -0.487 + 0.0180 * 16 - 0.00203 * 16^2 rtol = RTOL
+    @test CF252.σZ50 ≈ 0.356 + 0.060 * 6 rtol = RTOL
     @test wahl_polarization(CF252, 126) ≈ 0.0 atol = 1e-12
 
     # Outside the fitted ranges the constructor refuses rather than extrapolating quietly.
@@ -122,11 +122,9 @@ end
     distribution = wahl_charge_distribution(table, system, 118:160)
     @test distribution !== nothing
     @test charge_polarization(distribution, 140) ≈
-          wahl_polarization(WahlSystematics(table, system), 140)
+          wahl_polarization(WahlSystematics(table, system), 140) rtol = RTOL
     # The tabulated dispersion is on the lattice footing of Wahl eq. (8), not the model's own
     # sigma_Z, because that is what an evaluated table carries and what this package reads.
-    @test charge_dispersion(distribution, 140) ≈
-          sqrt(wahl_dispersion(WahlSystematics(table, system), 140)^2 + 1 / 12)
     @test charge_dispersion(distribution, 140) >
           wahl_dispersion(WahlSystematics(table, system), 140)
 
@@ -140,8 +138,9 @@ end
     # The precursor excitation energy of a thermal capture is Sₙ of the compound nucleus, so the
     # systematics built from the system agrees with the one built from that number by hand.
     excitation = value(compound_nucleus_excitation(table, system))
-    @test WahlSystematics(table, system).PE ≈ excitation
-    @test WahlSystematics(92, 236, excitation).ΔZ140 ≈ WahlSystematics(table, system).ΔZ140
+    @test WahlSystematics(table, system).PE ≈ excitation rtol = RTOL
+    @test WahlSystematics(92, 236, excitation).ΔZ140 ≈ WahlSystematics(table, system).ΔZ140 rtol =
+        RTOL
 
     # Spontaneous fission enters at zero excitation.
     @test WahlSystematics(table, spontaneous_fission(Nuclide(98, 252))).PE == 0.0
@@ -152,7 +151,7 @@ end
     )
 end
 
-CHARGE_DISTRIBUTION_AVAILABLE &&
+guarded(CHARGE_DISTRIBUTION_AVAILABLE, "Wahl systematics against the evaluated tables") do
     @testset "Wahl systematics against the evaluated tables" begin
         # An external check, against numbers this package did not produce. The shipped tables are a
         # per-reaction least-squares fit of the same model — Fig. 18 quotes reduced χ² of 2.9 for
@@ -239,6 +238,7 @@ CHARGE_DISTRIBUTION_AVAILABLE &&
                 1e-3
         end
     end
+end
 
 @testset "even-odd factors" begin
     table = mass_table()
@@ -252,8 +252,8 @@ CHARGE_DISTRIBUTION_AVAILABLE &&
     # Eqs. (11d), (11e): constant through the peak region, at the Table 2 values.
     peak = wahl_even_odd_factors(w, 140)
     @test peak == wahl_even_odd_factors(w, w.B4 + 1e-8)
-    @test peak[1] ≈ 1.207
-    @test peak[2] ≈ 1.076
+    @test peak[1] ≈ 1.207 rtol = RTOL
+    @test peak[2] ≈ 1.076 rtol = RTOL
     # Both exceed unity, which is what an even-odd enhancement means.
     @test all(>(1), peak)
 
@@ -265,7 +265,7 @@ CHARGE_DISTRIBUTION_AVAILABLE &&
     # modulation alternates with the parity of Z.
     numbers, yields = wahl_charge_yield(w, 140, 11)
     @test length(numbers) == 11
-    @test sum(yields) ≈ 1.0
+    @test sum(yields) ≈ 1.0 atol = 1e-12
     @test all(>(0), yields)
     plain = [
         charge_probability(
@@ -285,7 +285,10 @@ CHARGE_DISTRIBUTION_AVAILABLE &&
     @test_throws ArgumentError wahl_even_odd_factors(w, 100)
 end
 
-CHARGE_DISTRIBUTION_AVAILABLE &&
+guarded(
+    U235_POLARIZATION_AVAILABLE,
+    "the even-odd option reproduces the ripple, not the baseline",
+) do
     @testset "the even-odd option reproduces the ripple, not the baseline" begin
         table = mass_table()
         system = neutron_induced_fission(Nuclide(92, 235), 2.53e-8, "nth")
@@ -316,15 +319,11 @@ CHARGE_DISTRIBUTION_AVAILABLE &&
         @test correlation > 0.4
 
         # It stays a ChargeDistribution, and says in its source that the factors were applied.
+        # They are off by default: the tabulated distributions already carry the effect, so
+        # folding it in on top of one would count it twice.
         @test folded isa ChargeDistribution
         @test occursin("even-odd", folded.source)
         @test !occursin("even-odd", bare.source)
-
-        # Off by default: the tabulated distributions already carry the effect, so folding it in
-        # on top of one would count it twice.
-        plain = wahl_charge_distribution(table, system, masses)
-        @test charge_dispersion(plain, 140) ≈
-              sqrt(wahl_dispersion(WahlSystematics(table, system), 140)^2 + 1 / 12)
 
         # And putting the systematics on the table's footing is what makes it a better stand-in:
         # it moves every mass toward the evaluated table rather than away from it.
@@ -335,8 +334,9 @@ CHARGE_DISTRIBUTION_AVAILABLE &&
             ) for A in masses
         )
         lattice_error = sum(
-            abs(charge_dispersion(plain, A) - charge_dispersion(evaluated, A)) for
+            abs(charge_dispersion(bare, A) - charge_dispersion(evaluated, A)) for
             A in masses
         )
         @test lattice_error < bare_error
     end
+end

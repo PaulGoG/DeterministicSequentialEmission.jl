@@ -50,3 +50,5 @@ include("physics.jl")
         )
     end
 end
+
+isempty(SKIPPED) || @info "testsets skipped for absent input data" SKIPPED

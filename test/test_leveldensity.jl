@@ -1,15 +1,17 @@
-SHELL_CORRECTIONS_AVAILABLE && @testset "shell correction file layout" begin
-    corrections = read_shell_correction_table(SHELL_CORRECTION_FILE)
+guarded(SHELL_CORRECTIONS_AVAILABLE, "shell correction file layout") do
+    @testset "shell correction file layout" begin
+        corrections = read_shell_correction_table(SHELL_CORRECTION_FILE)
 
-    # The reader takes columns by position, so this guards the shipped file rather than the
-    # reader: the neutron correction comes first, `n S_N S_Z`. The prototype declares the two
-    # the other way round, and because S(Z) is looked up at the proton number while S(N) is
-    # looked up at the neutron number, the swap is not absorbed by their sum.
-    header = split(strip(first(readlines(SHELL_CORRECTION_FILE))))
-    @test header[2] == "S_N"
-    @test header[3] == "S_Z"
-    @test corrections.S_N[11] ≈ 6.80
-    @test corrections.S_Z[11] ≈ -2.91
+        # The reader takes columns by position, so this guards the shipped file rather than the
+        # reader: the neutron correction comes first, `n S_N S_Z`. The prototype declares the
+        # two the other way round, and because S(Z) is looked up at the proton number while S(N)
+        # is looked up at the neutron number, the swap is not absorbed by their sum.
+        header = split(strip(first(readlines(SHELL_CORRECTION_FILE))))
+        @test header[2] == "S_N"
+        @test header[3] == "S_Z"
+        @test corrections.S_N[11] ≈ 6.80 rtol = RTOL
+        @test corrections.S_Z[11] ≈ -2.91 rtol = RTOL
+    end
 end
 
 @testset "back-shifted Fermi gas against the archived run" begin
@@ -25,20 +27,17 @@ end
     a_heavy = column(reference, :a_H, Float64)
     @test length(reference) == 244
 
-    worst = 0.0
-    for row in eachindex(heavy_masses)
-        heavy = Nuclide(heavy_charges[row], heavy_masses[row])
-        light = complementary_fragment(CF252, heavy)
-        computed_heavy = level_density_parameter(model, heavy)
-        computed_light = level_density_parameter(model, light)
-        @test computed_heavy !== nothing
-        @test computed_light !== nothing
-        (computed_heavy === nothing || computed_light === nothing) && continue
-        worst = max(worst, abs(computed_heavy - a_heavy[row]))
-        worst = max(worst, abs(computed_light - a_light[row]))
-    end
+    heavy = [Nuclide(Z, A) for (A, Z) in zip(heavy_masses, heavy_charges)]
+    computed_heavy = [level_density_parameter(model, nuclide) for nuclide in heavy]
+    computed_light = [
+        level_density_parameter(model, complementary_fragment(CF252, nuclide)) for
+        nuclide in heavy
+    ]
+    @test count(isnothing, computed_heavy) == 0
+    @test count(isnothing, computed_light) == 0
     # The reference is rounded to eight decimals on write.
-    @test worst < 1e-8
+    @test maximum(abs(a - r) for (a, r) in zip(computed_heavy, a_heavy)) < 1e-8
+    @test maximum(abs(a - r) for (a, r) in zip(computed_light, a_light)) < 1e-8
 end
 
 @testset "BSFG pinned to von Egidy & Bucurescu" begin
@@ -52,10 +51,11 @@ end
         S = shell_correction(model, nuclide)
         @test S !== nothing
         @test level_density_parameter(model, nuclide) ≈
-              (0.199 + 0.0096 * S) * nuclide.A^0.869
+              (0.199 + 0.0096 * S) * nuclide.A^0.869 rtol = RTOL
         @test !isapprox(
             level_density_parameter(model, nuclide),
-            0.199 * (1 + 0.0096 * S) * nuclide.A^0.869,
+            0.199 * (1 + 0.0096 * S) * nuclide.A^0.869;
+            rtol = RTOL,
         )
     end
 
@@ -73,7 +73,7 @@ end
             nuclide.Z * value(mass_excess(table, Nuclide(1, 1))) +
             neutron_number(nuclide) * value(mass_excess(table, NEUTRON)) - Δ
         )
-    @test shell_correction(model, nuclide) ≈ δW₀ + pairing
+    @test shell_correction(model, nuclide) ≈ δW₀ + pairing rtol = RTOL
 
     # S = M_exp − M_LD (2005, eq. 7), so a nucleus more bound than the liquid drop has S < 0.
     # Shell closures are exactly those nuclei, and the suppressed a is what puts the sawtooth
@@ -131,35 +131,37 @@ end
     @test !is_deformed_gilbert_cameron(Nuclide(25, 55))    # 20 ≤ Z ≤ 29 follows line I
 end
 
-SHELL_CORRECTIONS_AVAILABLE && @testset "the two Gilbert-Cameron branches" begin
-    gilbert = GilbertCameron(read_shell_correction_table(SHELL_CORRECTION_FILE))
+guarded(SHELL_CORRECTIONS_AVAILABLE, "the two Gilbert-Cameron branches") do
+    @testset "the two Gilbert-Cameron branches" begin
+        gilbert = GilbertCameron(read_shell_correction_table(SHELL_CORRECTION_FILE))
 
-    # The branches differ by the intercept alone, 0.142 − 0.120 = 0.022 per nucleon, so the
-    # deformed one is lower by exactly 0.022 A. Checked on a fragment inside the region.
-    deformed = Nuclide(58, 148)
-    @test is_deformed_gilbert_cameron(deformed)
-    a = level_density_parameter(gilbert, deformed)
-    corrections = read_shell_correction_table(SHELL_CORRECTION_FILE)
-    S = corrections.S_Z[58] + corrections.S_N[90]
-    undeformed_value = 148 * (0.00917 * S + 0.142)
-    @test undeformed_value - a ≈ 0.022 * 148
+        # The branches differ by the intercept alone, 0.142 − 0.120 = 0.022 per nucleon, so the
+        # deformed one is lower by exactly 0.022 A. Checked on a fragment inside the region.
+        deformed = Nuclide(58, 148)
+        @test is_deformed_gilbert_cameron(deformed)
+        a = level_density_parameter(gilbert, deformed)
+        corrections = read_shell_correction_table(SHELL_CORRECTION_FILE)
+        S = corrections.S_Z[58] + corrections.S_N[90]
+        undeformed_value = 148 * (0.00917 * S + 0.142)
+        @test undeformed_value - a ≈ 0.022 * 148 rtol = RTOL
 
-    # Roughly a fifth: the size of the correction on the heavy fragment peak.
-    @test 0.15 < (undeformed_value - a) / a < 0.35
+        # Roughly a fifth: the size of the correction on the heavy fragment peak.
+        @test 0.15 < (undeformed_value - a) / a < 0.35
 
-    # Selecting eq. (20) alone reverts to the single-branch behaviour, which is what the
-    # published results of this method used and what the companion package implements.
-    undeformed = GilbertCameron(
-        read_shell_correction_table(SHELL_CORRECTION_FILE);
-        deformed_branch = false,
-    )
-    @test level_density_parameter(undeformed, deformed) ≈ undeformed_value
-    @test level_density_parameter(undeformed, Nuclide(40, 100)) ≈
-          level_density_parameter(gilbert, Nuclide(40, 100))
+        # Selecting eq. (20) alone reverts to the single-branch behaviour, which is what the
+        # published results of this method used and what the companion package implements.
+        undeformed = GilbertCameron(
+            read_shell_correction_table(SHELL_CORRECTION_FILE);
+            deformed_branch = false,
+        )
+        @test level_density_parameter(undeformed, deformed) ≈ undeformed_value rtol = RTOL
+        @test level_density_parameter(undeformed, Nuclide(40, 100)) ≈
+              level_density_parameter(gilbert, Nuclide(40, 100)) rtol = RTOL
 
-    # Z ≥ 99 has no tabulated S(Z). The file pads it with zeros; the reader must not store
-    # them, or the systematics silently answers where the paper says nothing.
-    # Both have a tabulated S(N); they differ only in whether S(Z) exists.
-    @test level_density_parameter(gilbert, Nuclide(99, 240)) === nothing
-    @test level_density_parameter(gilbert, Nuclide(98, 240)) !== nothing
+        # Z ≥ 99 has no tabulated S(Z). The file pads it with zeros; the reader must not store
+        # them, or the systematics silently answers where the paper says nothing.
+        # Both have a tabulated S(N); they differ only in whether S(Z) exists.
+        @test level_density_parameter(gilbert, Nuclide(99, 240)) === nothing
+        @test level_density_parameter(gilbert, Nuclide(98, 240)) !== nothing
+    end
 end

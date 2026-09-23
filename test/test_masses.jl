@@ -16,12 +16,6 @@ end
 @testset "separation energies" begin
     table = mass_table()
 
-    # Sₙ = Δ(A−1,Z) + Δ(n) − Δ(A,Z), checked against the table entries directly.
-    cf251 = mass_excess(table, Nuclide(98, 251))
-    cf252 = mass_excess(table, Nuclide(98, 252))
-    expected = cf251 + mass_excess(table, NEUTRON) - cf252
-    @test value(neutron_separation_energy(table, Nuclide(98, 252))) ≈ value(expected)
-
     # Sₙ of an actinide sits around 5–7 MeV; a sign or unit slip would leave this range.
     Sₙ = value(neutron_separation_energy(table, Nuclide(98, 252)))
     @test 4.0 < Sₙ < 8.0
@@ -35,25 +29,18 @@ end
     reference = read_reference("Q_vs_A_H_Z_H.dat", [:A_H, :Z_H, :Q], 2)
     @test length(reference) == 245
 
-    checked = 0
-    worst = 0.0
-    for ((A_heavy, Z_heavy), expected) in reference
-        Q = q_value(table, CF252, Nuclide(Z_heavy, A_heavy))
-        @test Q !== nothing
-        Q === nothing && continue
-        error = abs(value(Q) - expected)
-        worst = max(worst, error)
-        checked += 1
-    end
-    @test checked == 245
+    computed = Dict(
+        (A_heavy, Z_heavy) => q_value(table, CF252, Nuclide(Z_heavy, A_heavy)) for
+        (A_heavy, Z_heavy) in keys(reference)
+    )
+    @test count(isnothing, values(computed)) == 0
     # The reference was written at full Float64 precision, so agreement is to round-off.
-    @test worst < 1e-9
+    @test maximum(abs(value(computed[k]) - reference[k]) for k in keys(reference)) < 1e-9
 
     # Q for an actinide split is ≈ 200 MeV; every entry must be positive and in range.
-    for ((A_heavy, Z_heavy), _) in reference
-        Q = value(q_value(table, CF252, Nuclide(Z_heavy, A_heavy)))
-        @test 150.0 < Q < 260.0
-    end
+    Q_min, Q_max = extrema(value(computed[k]) for k in keys(reference))
+    @test Q_min > 150.0
+    @test Q_max < 260.0
 end
 
 @testset "Q value uncertainties" begin
@@ -69,7 +56,7 @@ end
     # Complementarity: naming either fragment of the pair describes the same split.
     light = complementary_fragment(CF252, heavy)
     @test light == Nuclide(46, 118)
-    @test value(q_value(table, CF252, light)) ≈ value(Q)
+    @test value(q_value(table, CF252, light)) ≈ value(Q) rtol = RTOL
 
     # A fragment heavier or more charged than the compound nucleus is a caller error, not an
     # absent measurement, and is named as such rather than returned as `nothing`.

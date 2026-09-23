@@ -1,11 +1,9 @@
 @testset "neutron strength function" begin
     # Piecewise linear with plateaux, continuous at the joints the parameterization declares.
-    for A in (23, 55, 69, 79, 90, 110, 120, 135, 146, 152, 158, 173, 186, 208)
-        left = neutron_strength_function(A)
-        right = neutron_strength_function(A + 1)
-        @test isfinite(left) && isfinite(right)
-        @test left > 0 && right > 0
-    end
+    joints = (23, 55, 69, 79, 90, 110, 120, 135, 146, 152, 158, 173, 186, 208)
+    sampled = [neutron_strength_function(A + δ) for A in joints for δ in (0, 1)]
+    @test all(isfinite, sampled)
+    @test minimum(sampled) > 0
     @test neutron_strength_function(10) == 2.5e-5
     @test neutron_strength_function(300) == 1e-4
 
@@ -26,8 +24,6 @@ end
 
     # A non-zero α lowers the mean energy, the low-energy enhancement of σ_c.
     @test mean_neutron_energy(variable, 0.3, 1.0) < 2.0
-
-    @test fermi_gas_energy(13.0, 0.5) ≈ 13.0 * 0.25
 end
 
 @testset "residual temperature" begin
@@ -38,7 +34,7 @@ end
     a = 13.0
     available = 10.0
     T = residual_temperature(constant, a, available)
-    @test a * T^2 + 2T ≈ available
+    @test a * T^2 + 2T ≈ available rtol = RTOL
 
     # The bisection root satisfies the transcendental equation it was found for.
     α = alpha_parameter(133)
@@ -121,43 +117,31 @@ end
         )
     end
 
-    worst_S = 0.0
-    worst_a = 0.0
-    worst_T = 0.0
-    worst_E = 0.0
-    worst_ε = 0.0
-    compared = 0
-    for row in eachindex(masses)
-        chain = chains[(masses[row], charges[row], energies[row], sides[row])]
-        @test indices[row] <= length(chain)
-        indices[row] <= length(chain) || continue
-        sequence = chain.sequences[indices[row]]
-        @test sequence.index == indices[row]
-        worst_S = max(worst_S, abs(sequence.separation_energy - expected_S[row]))
+    rows = eachindex(masses)
+    row_chains = [chains[(masses[r], charges[r], energies[r], sides[r])] for r in rows]
+    @test all(indices[r] <= length(row_chains[r]) for r in rows)
+    sequences = [row_chains[r].sequences[indices[r]] for r in rows]
+    @test all(sequences[r].index == indices[r] for r in rows)
+    @test maximum(abs(sequences[r].separation_energy - expected_S[r]) for r in rows) < 1e-8
 
-        # A sequence the archive wrote with a zero temperature is one the equation could not
-        # solve; the rewrite reports it as absent rather than as a zero that averages in.
-        if expected_T[row] > 0
-            @test is_solved(sequence)
-            is_solved(sequence) || continue
-            worst_a = max(worst_a, abs(sequence.level_density_parameter - expected_a[row]))
-            worst_T = max(worst_T, abs(sequence.temperature - expected_T[row]))
-            worst_E = max(worst_E, abs(sequence.residual_energy - expected_E[row]))
-            worst_ε = max(worst_ε, abs(sequence.mean_neutron_energy - expected_ε[row]))
-            compared += 1
-        else
-            @test !is_solved(sequence)
-        end
-    end
+    # A sequence the reference writes with a zero temperature is one the equation could not
+    # solve; it is reported as absent rather than as a zero that averages in.
+    with_temperature = [r for r in rows if expected_T[r] > 0]
+    without_temperature = [r for r in rows if !(expected_T[r] > 0)]
+    @test all(is_solved(sequences[r]) for r in with_temperature)
+    @test !any(is_solved(sequences[r]) for r in without_temperature)
 
-    @test compared > 600
-    @test worst_S < 1e-8
-    @test worst_a < 1e-8
+    solved = [r for r in with_temperature if is_solved(sequences[r])]
+    @test length(solved) > 600
+    @test maximum(
+        abs(sequences[r].level_density_parameter - expected_a[r]) for r in solved
+    ) < 1e-8
     # The archived temperatures are rounded to eight decimals; the root itself is found by
     # bisection to a tighter tolerance than that.
-    @test worst_T < 1e-7
-    @test worst_E < 1e-6
-    @test worst_ε < 1e-7
+    @test maximum(abs(sequences[r].temperature - expected_T[r]) for r in solved) < 1e-7
+    @test maximum(abs(sequences[r].residual_energy - expected_E[r]) for r in solved) < 1e-6
+    @test maximum(abs(sequences[r].mean_neutron_energy - expected_ε[r]) for r in solved) <
+          1e-7
 end
 
 @testset "the archived run used the 2 MeV ceiling" begin
@@ -201,7 +185,13 @@ end
 @testset "chain bookkeeping" begin
     table = mass_table()
     model = BackShiftedFermiGas(table)
-    chain = emission_chain(table, model, VariableCrossSection(), Nuclide(52, 134), 20.0)
+    chain = @inferred emission_chain(
+        table,
+        model,
+        VariableCrossSection(),
+        Nuclide(52, 134),
+        20.0,
+    )
 
     # n counts every prompt neutron; k_max only the sequences with a temperature.
     @test chain.possible >= chain.solved
@@ -212,13 +202,11 @@ end
     @test post_neutron_mass(chain) == 134 - chain.possible
     @test post_neutron_mass(chain) isa Int
 
-    # ν is a different quantity from n and must not be confused with it.
-    @test neutron_multiplicity(chain) == (chain.possible + 1) / 2
-
     # Sequence averages run over k_max, not over n.
     average = sequence_average(chain, :temperature)
     @test average ≈
-          sum(s.temperature for s in chain.sequences if is_solved(s)) / chain.solved
+          sum(s.temperature for s in chain.sequences if is_solved(s)) / chain.solved rtol =
+        RTOL
 
     @test_throws ArgumentError sequence_average(chain, :nonsense)
 

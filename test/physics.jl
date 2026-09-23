@@ -31,6 +31,27 @@ CHARGE_DISTRIBUTION_AVAILABLE || @warn """
     from it are skipped. The reference tests are unaffected — they take their fragmentations \
     from the reference files. See data/README.md.""" file = CF252_CHARGE_DISTRIBUTION_FILE
 
+# Relative tolerance of `isapprox` between Float64 operands when none is given.
+const RTOL = sqrt(eps(Float64))
+
+# Names of the testsets not run because their input data is absent.
+const SKIPPED = String[]
+
+"""
+    guarded(flag, name, body)
+
+Run `body()` when `flag` holds; otherwise record `name` in `SKIPPED`, so that a testset gated on
+absent input data is reported at the end of the run rather than omitted without trace.
+
+The method taking `body` first serves the `do`-block form, `guarded(flag, name) do … end`.
+"""
+function guarded(flag::Bool, name::AbstractString, body::Function)
+    flag ? body() : push!(SKIPPED, String(name))
+    return nothing
+end
+
+guarded(body::Function, flag::Bool, name::AbstractString) = guarded(flag, name, body)
+
 mass_table() = read_mass_excess_table(MASS_EXCESS_FILE)
 
 cf252_charge_distribution() = read_charge_distribution(CF252_CHARGE_DISTRIBUTION_FILE)

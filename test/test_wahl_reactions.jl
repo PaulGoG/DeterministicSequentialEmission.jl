@@ -94,7 +94,10 @@ end
     end
 end
 
-CHARGE_DISTRIBUTION_AVAILABLE &&
+guarded(
+    CHARGE_DISTRIBUTION_AVAILABLE,
+    "the first layer beats the second on every evaluated table",
+) do
     @testset "the first layer beats the second on every evaluated table" begin
         # The point of the layering: where a reaction has its own parameters they are closer to
         # what an evaluation of that reaction gives than a trend across reactions is.
@@ -122,6 +125,7 @@ CHARGE_DISTRIBUTION_AVAILABLE &&
             @test mad(per_reaction, charge_dispersion) < mad(systematics, charge_dispersion)
         end
     end
+end
 
 @testset "Table A places its own regions" begin
     # Footnotes a and c give the ranges the narrow dispersion and the unit even-odd factors apply
