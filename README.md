@@ -108,11 +108,14 @@ Redraw the figures from what those runs wrote, without solving anything again:
 julia plotting/figures.jl
 ```
 
-That draws the two figures under *The model* from every system a run has written, a panel of the quantities
-internal to the emission chain — `E*(A)`, `Ē_r(A)`, `⟨T⟩(A)`, `⟨ε⟩(A)` — and a diagnostic of the
-charge distribution each run was weighted by, against the two it could have taken instead: the
-`Zₚ` model built without a table, and the conventional means. Those have no experimental counterpart, so they
-are diagnostics and are not tracked.
+That draws the two figures under *The model* from every system a run has written, a panel of
+the quantities internal to the emission chain — `E*(A)`, `Ē_r(A)`, `⟨T⟩(A)`, `⟨ε⟩(A)` — and a
+diagnostic of the charge distribution each run was weighted by, against the two it could have
+taken instead: the `Zₚ` model built without a table, and the conventional means. Those have no
+experimental counterpart, so they are diagnostics and are not tracked. Every figure is exported
+as PDF and PNG beside a `.toml` sidecar naming, per system, the run drawn, the commit its
+metadata records and the measured files, so a panel traces to a configuration and a commit; the
+two tracked figures carry their sidecars in the repository.
 
 The charge-distribution diagnostic is worth reading whenever a system is investigated. It is what
 shows where an evaluated table and the systematics part company — which is the uncertainty a
