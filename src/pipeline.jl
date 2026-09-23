@@ -1,9 +1,8 @@
 """
     Curve
 
-A tabulated one-dimensional result, `Vector{Tuple{Float64,Float64}}`. Abscissa and value, which
-is what every written table holds and what reads back without either side having to know the
-abscissa in advance.
+A tabulated one-dimensional result, `Vector{Tuple{Float64,Float64}}` of abscissa and value
+pairs, the content of every written two-column table.
 """
 const Curve = Vector{Tuple{Float64, Float64}}
 
@@ -34,9 +33,8 @@ struct RunResult
     mean_kinetic_energy::Float64
     mean_neutron_lab_energy::Float64
 
-    # Written out rather than left to the default constructor: with the fields declared and no
-    # generic path into the type, every argument is concrete at the call site and nothing has to
-    # be converted from an abstract array on the way in.
+    # Explicit inner constructor: concrete argument types, no generic `convert` path into the
+    # type.
     function RunResult(
         configuration::Configuration,
         configurations_solved::Integer,
@@ -94,14 +92,11 @@ end
     run_pipeline(configuration) -> RunResult
 
 Solve every configuration the domain and the kinetic energy grid span, contract the results
-against the yield weights, and return the result. Nothing is written here:
-[`write_results`](@ref) writes the tables to a directory of the caller's choosing, and
-`scripts/run.jl` adds the provenance beside them.
-
-The sweep is deterministic: no sampling, no seeds. A configuration is dropped only where the
-physics excludes it — a non-positive `TXE`, a partition the segments do not cover, a fragment
-the mass table cannot reach — and the counts of attempted and solved configurations are
-reported so that the coverage of a run can be audited from its own output.
+against the yield weights, and return the result without writing it; [`write_results`](@ref)
+writes the tables, and `scripts/run.jl` adds the provenance. The sweep is deterministic, with
+no sampling. A configuration is dropped where `TXE` is non-positive, the partition input does
+not cover it, or the mass table does not reach a fragment; the counts of attempted and solved
+configurations are reported with the result.
 """
 function run_pipeline(configuration::Configuration)
     domain = fragmentation_domain(
@@ -178,15 +173,14 @@ function run_pipeline(configuration::Configuration)
         ),
     )
 
-    # Contracted and narrowed to plain pairs in one step. The weights of a run are yields, which
-    # carry no uncertainty of their own here, so the result is `Float64`; saying so keeps the
-    # result type concrete rather than leaving it to inference across the contraction.
+    # Contract and narrow to `Float64` pairs in one step; the yield weights carry no uncertainty
+    # here, and the narrowing keeps the result type concrete.
     curve(store) = _pairs(average(store, weights; over = (:charge, :kinetic_energy)))
     by_energy(store) = _pairs(average(store, weights; over = (:mass, :charge)))
 
     spectrum, mean_lab = _run_spectrum(configuration, chains, weights)
     covered = segment_coverage(configuration.method, configuration.heavy_masses).covered
-    # `solved > 0` above guarantees this, but the contraction cannot say so in its return type.
+    # Guaranteed by `solved > 0` above; the check narrows the return type of the contraction.
     total = total_average(ν, weights)
     total === nothing && throw(
         ArgumentError(
@@ -216,9 +210,8 @@ function run_pipeline(configuration::Configuration)
     return result
 end
 
-# Narrow a contraction to plain pairs. The return annotation is load-bearing: it fixes the type
-# at the function boundary, so the result struct is built from concrete vectors rather than from
-# whatever inference makes of a comprehension over a parametric result.
+# Narrow a contraction to plain pairs. The return annotation fixes the type at the function
+# boundary, so `RunResult` is built from concrete vectors.
 function _pairs(contracted)::Curve
     out = Curve()
     for (x, y) in contracted
@@ -233,20 +226,19 @@ end
 The weight of one fragmentation in a sum over pairs, from the fragment yield of its heavy side.
 
 The yield is normalised to 200 over both fragments of every split, so a sum over the heavy
-fragments alone counts an asymmetric split once, at the yield of the split. At mass symmetry
-the heavy side holds both fragments: the two labellings `(Z, Z₀−Z)` and `(Z₀−Z, Z)` of one
-split are both heavy-side entries, and the self-complementary nuclide `(A₀/2, Z₀/2)` carries the
-yield of two fragments. Halving every mass-symmetric entry restores the yield of the split and
-makes the heavy-side sum exactly half the sum over all fragments, which is the form the total
-average takes — Tudora, Hambsch, Tobosaru, *EPJA* **54**, 87 (2018), text after eq. (16).
+fragments counts an asymmetric split once, at the yield of the split. At mass symmetry both
+labellings `(Z, Z₀−Z)` and `(Z₀−Z, Z)` of one split are heavy-side entries, and the
+self-complementary nuclide `(A₀/2, Z₀/2)` carries the yield of two fragments. Halving every
+mass-symmetric entry makes the heavy-side sum exactly half the sum over all fragments, the form
+of the total average in the text after eq. (16) of Tudora, Hambsch, Tobosaru, *EPJA* **54**, 87
+(2018), doi:10.1140/epja/i2018-12521-7.
 """
 _pair_weight(fragmentation::Fragmentation, yield::Float64) =
     is_symmetric(fragmentation) ? yield / 2 : yield
 
-# The laboratory spectrum of the whole system: every solved pair contributes its two chains,
-# weighted by the yield of the fragmentation — halved at mass symmetry, see `_pair_weight` —
-# and, within a pair, by how the neutrons divide between the fragments. Normalised to unit
-# area by construction, so the ratio to a Maxwellian is an absolute statement.
+# Laboratory spectrum of the system: each solved pair contributes its two chains, weighted by
+# `_pair_weight` scaled by `total_weight`, and within the pair by `pair_weights`. Unit area by
+# construction.
 function _run_spectrum(
     configuration::Configuration,
     chains,
@@ -269,8 +261,9 @@ function _run_spectrum(
         weight === nothing && continue
         w = _pair_weight(entry, Float64(value(weight)))
         w > 0 || continue
-        share = pair_weights(MultiplicityWeighting(), light, heavy, split)
+        share = pair_weights(configuration.spectrum_pair_weighting, light, heavy, split)
         share === nothing && continue
+        w = total_weight(configuration.spectrum_average, w, light, heavy)
         E_light, E_heavy = fragment_energy_per_nucleon(entry, TKE)
         push!(records, (w, light, heavy, share, E_light, E_heavy))
         total += w
@@ -295,8 +288,8 @@ function _run_spectrum(
     for (index, E) in pairs(grid)
         values[index] = (E, spectrum(E))
     end
-    # The first moment over the tabulated grid rather than over the whole half-line: what is
-    # reported is a property of what was written, so a reader can reproduce it from the file.
+    # First moment over the tabulated grid, not the half-line, so it is reproducible from the
+    # written file.
     norm = _trapezoid(values, (E, N) -> N)
     mean = norm > 0 ? _trapezoid(values, (E, N) -> E * N) / norm : NaN
     return values, mean
@@ -327,12 +320,9 @@ end
 """
     RUN_IDENTIFIER_ABBREVIATIONS
 
-The token each configuration key contributes to a run identifier.
-
-A token *is* the key it came from wherever that is short enough to carry; where it is not, the
-abbreviation is drawn from here and from nowhere else, so there is one place to look and a
-reader can get from a directory name back to a configuration without reading the source.
-[`run_identifier`](@ref) refuses a key with no entry rather than inventing a token.
+The token each configuration key contributes to a run identifier. This table is the single
+source of abbreviations, so a directory name maps back to configuration keys.
+[`run_identifier`](@ref) throws for a key with no entry.
 """
 const RUN_IDENTIFIER_ABBREVIATIONS = Dict(
     "incident_energy" => "En",
@@ -347,6 +337,8 @@ const RUN_IDENTIFIER_ABBREVIATIONS = Dict(
     "cross_section" => "sigma",
     "maximum_temperature" => "Tmax",
     "method" => "part",
+    "pair_weighting" => "pw",
+    "average" => "avg",
     "total" => "Ytot",
 )
 
@@ -356,22 +348,13 @@ const RUN_IDENTIFIER_ABBREVIATIONS = Dict(
 The configuration values that change the result, keyed by the token each contributes to the
 run identifier.
 
-Every key is abbreviated through [`RUN_IDENTIFIER_ABBREVIATIONS`](@ref), and a key with no
-entry there throws rather than being given a token on the spot.
-
-**It covers the scalar and enumerated keys, and it says which rather than claiming all of them.**
-`deformed_branch` appears only under Gilbert-Cameron and `total` only where a yield was loaded,
-because those are the runs each has an effect on. `incident_energy` is covered: it changes the
-compound excitation and so every quantity downstream of it, and two runs of one system on one
-channel may differ in nothing else.
-
-Four things are deliberately **not** tokens and are written in full into the metadata beside the
-result instead. The input files — the mass evaluation, the charge distribution, the segmented
-curve, the yields — change the result but do not reduce to a savename token. The spectrum grid
-and `maxwellian_temperature` change the tabulation of an already-solved spectrum rather than the
-physics, though the grid does move the first moment reported in `totals.dat`, which is a property
-of what was written. `significant_digits` changes how a number is rendered. And the system is not
-a token either: it names the directory the identifier sits in.
+Every key is abbreviated through [`RUN_IDENTIFIER_ABBREVIATIONS`](@ref); a key with no entry
+throws. The scalar and enumerated keys are covered, including `incident_energy`;
+`deformed_branch` appears only under Gilbert-Cameron and `total` only where a yield was loaded.
+Not tokens, and recorded in the run metadata instead: the input files, the spectrum grid and
+`maxwellian_temperature` (which affect the tabulation, and through the grid the first moment in
+`totals.dat`, but not the solution), and `significant_digits`. The system names the directory
+containing the identifier.
 """
 function run_parameters(configuration::Configuration)
     entries = Pair{String, Any}[
@@ -386,6 +369,8 @@ function run_parameters(configuration::Configuration)
         "cross_section" => _cross_section_token(configuration.cross_section),
         "maximum_temperature" => configuration.maximum_temperature,
         "method" => _method_token(configuration.method),
+        "pair_weighting" => _pair_weighting_token(configuration.spectrum_pair_weighting),
+        "average" => _average_token(configuration.spectrum_average),
     ]
     if configuration.model isa GilbertCameron
         push!(entries, "deformed_branch" => configuration.model.deformed_branch)
@@ -431,7 +416,7 @@ end
 _token(x::Integer) = string(x)
 _token(x::Bool) = string(x)
 _token(x::AbstractString) = String(x)
-# Trailing zeros carry no information and would make two spellings of one grid.
+# Integer-valued reals are written without a decimal part, so one grid has one spelling.
 _token(x::Real) = isinteger(x) ? string(Int(round(x))) : string(x)
 
 _model_token(::BackShiftedFermiGas) = "BSFG"
@@ -441,6 +426,10 @@ _cross_section_token(::ConstantCrossSection) = "constant"
 _method_token(::TemperatureRatio) = "temperature_ratio"
 _method_token(::ExcitationEnergyRatio) = "excitation_ratio"
 _method_token(::ScissionModelling) = "scission"
+_pair_weighting_token(::MultiplicityWeighting) = "multiplicity"
+_pair_weighting_token(::ExcitationWeighting) = "excitation"
+_average_token(::PerFissionAverage) = "per_fission"
+_average_token(::PerNeutronAverage) = "per_neutron"
 
 """
     write_results(result, directory) -> String
@@ -449,11 +438,9 @@ Write the tables of a run into `directory`: one two-column file per curve, the f
 projections, the charge distribution the run used beside the ones it could have used, and a
 table of totals.
 
-`directory` is created. One that already holds a run is refused rather than overwritten, so a
-caller that wants a second run of one configuration beside the first moves the first aside;
-`scripts/run.jl` does, numbering it `#1`, `#2`, …. The provenance record is not written here:
-[`run_metadata`](@ref) supplies what the library knows about a run, and the script adds the
-rest and writes the whole.
+`directory` is created. A directory already holding a run is refused, not overwritten;
+`scripts/run.jl` moves an existing run aside as `#1`, `#2`, …. The provenance record is written
+by the script, from [`run_metadata`](@ref) and its own additions.
 """
 function write_results(result::RunResult, directory::AbstractString)
     isfile(joinpath(directory, "totals.dat")) && throw(
@@ -531,26 +518,19 @@ end
 """
     _write_charge_distributions(destination, configuration, digits)
 
-Write the isobaric charge distribution the run used, beside the two it could have used instead.
+Write the isobaric charge distribution `ΔZ(A)`, `σ_Z(A)` the run used, beside the alternatives,
+as up to four tables in the `A dZ sigma_Z` form of an evaluation:
 
-Which `ΔZ(A)`, `σ_Z(A)` a run was weighted by is a choice with a measurable effect on `ν(A)`, and
-until it is written down the only record of it is a path in a configuration. Up to four tables,
-each in the same `A dZ sigma_Z` form an evaluation is supplied in, so the comparison needs nothing
-but a reader:
+- `charge_distribution_vs_A.dat` — the distribution `charge_distribution_file` selected.
+- `charge_distribution_vs_A_wahl_per_reaction.dat` — the `Zₚ` model with the parameters fitted to
+  this reaction in Wahl, At. Data Nucl. Data Tables 39, 1 (1988), doi:10.1016/0092-640X(88)90016-2,
+  where [`WAHL_PER_REACTION`](@ref) covers it.
+- `charge_distribution_vs_A_wahl_systematics.dat` — the same model with parameters estimated from
+  eq. (17), where [`is_wahl_applicable`](@ref) places the system inside the fitted range.
+- `charge_distribution_vs_A_mean.dat` — the conventional means, without mass dependence.
 
-- `charge_distribution_vs_A.dat` — what the run used, whatever `charge_distribution_file` selected.
-- `charge_distribution_vs_A_wahl_per_reaction.dat` — the `Zₚ` model carrying the parameters the
-  1988 evaluation fitted to this reaction, where [`WAHL_PER_REACTION`](@ref) covers it.
-- `charge_distribution_vs_A_wahl_systematics.dat` — the same model with its parameters estimated
-  from eq. (17) instead, where [`is_wahl_applicable`](@ref) says the system is inside the fitted
-  range. Marked as generated in its name, as a systematics table always is.
-- `charge_distribution_vs_A_mean.dat` — the conventional means, the fallback that carries no mass
-  dependence at all.
-
-Together they are the layers of [`build_charge_distribution`](@ref) laid side by side, so what a
-run gave up by taking one rather than another is visible in its own output directory. Where the
-run already took one of them, that file and the used one coincide, and that is the honest picture
-rather than a redundancy to suppress.
+These are the layers of [`build_charge_distribution`](@ref). Where the run used one of the
+alternatives, the corresponding files coincide.
 """
 function _write_charge_distributions(
     destination::AbstractString,
@@ -666,6 +646,9 @@ function run_metadata(result::RunResult)
         "mass_excess" => configuration.mass_excess_table.source,
         "significant_digits" => configuration.significant_digits,
         "maxwellian_temperature_MeV" => configuration.maxwellian_temperature,
+        "spectrum_pair_weighting" =>
+            _pair_weighting_token(configuration.spectrum_pair_weighting),
+        "spectrum_average" => _average_token(configuration.spectrum_average),
         "spectrum_grid_MeV" => grid === nothing ? "none" : [first(grid), last(grid)],
         "spectrum_points" => grid === nothing ? 0 : length(grid),
         "yield" => fragment_yield === nothing ? "none" : sprint(show, fragment_yield),

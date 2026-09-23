@@ -153,7 +153,11 @@ export centre_of_mass_spectrum,
     SpectrumWeighting,
     MultiplicityWeighting,
     ExcitationWeighting,
-    pair_weights
+    pair_weights,
+    SpectrumAverage,
+    PerFissionAverage,
+    PerNeutronAverage,
+    total_weight
 export EmissionSequence,
     EmissionChain,
     emission_chain,
@@ -173,9 +177,9 @@ export RunResult,
 """
     PACKAGE_ROOT
 
-The directory the package was loaded from. The default input location is taken relative to it,
-so a configuration loads unchanged from any working directory. Nothing is written relative to
-it: where a run lands is the caller's decision, and `scripts/run.jl` makes it.
+The directory the package was loaded from. The default input location is resolved relative to
+it, so a configuration loads unchanged from any working directory. No output is written
+relative to it; the output location is chosen by the caller, `scripts/run.jl`.
 """
 const PACKAGE_ROOT = dirname(@__DIR__)
 

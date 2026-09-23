@@ -14,9 +14,8 @@ of the emitting fragment, normalized to unit area.
 `2T` and [`mean_neutron_energy`](@ref) respectively.
 
 `α` is ignored by the constant cross section and is the residual nucleus's
-[`alpha_parameter`](@ref) for the variable one — the same value the sequential equation was
-solved with, which is what keeps the spectrum consistent with the energy balance that produced
-`T`.
+[`alpha_parameter`](@ref) for the variable one, the value the sequential equation was solved
+with, so the spectrum is consistent with the energy balance that produced `T`.
 """
 function centre_of_mass_spectrum(::ConstantCrossSection, ::Real, T::Real, ε::Real)
     (ε <= 0 || T <= 0) && return 0.0
@@ -40,12 +39,10 @@ its own mass,
 E_f^L = (A_H/A_L) TKE/A₀,    E_f^H = (A_L/A_H) TKE/A₀
 ```
 
-so `E_f^L > E_f^H` — the light fragment is the faster one, and that ordering is what fixes which
-spectrum is broader. The neutron mass is taken as one atomic mass unit here, as every treatment
-of this model does; carrying `m_n/m_u = 1.00867` would raise both by 0.9 %.
-
-`E_f` is constant along an emission chain, not an approximation made for convenience: under the
-recoil-free scaling `KE_k = KE (A−k)/A` the ratio `KE_k/(A−k)` is invariant.
+so `E_f^L > E_f^H` and the light-fragment spectrum is the broader. The neutron mass is taken as
+one atomic mass unit; `m_n/m_u = 1.00867` would raise both by 0.9 %. `E_f` is constant along an
+emission chain: under the recoil-free scaling `KE_k = KE (A−k)/A` the ratio `KE_k/(A−k)` is
+invariant.
 """
 function fragment_energy_per_nucleon(fragmentation::Fragmentation, TKE::Real)
     A₀ = fragmentation.light.A + fragmentation.heavy.A
@@ -67,16 +64,14 @@ fixed `ε` the lab energy is uniform over a band of width `4√(ε E_f)`, and fo
 N(E) = 1/(4√E_f) ∫_{u₁}^{u₂} φ(ε) ε^(-1/2) dε,   u_{1,2} = (√E ∓ √E_f)²
 ```
 
-**The `4√(ε E_f)` is not a chosen normalization — it is the width of that band**, so the kernel
-is measure preserving and `N` inherits unit area from `φ` exactly. Substituting `ε = s²` shows it
-plainly: the kernel becomes uniform in `s` over an interval of fixed length `2√E_f`,
+The factor `4√(ε E_f)` is the width of that band, by the identity
+`(√ε+√E_f)² − (√ε−√E_f)² = 4√(ε E_f)`, so the kernel is measure-preserving and `N` inherits
+unit area from `φ` exactly. With `ε = s²` the kernel is uniform in `s` over an interval of fixed
+length `2√E_f`,
 
 ```
 N(E) = 1/(2√E_f) ∫_{|√E−√E_f|}^{√E+√E_f} φ(s²) ds
 ```
-
-Neither Madland-Nix nor the papers that use the result state the normalization property; it
-follows from the width identity `(√ε+√E_f)² − (√ε−√E_f)² = 4√(ε E_f)`.
 
 Evaluated in closed form rather than by quadrature. With `a_i = u_i/T`,
 
@@ -86,11 +81,11 @@ variable σ_c:   N = { [Γ(3/2,a₁) − Γ(3/2,a₂)] + (α/√T)[exp(−a₁) 
                     / [4√E_f (√T + α√π/2)]
 ```
 
-The second reduces to the first as `α → 0`. The differences are taken over the **upper**
-incomplete gamma deliberately: the equivalent lower-gamma difference cancels catastrophically in
-the tail, and is wrong by a factor of four beyond about 20 MeV.
+The second reduces to the first as `α → 0`. The differences are taken over the upper incomplete
+gamma, since the equivalent lower-gamma difference cancels catastrophically in the tail and is
+in error by a factor of four beyond about 20 MeV.
 
-Source: Madland & Nix, *Nucl. Sci. Eng.* **81**, 213 (1982), eq. (12).
+Source: eq. (12) of Madland & Nix, *Nucl. Sci. Eng.* **81**, 213 (1982), doi:10.13182/NSE82-5.
 """
 function laboratory_spectrum(
     cross_section::EvaporationCrossSection,
@@ -138,10 +133,10 @@ temperature.
 N_f(E) = (1/k_max) Σ_{k solved} N(E; α_k, T_k, E_f)
 ```
 
-The denominator is `k_max`, the sequences the equation could solve, matching
-[`sequence_average`](@ref) and Tudora, *EPJA* 54, 87 (2018) eq. (12). Sequences without a
-temperature are skipped rather than contributing zero — they carry no spectrum, though they do
-count towards `n` and so towards the multiplicity weighting this spectrum is later combined with.
+The denominator is `k_max`, the number of solved sequences, as in [`sequence_average`](@ref)
+and eq. (12) of Tudora, *EPJA* 54, 87 (2018), doi:10.1140/epja/i2018-12521-7. Sequences without
+a temperature carry no spectrum and are skipped, although they count towards `n` and hence
+towards the multiplicity weighting of the pair spectrum.
 
 Returns `0` for a chain that solved nothing.
 """
@@ -192,20 +187,12 @@ end
 
 How the light and heavy fragment spectra are combined into the pair spectrum.
 
-`MultiplicityWeighting` uses `ν_{L,H}/ν_pair` — Tudora, *EPJA* 54, 87 (2018) eq. (16) and
-Capote *et al.*, *Nucl. Data Sheets* **131**, 1 (2016) eq. (33), which assigns it to exactly this
-class of model. It is the convention of the archived thesis run.
-
-`ExcitationWeighting` uses `E*_{L,H}/TXE` — the 2021 review eq. (31), the model's own most recent
-description, which prints the multiplicity form nowhere.
-
-Both are supported because the literature genuinely uses both and the two are close by
-construction: `E*_H/TXE` behaves like `ν_H/(ν_L + ν_H)`. Which is not the same as saying they
-agree, so the difference is worth measuring rather than assuming.
-
-The equal weighting of Madland & Nix eq. (16) is deliberately **not** offered. It rests on the
-light and heavy multiplicities being approximately equal near the most probable fragmentation,
-which is the assumption this model exists to discard.
+`MultiplicityWeighting` uses `ν_{L,H}/ν_pair`, eq. (16) of Tudora, *EPJA* 54, 87 (2018),
+doi:10.1140/epja/i2018-12521-7, and eq. (33) of Capote *et al.*, *Nucl. Data Sheets* **131**, 1
+(2016), doi:10.1016/j.nds.2015.12.002; it is the convention of the thesis and the one the
+pipeline applies. `ExcitationWeighting` uses `E*_{L,H}/TXE`, eq. (31) of Tudora, EPJ Web Conf.
+256, 00017 (2021), doi:10.1051/epjconf/202125600017. The two are close by construction, since
+`E*_H/TXE` behaves like `ν_H/(ν_L + ν_H)`, but not identical.
 """
 abstract type SpectrumWeighting end
 
@@ -251,4 +238,51 @@ function pair_weights(
     total = sum(energies)
     total > 0 || return nothing
     return (energies.light / total, energies.heavy / total)
+end
+
+"""
+    SpectrumAverage
+
+How the pair spectra of the fragmentations combine into the total laboratory spectrum.
+
+[`PerFissionAverage`](@ref) weights each unit-normalised pair spectrum by the yield of its
+fragmentation, `N = Σ Y N_pair / Σ Y`: the form of the thesis and of Tudora, Hambsch, Tobosaru,
+*EPJA* **54**, 87 (2018), doi:10.1140/epja/i2018-12521-7, text after eq. (16).
+[`PerNeutronAverage`](@ref) weights it by the yield times the pair multiplicity,
+`N = Σ Y ν_pair N_pair / Σ Y ν_pair`, which counts every emitted neutron once and is the
+quantity a neutron-counting measurement histograms. The two differ where `ν_pair` correlates
+with the hardness of `N_pair`.
+"""
+abstract type SpectrumAverage end
+
+"""
+    PerFissionAverage()
+
+Combine pair spectra by `Y`.
+"""
+struct PerFissionAverage <: SpectrumAverage end
+
+"""
+    PerNeutronAverage()
+
+Combine pair spectra by `Y ν_pair`.
+"""
+struct PerNeutronAverage <: SpectrumAverage end
+
+"""
+    total_weight(average, yield, light, heavy) -> Float64
+
+The weight of one fragmentation's pair spectrum in the total: `yield` under
+[`PerFissionAverage`](@ref), `yield` times the pair multiplicity under
+[`PerNeutronAverage`](@ref).
+"""
+total_weight(::PerFissionAverage, yield::Float64, ::EmissionChain, ::EmissionChain) = yield
+
+function total_weight(
+    ::PerNeutronAverage,
+    yield::Float64,
+    light::EmissionChain,
+    heavy::EmissionChain,
+)
+    return yield * (neutron_multiplicity(light) + neutron_multiplicity(heavy))
 end

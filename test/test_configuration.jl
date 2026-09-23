@@ -108,10 +108,25 @@ end
             grid = with_spectrum.spectrum_grid
             @test grid !== nothing
             @test length(grid) == 64
-            @test first(grid) ≈ 0.1
-            @test last(grid) ≈ 10.0
+            @test first(grid) ≈ 0.1 rtol = RTOL
+            @test last(grid) ≈ 10.0 rtol = RTOL
             @test issorted(grid)
-            @test grid[2] / grid[1] ≈ grid[end] / grid[end - 1]
+            @test grid[2] / grid[1] ≈ grid[end] / grid[end - 1] rtol = RTOL
+
+            # The two spectrum choices default to the thesis formulation and are validated.
+            @test with_spectrum.spectrum_pair_weighting isa MultiplicityWeighting
+            @test with_spectrum.spectrum_average isa PerFissionAverage
+            chosen = _configuration(
+                directory,
+                "[output]" => "[spectrum]\nenabled = true\npair_weighting = \"excitation\"\naverage = \"per_neutron\"\n\n[output]",
+            )
+            @test chosen.spectrum_pair_weighting isa ExcitationWeighting
+            @test chosen.spectrum_average isa PerNeutronAverage
+            @test _rejects(
+                directory,
+                "spectrum.average",
+                "[output]" => "[spectrum]\naverage = \"per_event\"\n\n[output]",
+            )
 
             # "wahl" builds the Zₚ model in place of a table, over exactly the domain's masses,
             # taking the best layer the system reaches. ²⁵²Cf(sf) is one of the four reactions the

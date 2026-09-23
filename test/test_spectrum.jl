@@ -53,28 +53,34 @@ end
     @test light > heavy
 
     # Each is the fragment's own kinetic energy divided by its own mass.
-    @test light ≈ (180.0 * 140 / 252) / 112
-    @test heavy ≈ (180.0 * 112 / 252) / 140
+    @test light ≈ (180.0 * 140 / 252) / 112 rtol = RTOL
+    @test heavy ≈ (180.0 * 112 / 252) / 140 rtol = RTOL
 
     # Momentum balance: the two kinetic energies sum to TKE.
-    @test light * 112 + heavy * 140 ≈ 180.0
+    @test light * 112 + heavy * 140 ≈ 180.0 atol = 1e-12
 end
 
 @testset "the laboratory transformation preserves normalization" begin
     # The kernel width identity makes N(E) inherit unit area from φ exactly, for any E_f. This
     # is the property the transformation rests on, so it is checked rather than assumed.
-    for cross_section in (ConstantCrossSection(), VariableCrossSection())
-        for α in (0.0, 0.35, 1.2), T in (0.5, 1.1, 1.9), E_f in (0.4, 1.05, 2.0)
-            cross_section isa ConstantCrossSection && α != 0.0 && continue
-            area, _ = quadgk(
+    cases = [
+        (cross_section, α, T, E_f) for
+        cross_section in (ConstantCrossSection(), VariableCrossSection()) for
+        α in (0.0, 0.35, 1.2) for T in (0.5, 1.1, 1.9) for
+        E_f in (0.4, 1.05, 2.0) if !(cross_section isa ConstantCrossSection && α != 0.0)
+    ]
+    @test length(cases) == 36
+    areas = [
+        first(
+            quadgk(
                 E -> laboratory_spectrum(cross_section, α, T, E_f, E),
                 0,
                 Inf;
                 rtol = 1e-11,
-            )
-            @test area ≈ 1 atol = 1e-8
-        end
-    end
+            ),
+        ) for (cross_section, α, T, E_f) in cases
+    ]
+    @test maximum(abs(area - 1) for area in areas) <= 1e-8
 end
 
 @testset "laboratory moments follow the kinematics" begin
@@ -126,12 +132,16 @@ end
             ),
         ) / (2 * sqrt(E_f))
 
-    for (cross_section, α) in ((ConstantCrossSection(), 0.0), (VariableCrossSection(), 0.7))
-        for T in (0.5, 1.3), E_f in (0.6, 1.4), E in (0.01, 0.1, 1.0, 3.0, 8.0, 15.0)
-            got = laboratory_spectrum(cross_section, α, T, E_f, E)
-            @test got ≈ reference(cross_section, α, T, E_f, E) rtol = 1e-9
-        end
-    end
+    cases = [
+        (cross_section, α, T, E_f, E) for (cross_section, α) in
+        ((ConstantCrossSection(), 0.0), (VariableCrossSection(), 0.7)) for
+        T in (0.5, 1.3) for E_f in (0.6, 1.4) for E in (0.01, 0.1, 1.0, 3.0, 8.0, 15.0)
+    ]
+    @test length(cases) == 48
+    relative_error(got, expected) = abs(got - expected) / max(abs(got), abs(expected))
+    @test maximum(
+        relative_error(laboratory_spectrum(case...), reference(case...)) for case in cases
+    ) <= 1e-9
 
     # The variable form collapses onto the constant one as α → 0.
     for T in (0.7, 1.5), E_f in (0.8,), E in (0.5, 2.0, 6.0)
@@ -239,7 +249,7 @@ end
     for weighting in (MultiplicityWeighting(), ExcitationWeighting())
         weights = pair_weights(weighting, light, heavy, split)
         @test weights !== nothing
-        @test sum(weights) ≈ 1
+        @test sum(weights) ≈ 1 atol = 1e-12
         @test all(>=(0), weights)
     end
 
@@ -249,8 +259,8 @@ end
     excitation = pair_weights(ExcitationWeighting(), light, heavy, split)
     @test ν[1] ≈
           neutron_multiplicity(light) /
-          (neutron_multiplicity(light) + neutron_multiplicity(heavy))
-    @test excitation[2] ≈ split.heavy / sum(split)
+          (neutron_multiplicity(light) + neutron_multiplicity(heavy)) rtol = RTOL
+    @test excitation[2] ≈ split.heavy / sum(split) rtol = RTOL
 
     # A fragmentation that emits nothing has no pair spectrum to weight.
     barren = emission_chain(table, model, cross_section, fragmentation.light, 0.0)
@@ -266,4 +276,23 @@ end
           1.5
     @test DeterministicSequentialEmission._pair_weight(fragmentation_at(127, 50), 3.0) ==
           3.0
+end
+
+@testset "total-spectrum weights" begin
+    table = mass_table()
+    model = BackShiftedFermiGas(table)
+    cross_section = VariableCrossSection()
+    fragmentation = fragmentation_at(134, 52)
+    balance = energetics(table, CF252, fragmentation, 180.0)
+    method = ExcitationEnergyRatio(
+        SegmentedCurve([(126, 0.5), (130, 0.14), (150, 0.607), (174, 0.865)]),
+    )
+    split = partition(method, fragmentation, value(balance.TXE))
+    light = emission_chain(table, model, cross_section, fragmentation.light, split.light)
+    heavy = emission_chain(table, model, cross_section, fragmentation.heavy, split.heavy)
+    ν_pair = neutron_multiplicity(light) + neutron_multiplicity(heavy)
+    @test ν_pair > 0
+    # Per fission the yield stands; per neutron it is scaled by the pair multiplicity.
+    @test total_weight(PerFissionAverage(), 2.0, light, heavy) == 2.0
+    @test total_weight(PerNeutronAverage(), 2.0, light, heavy) ≈ 2.0 * ν_pair rtol = RTOL
 end

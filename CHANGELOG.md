@@ -27,6 +27,10 @@ here.
   joint distribution from `Y(A)` and `⟨TKE⟩(A)` with a measured `σ_TKE(A)`.
 - The averaging layer, with uncertainties propagated through `Measurements.jl`.
 - The prompt fission neutron spectrum, centre-of-mass and laboratory, in closed form.
+- `[spectrum] pair_weighting = "multiplicity" | "excitation"` selects the light and heavy
+  weights within a pair, and `[spectrum] average = "per_fission" | "per_neutron"` the weight of
+  a pair spectrum in the total, `Y` or `Y ν_pair`. The defaults are the thesis formulation; both
+  enter the run identifier and the metadata.
 - A configuration-driven entry point, `scripts/run.jl`, validating every key. Runs are written to
   `data/sims/<system>/<run>` with `metadata.toml` and copies of the configuration and the resolved
   `Manifest.toml`; a directory that already holds a run is moved aside with a numbered suffix.
@@ -74,6 +78,8 @@ here.
 ### Known limitations
 
 - Total multiplicity is 7 % low for ²⁵²Cf and ²³⁹Pu and 4–5 % high for ²³⁵U and ²³³U; undiagnosed.
-- The laboratory spectrum is about 8 % soft in `⟨E⟩` for ²⁵²Cf, 1.96 MeV against a measured 2.13.
+- The laboratory spectrum is about 8 % soft in `⟨E⟩` for ²⁵²Cf, 1.96 MeV against a measured 2.13;
+  the per-neutron average raises it to 2.01 MeV and the excitation pair weighting to 1.98, so the
+  remainder is not a weighting effect.
 - Post-emission distributions are not yet ported.
 - Only the low-energy Wahl branch is implemented, so multiple-chance fission is not covered.

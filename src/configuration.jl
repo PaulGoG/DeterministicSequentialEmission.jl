@@ -2,14 +2,11 @@
     Configuration
 
 A complete run: the fissioning system, the fragmentation domain, the level density and
-evaporation models, the TXE partition, and the yield weights.
-
-Built by [`load_configuration`](@ref) from a TOML file. Every field is validated on load, and a
-section or key outside [`CONFIGURATION_KEYS`](@ref) is refused, so a pipeline cannot start from a
-configuration it is unable to honour.
-
-Where the results go is not a field, because it is not a key: a run writes to the directory
-[`system_label`](@ref) names, under the run identifier [`run_identifier`](@ref) builds.
+evaporation models, the TXE partition, and the yield weights. Built by
+[`load_configuration`](@ref) from a TOML file; every field is validated on load, and a section or
+key outside [`CONFIGURATION_KEYS`](@ref) is refused. The output location is not a field: a run
+writes to the directory named by [`system_label`](@ref), under the identifier built by
+[`run_identifier`](@ref).
 """
 struct Configuration
     system::FissioningSystem
@@ -25,6 +22,8 @@ struct Configuration
     fragment_yield::Union{FragmentYield, Nothing}
     spectrum_grid::Union{Vector{Float64}, Nothing}
     maxwellian_temperature::Float64
+    spectrum_pair_weighting::SpectrumWeighting
+    spectrum_average::SpectrumAverage
     significant_digits::Int
     source::String
     data_directory::String
@@ -51,8 +50,8 @@ end
 """
     CONFIGURATION_KEYS
 
-The sections a configuration may hold and the keys each may carry. Anything else is refused on
-load: a misspelt optional key would otherwise take its default without a word.
+The sections a configuration may hold and the keys each may carry. Any other section or key is
+refused on load, so a misspelt optional key cannot silently take its default.
 """
 const CONFIGURATION_KEYS = Dict(
     "system" => ("target_A", "target_Z", "channel", "incident_energy"),
@@ -85,8 +84,15 @@ const CONFIGURATION_KEYS = Dict(
         "kinetic_energy_dispersion",
         "kinetic_energy_dispersion_file",
     ),
-    "spectrum" =>
-        ("enabled", "maxwellian_temperature", "energy_min", "energy_max", "points"),
+    "spectrum" => (
+        "enabled",
+        "maxwellian_temperature",
+        "energy_min",
+        "energy_max",
+        "points",
+        "pair_weighting",
+        "average",
+    ),
     "output" => ("significant_digits",),
 )
 
@@ -183,11 +189,8 @@ end
 """
     load_configuration(path; data_directory) -> Configuration
 
-Read and validate a run configuration.
-
-`data_directory` is the root every input path in the file is taken relative to, `data/` beside
-the project by default, so a configuration is portable between checkouts and a data tree can
-live anywhere. Absolute paths in the file are honoured as written.
+Read and validate a run configuration. Relative input paths in the file are resolved against
+`data_directory`, `data/` beside the project by default; absolute paths are used as written.
 """
 function load_configuration(
     path::AbstractString;
@@ -226,7 +229,8 @@ function load_configuration(
         kinetic_energies,
         data_directory,
     )
-    spectrum_grid, maxwellian = _load_spectrum(document)
+    spectrum_grid, maxwellian, spectrum_pair_weighting, spectrum_average =
+        _load_spectrum(document)
     significant_digits = _load_output(document)
 
     return Configuration(
@@ -243,6 +247,8 @@ function load_configuration(
         fragment_yield,
         spectrum_grid,
         maxwellian,
+        spectrum_pair_weighting,
+        spectrum_average,
         significant_digits,
         abspath(path),
         abspath(data_directory),
@@ -334,10 +340,8 @@ function _load_fragmentation(
         "fragmentation.charge_distribution_file",
     )
     distribution = if source == "wahl"
-        # The model rather than a table: the route for a system with no evaluated ΔZ(A), σ_Z(A)
-        # of its own. Resolved in layers — this reaction's own fitted parameters, else the
-        # systematics, else the conventional means — and the layer that answered is recorded in
-        # the distribution's source. Tabulated over exactly the masses the domain will ask for.
+        # The Zₚ model, for a system without an evaluated ΔZ(A), σ_Z(A), tabulated over the
+        # domain's heavy masses; the resolved layer is recorded in the distribution's source.
         build_charge_distribution(mass_excess_table, system, lower:upper)
     elseif source == "mean"
         mean_charge_distribution()
@@ -462,8 +466,7 @@ function _load_partition(
         return ScissionModelling(deformation, model)
     end
     if method == "excitation_ratio"
-        # No package of this toolchain produces `E*_H/TXE (A_H)`, so there is no run record to
-        # read and the file is named directly.
+        # `E*_H/TXE (A_H)` has no producing run record, so the file is named directly.
         curve = read_segmented_curve(
             _input(
                 data_directory,
@@ -480,10 +483,8 @@ function _load_partition(
         return ExcitationEnergyRatio(curve)
     end
 
-    # `R_T(A_H)` is taken through the producing run's own record and never from a path typed into
-    # a configuration. The two tables that run writes side by side hold `R_T` and `r_ν`, both
-    # plausible floats in the same column, so a hand-named path can select the wrong quantity and
-    # the run will finish and report a number. The manifest is what makes the quantity checkable.
+    # `R_T(A_H)` is read through the producing run's manifest, not a configured path: that run
+    # writes `R_T` and `r_ν` side by side in the same layout, and the manifest identifies each.
     subdirectory = _value(section, "subdirectory", String, "partition.subdirectory")
     isempty(subdirectory) &&
         throw(ArgumentError("partition.subdirectory must not be empty"))
@@ -548,8 +549,8 @@ function _load_yield(
             ),
         )
     else
-        # One width unless a measured table says otherwise, and the width is then what the
-        # table falls back on where it does not reach.
+        # One width unless a measured table is given; the width is then the table's fallback
+        # outside its range.
         default = Float64(
             _bounded(
                 _value(
@@ -615,7 +616,8 @@ function _load_yield(
 end
 
 function _load_spectrum(document::AbstractDict)
-    haskey(document, "spectrum") || return nothing, 1.42
+    haskey(document, "spectrum") ||
+        return nothing, 1.42, MultiplicityWeighting(), PerFissionAverage()
     section = _section(document, "spectrum")
     maxwellian = Float64(
         _bounded(
@@ -632,7 +634,26 @@ function _load_spectrum(document::AbstractDict)
             exclusive_min = true,
         ),
     )
-    _value(section, "enabled", Bool, "spectrum.enabled", true) || return nothing, maxwellian
+    pair_weighting = _spectrum_pair_weighting(
+        _choice(
+            section,
+            "pair_weighting",
+            ("multiplicity", "excitation"),
+            "spectrum.pair_weighting",
+            "multiplicity",
+        ),
+    )
+    average = _spectrum_average(
+        _choice(
+            section,
+            "average",
+            ("per_fission", "per_neutron"),
+            "spectrum.average",
+            "per_fission",
+        ),
+    )
+    _value(section, "enabled", Bool, "spectrum.enabled", true) ||
+        return nothing, maxwellian, pair_weighting, average
     lower = Float64(
         _bounded(
             _value(section, "energy_min", Real, "spectrum.energy_min", 0.05),
@@ -661,10 +682,16 @@ function _load_spectrum(document::AbstractDict)
             max = 4000,
         ),
     )
-    # Logarithmic, because the spectrum is compared over four decades and a linear grid resolves
-    # none of the sub-MeV shape.
-    return 10 .^ range(log10(lower), log10(upper); length = points), maxwellian
+    # Logarithmic grid: the spectrum spans four decades, and a linear grid does not resolve the
+    # sub-MeV shape.
+    grid = 10 .^ range(log10(lower), log10(upper); length = points)
+    return grid, maxwellian, pair_weighting, average
 end
+
+_spectrum_pair_weighting(kind::String) =
+    kind == "excitation" ? ExcitationWeighting() : MultiplicityWeighting()
+_spectrum_average(kind::String) =
+    kind == "per_neutron" ? PerNeutronAverage() : PerFissionAverage()
 
 function _load_output(document::AbstractDict)
     section = _section(document, "output")
