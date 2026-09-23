@@ -109,7 +109,7 @@ function Solve_transcendental_eq(Eᵣ_k_last, Sₙ_k_last, a_k, A, k)
     trans_eq(Tₖ) = a_k *Tₖ^2 + epsilon_SCM(Tₖ) + (Sₙ_k_last - Eᵣ_k_last)
     T_k = find_zero(trans_eq, (0.0, Inf))
     
-    #Cutoff values to match old Fortran code root-searching algorithm
+    #Lower cutoff on the residual temperature: a root below ΔT is discarded
     #if T_k > 2 || T_k < ΔT
     if T_k < ΔT
         T_k = NaN
