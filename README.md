@@ -2,34 +2,6 @@
 
 Prompt neutron emission from fission fragments, treated sequence by sequence.
 
-Where global treatments integrate an evaporation spectrum over a residual temperature
-distribution and return averages, the DSE model solves the energy conservation equation of every
-emission sequence separately:
-
-```
-Ē_r^(k-1) − S_n^(k-1) − ⟨ε⟩_k = a_k T_k²,    k = 1 … n(A,Z,TKE)
-```
-
-with Weisskopf-Ewing evaporation spectra in the centre-of-mass system and fragment level
-densities in the Fermi-gas regime. Because the number of sequences `n` is an integer at every
-configuration, the post-neutron fragment mass `A_p = A − n` is an integer too, without rounding —
-which is what makes the model suitable for independent fission product yields.
-
-![Prompt neutron multiplicity against fragment mass, four fissioning systems](plots/multiplicity_vs_experiment.png)
-
-The sawtooth is the signature observable, and it is not fitted: the total excitation energy is
-shared between the fragments by a temperature ratio `R_T(A_H)` extracted from measured `ν(A)` by
-a companion package, the emission chain is then solved configuration by configuration, and the
-result is contracted against the measured fragment yield `Y(A, TKE)`. Total multiplicities come
-out within −7 % to +5 % of the evaluated values, with no parameter adjusted per system.
-
-![Prompt fission neutron spectrum of 252-Cf as a ratio to a Maxwellian](plots/prompt_neutron_spectrum.png)
-
-The spectrum is the same statement in energy. Model and measurement are both absolute here —
-the model spectrum integrates to one neutron by construction, and every retrieved set is
-reported against the same 1.42 MeV Maxwellian — so nothing is scaled to anything. The model is
-about 8 % soft in `⟨E⟩`, 1.96 MeV against 2.13, and the deficit is in the tail above 3 MeV.
-
 ## File structure
 
 ```
@@ -42,12 +14,69 @@ DeterministicSequentialEmission.jl/
 ├── docs/                 Documenter site, own environment
 ├── data/                 input data — see data/README.md; only the mass evaluation ships
 │   └── sims/             written by a run, data/sims/<system>/<run> — not tracked
-├── plots/                the two figures above, and the diagnostic panels, which are not tracked
+├── plots/                the two figures under The model; the diagnostic panels are not tracked
 ├── formatter/            pinned JuliaFormatter, so the gate cannot drift
 ├── check.jl              the gate: format, then test
 ├── activate.jl           activates and instantiates the root environment
 └── Project.toml
 ```
+
+<details>
+<summary>Full tree</summary>
+
+```
+DeterministicSequentialEmission.jl/
+├── src/
+│   ├── DeterministicSequentialEmission.jl   the module and its exports
+│   ├── nuclides.jl           nuclides, fissioning systems, entrance channels
+│   ├── tables.jl             delimited tables, read by column position
+│   ├── masses.jl             mass excesses and separation energies
+│   ├── charge.jl             isobaric charge distribution p(Z,A)
+│   ├── wahl.jl               Zₚ systematics, LA-13928
+│   ├── wahl_reactions.jl     per-reaction Zₚ parameters, Table A of the 1988 evaluation
+│   ├── domain.jl             fragmentation domain
+│   ├── leveldensity.jl       level density parameter: Gilbert-Cameron, BSFG
+│   ├── energetics.jl         Q, compound excitation, TXE
+│   ├── partition.jl          TXE partition: scission modelling, E*_H/TXE, R_T
+│   ├── manifest.jl           run record of a temperature-ratio extraction
+│   ├── evaporation.jl        evaporation cross sections and ⟨ε⟩
+│   ├── sequences.jl          the sequential equations and emission chains
+│   ├── yields.jl             Y(A,Z,TKE), its projections and its reconstruction
+│   ├── averaging.jl          contractions of q(A,Z,TKE) against a weight
+│   ├── spectrum.jl           centre-of-mass and laboratory spectra
+│   ├── configuration.jl      TOML schema and validation
+│   └── pipeline.jl           run_pipeline, write_results, run identifiers
+├── config/                   Cf252_sf, U235_nth, U235_nres, U233_nth, Pu239_nth
+├── scripts/run.jl            entry point
+├── plotting/                 activate.jl, Project.toml, figures.jl
+├── test/
+│   ├── activate.jl, Project.toml
+│   ├── runtests.jl           the suite, then Aqua, ExplicitImports, JET
+│   ├── physics.jl            the archived run's configuration and shared helpers
+│   ├── test_<module>.jl      one file per source file
+│   └── references/Cf252_sf/  pinned tables of the archived run
+├── docs/
+│   ├── activate.jl, Project.toml, make.jl
+│   └── src/                  index, running, naming, system, fragmentation, energetics, emission, observables
+├── data/
+│   ├── README.md             what each file is and where to obtain it
+│   ├── reference/            mass_excess_ame2020.dat ships; the other evaluations do not
+│   ├── <system>/             input data per fissioning system — not tracked
+│   └── sims/<system>/<run>/  tables and provenance of a run — not tracked
+├── plots/                    multiplicity_vs_experiment and prompt_neutron_spectrum tracked; diagnostics not
+├── formatter/                activate.jl, Project.toml — pinned JuliaFormatter
+├── .github/dormant/          CI.yml, dependabot.yml, held until the public release
+├── .JuliaFormatter.toml
+├── .gitattributes
+├── activate.jl
+├── check.jl
+├── CHANGELOG.md
+├── CITATION.cff
+├── LICENSE
+└── Project.toml
+```
+
+</details>
 
 ## Getting started
 
@@ -79,7 +108,7 @@ Redraw the figures from what those runs wrote, without solving anything again:
 julia plotting/figures.jl
 ```
 
-That draws the two figures above from every system a run has written, a panel of the quantities
+That draws the two figures under *The model* from every system a run has written, a panel of the quantities
 internal to the emission chain — `E*(A)`, `Ē_r(A)`, `⟨T⟩(A)`, `⟨ε⟩(A)` — and a diagnostic of the
 charge distribution each run was weighted by, against the two it could have taken instead: the
 `Zₚ` model built without a table, and the conventional means. Those have no experimental counterpart, so they
@@ -109,6 +138,57 @@ pinned formatter, then run the tests:
 julia check.jl            # format in place, then test
 julia check.jl --check    # report differences without rewriting
 ```
+
+## Status
+
+| Component | State |
+|---|---|
+| Package environment, test and docs environments | done |
+| Continuous integration, dependency updates, docs deployment | dormant until the public release, under `.github/dormant/` |
+| Tabular input contract, `ExforFissionData.jl`-compatible | done |
+| Mass data, `Q`, `S_n`, `TXE` with uncertainties | done |
+| Fragmentation domain, `Z_p(A)`, `p(Z,A)` | done |
+| Charge distribution — evaluated tables, then `Zₚ` per-reaction, systematics, means | done |
+| One name per quantity, from configuration key to column header (`docs/src/naming.md`) | done |
+| Level density parameter — Gilbert-Cameron, Egidy-Bucurescu BSFG | done |
+| TXE partition — scission modelling, `E*_H/TXE (A_H)`, `R_T (A_H)` | done |
+| Sequential equations — constant and variable evaporation cross section | done |
+| Fragment yields `Y(A,Z,TKE)`, its projections, and its reconstruction from marginals | done |
+| Yield averaging — contractions of `q(A,Z,TKE)`, with uncertainty | done |
+| Prompt fission neutron spectrum — centre-of-mass and laboratory, in closed form | done |
+| Configuration, provenance, entry point | done |
+| Figures (CairoMakie), redrawn from written tables | done |
+| Post-emission distributions | to port |
+
+## The model
+
+Where global treatments integrate an evaporation spectrum over a residual temperature
+distribution and return averages, the DSE model solves the energy conservation equation of every
+emission sequence separately:
+
+```
+Ē_r^(k-1) − S_n^(k-1) − ⟨ε⟩_k = a_k T_k²,    k = 1 … n(A,Z,TKE)
+```
+
+with Weisskopf-Ewing evaporation spectra in the centre-of-mass system and fragment level
+densities in the Fermi-gas regime. Because the number of sequences `n` is an integer at every
+configuration, the post-neutron fragment mass `A_p = A − n` is an integer too, without rounding —
+which is what makes the model suitable for independent fission product yields.
+
+![Prompt neutron multiplicity against fragment mass, four fissioning systems](plots/multiplicity_vs_experiment.png)
+
+The sawtooth is the signature observable, and it is not fitted: the total excitation energy is
+shared between the fragments by a temperature ratio `R_T(A_H)` extracted from measured `ν(A)` by
+a companion package, the emission chain is then solved configuration by configuration, and the
+result is contracted against the measured fragment yield `Y(A, TKE)`. Total multiplicities come
+out within −7 % to +5 % of the evaluated values, with no parameter adjusted per system.
+
+![Prompt fission neutron spectrum of 252-Cf as a ratio to a Maxwellian](plots/prompt_neutron_spectrum.png)
+
+The spectrum is the same statement in energy. Model and measurement are both absolute here —
+the model spectrum integrates to one neutron by construction, and every retrieved set is
+reported against the same 1.42 MeV Maxwellian — so nothing is scaled to anything. The model is
+about 8 % soft in `⟨E⟩`, 1.96 MeV against 2.13, and the deficit is in the tail above 3 MeV.
 
 ## Configuration
 
@@ -243,26 +323,20 @@ The prompt neutron spectrum has no archived counterpart to pin against, so it is
 instead against the identities its derivation implies — unit area, `⟨E⟩ = E_f + ⟨ε⟩`, and the
 second moment — over the whole domain.
 
-## Status
+## How to cite
 
-| Component | State |
-|---|---|
-| Package environment, test and docs environments | done |
-| Continuous integration, dependency updates, docs deployment | dormant until the public release, under `.github/dormant/` |
-| Tabular input contract, `ExforFissionData.jl`-compatible | done |
-| Mass data, `Q`, `S_n`, `TXE` with uncertainties | done |
-| Fragmentation domain, `Z_p(A)`, `p(Z,A)` | done |
-| Charge distribution — evaluated tables, then `Zₚ` per-reaction, systematics, means | done |
-| One name per quantity, from configuration key to column header (`docs/src/naming.md`) | done |
-| Level density parameter — Gilbert-Cameron, Egidy-Bucurescu BSFG | done |
-| TXE partition — scission modelling, `E*_H/TXE (A_H)`, `R_T (A_H)` | done |
-| Sequential equations — constant and variable evaporation cross section | done |
-| Fragment yields `Y(A,Z,TKE)`, its projections, and its reconstruction from marginals | done |
-| Yield averaging — contractions of `q(A,Z,TKE)`, with uncertainty | done |
-| Prompt fission neutron spectrum — centre-of-mass and laboratory, in closed form | done |
-| Configuration, provenance, entry point | done |
-| Figures (CairoMakie), redrawn from written tables | done |
-| Post-emission distributions | to port |
+A published result that rests on this package should cite the software, and the measurements
+behind its input data as `data/README.md` describes. `CITATION.cff` carries the same entry.
+
+```bibtex
+@software{Gogita_DeterministicSequentialEmission_jl,
+  author  = {Gogîță, Paul-Adrian},
+  title   = {DeterministicSequentialEmission.jl: prompt neutron emission from fission fragments, sequence by sequence},
+  year    = {2026},
+  url     = {https://github.com/PaulGoG/DeterministicSequentialEmission.jl},
+  license = {MIT},
+}
+```
 
 ## Licence
 
