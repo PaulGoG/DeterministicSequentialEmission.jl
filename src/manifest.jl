@@ -2,18 +2,11 @@
     ManifestCurve
 
 One `[[segmented_curve]]` of a temperature-ratio manifest: its label, its kind, and the two files
-the producing run tabulated it in.
-
-This is the manifest's *description* of a curve, not the curve. [`SegmentedCurve`](@ref) is the
-piecewise-linear function itself, read from one of these files; two different things, so two
-different names.
-
-`kind` is `"dataset"` for a curve extracted from a single measurement and `"systematic_trend"` for
-the combined trend fitted across them.
-
-**Only `temperature_ratio_file` is ever read.** `multiplicity_ratio_pivots_file` holds `r_ν`, not
-`R_T`, and is carried here so that the difference is visible rather than so that it can be
-selected: [`temperature_ratio_path`](@ref) resolves the first and has no route to the second.
+the producing run tabulated it in. It describes a curve; the function itself is a
+[`SegmentedCurve`](@ref) read from one of these files. `kind` is `"dataset"` for a curve
+extracted from a single measurement and `"systematic_trend"` for the combined trend fitted
+across them. Only `temperature_ratio_file` is read, through [`temperature_ratio_path`](@ref);
+`multiplicity_ratio_pivots_file` holds `r_ν`, not `R_T`, and is recorded only.
 """
 struct ManifestCurve
     label::String
@@ -53,10 +46,9 @@ const MANIFEST_CURVE_KINDS = ("dataset", "systematic_trend")
     MANIFEST_ORDINATE
     MANIFEST_ABSCISSA
 
-What a temperature-ratio manifest must declare its curves to be tabulations of: `R_T` against
-`A_H`, and nothing else. A manifest that declares anything else is refused rather than read,
-because every quantity this consumer could be handed instead — `r_ν` above all — is a plausible
-float in the same column position and would run to completion on the wrong physics.
+The ordinate and abscissa a temperature-ratio manifest must declare: `R_T` against `A_H`. A
+manifest declaring any other quantity is refused, since `r_ν` and similar quantities occupy the
+same column position and would otherwise be read without error.
 """
 const MANIFEST_ORDINATE = "R_T"
 
@@ -67,11 +59,9 @@ const MANIFEST_ABSCISSA = ["A_H"]
     ManifestSystem
 
 The `[system]` table of a manifest: the fissioning system the producing run extracted its curves
-from. Field names mirror the keys.
-
-It is recorded rather than enforced. A run of one system may legitimately take its curve from
-another system's manifest — a resonance-channel run reading the thermal system's trend, for
-instance — so this is here to be read, not to be matched against the consumer's own system.
+from. Field names mirror the keys. It is recorded, not matched against the consuming run's
+system, since a run may take its curve from another system's manifest, e.g. a resonance-channel
+run using the thermal system's trend.
 """
 struct ManifestSystem
     label::String
@@ -84,9 +74,8 @@ struct ManifestSystem
     compound_A::Int
     compound_Z::Int
 
-    # Written out rather than left to the default constructor: with no generic path into the
-    # type, every argument is concrete at the call site and nothing has to be converted from an
-    # abstract value on the way in.
+    # Explicit inner constructor: concrete conversions at the call site, no generic `convert`
+    # path into the type.
     function ManifestSystem(
         label::AbstractString,
         notation::AbstractString,
@@ -121,20 +110,11 @@ end
     TemperatureRatioManifest
 
 The run record a temperature-ratio extraction writes beside its results, and the only route by
-which this package will take an `R_T(A_H)` curve.
-
-It exists because a curve staged by hand carries nothing that can be checked. `R_T ≈ 1.2` and
-`r_ν ≈ 0.5` occupy the same column of two files written side by side; staging the wrong one runs
-to completion and reports a number that looks like a result. Reading the manifest instead makes
-the quantity a matter of record: the run declares what its curves tabulate, this package refuses
-a manifest declaring anything but `R_T` against `A_H`, and each curve is resolved through its
-`temperature_ratio_file` and through no other field.
-
-`columns` is held because the manifest states it, and is **documentation only** — it is never
-consulted to find a column. Readers take columns by position, and nothing here may be changed to
-a lookup by header text.
-
-Built by [`read_temperature_ratio_manifest`](@ref).
+which an `R_T(A_H)` curve enters a run. The manifest declares the tabulated quantity, so that
+`R_T` and `r_ν`, which occupy the same column of two files written side by side, cannot be
+confused; each curve is resolved through its `temperature_ratio_file` only. `columns` is recorded
+as stated by the manifest and is not used to locate a column, since readers take columns by
+position. Built by [`read_temperature_ratio_manifest`](@ref).
 """
 struct TemperatureRatioManifest
     system::ManifestSystem
@@ -144,7 +124,7 @@ struct TemperatureRatioManifest
     curves::Vector{ManifestCurve}
     source::String
 
-    # As above: concrete argument types, so no `Any`-accepting fallback is generated.
+    # Concrete argument types, so no `Any`-accepting fallback is generated.
     function TemperatureRatioManifest(
         system::ManifestSystem,
         ordinate::AbstractString,
@@ -173,8 +153,8 @@ function Base.show(io::IO, manifest::TemperatureRatioManifest)
     return nothing
 end
 
-# Reading one manifest key with its type, so that a malformed manifest names the offending key
-# rather than failing somewhere downstream. `label` gives the key its fully qualified spelling.
+# Read one manifest key with its type; a malformed manifest fails here, naming the key.
+# `label` is the fully qualified key name used in the message.
 function _manifest_value(
     table::AbstractDict,
     key::AbstractString,
@@ -215,25 +195,17 @@ end
 """
     read_temperature_ratio_manifest(path) -> TemperatureRatioManifest
 
-Read and validate the run record of a temperature-ratio extraction.
+Read and validate the run record of a temperature-ratio extraction. Each check throws an
+`ArgumentError` naming the offending key:
 
-The manifest is the index of what one run produced. Every check below refuses a manifest this
-package cannot honour, naming the key at fault, so that a run cannot start from one it would have
-had to guess about:
-
-- `[run] ordinate` must be `"R_T"` and `[run] abscissa` must be `["A_H"]`. A manifest indexing any
-  other quantity belongs to a different consumer.
+- `[run] ordinate` must be `"R_T"` and `[run] abscissa` must be `["A_H"]`.
 - Every `[[segmented_curve]]` must carry `label`, `kind`, `temperature_ratio_file` and
   `multiplicity_ratio_pivots_file`, with `kind` drawn from [`MANIFEST_CURVE_KINDS`](@ref).
-- Labels must be distinct, since a label is what selects a curve.
-- A curve whose two files are the same path is refused: the two hold different quantities, and a
-  producer that wrote one path twice has lost that distinction before this package sees it.
+- Labels must be distinct, since a label selects a curve.
+- The two files of a curve must be distinct paths, since they hold different quantities.
 
-`[run] columns` is read and kept as documentation. It is **not** used to locate a column — the
-CSV it describes is read by position, like every other table this package reads.
-
-File paths inside the manifest are taken relative to the directory the manifest itself sits in,
-which is where the producing run wrote them; an absolute path is honoured as written.
+`[run] columns` is recorded but not used to locate a column. File paths inside the manifest are
+resolved relative to the manifest's directory; absolute paths are taken as written.
 """
 function read_temperature_ratio_manifest(path::AbstractString)
     isfile(path) || throw(ArgumentError("no manifest at $path"))
@@ -273,8 +245,7 @@ function read_temperature_ratio_manifest(path::AbstractString)
         ),
     )
 
-    # Documentation, never a lookup key. Held so that what the manifest states is visible, and
-    # absent rather than invented when the producer omitted it.
+    # Recorded only, never a lookup key; empty when the manifest omits it.
     columns = String[]
     if haskey(run_table, "columns")
         for entry in
@@ -362,16 +333,10 @@ end
 """
     staged_manifest(directory) -> String
 
-The one manifest a staged temperature-ratio run leaves in `directory`.
-
-A run of the extraction writes `manifest_<run>.toml` beside its tables, and staging it here is a
-plain copy of that directory — the run token stays in the file name, so what was staged remains
-traceable without a configuration having to name a token that changes every time the producer
-runs.
-
-Exactly one is required. None means nothing was staged; several means two runs were copied into
-one place and nothing says which to take, which is the ambiguity a run identifier exists to
-prevent. Both are refused, naming the directory.
+The path of the single `manifest_<run>.toml` in `directory`, the staged copy of a
+temperature-ratio run's results directory. The run token stays in the file name, so the staged
+run is traceable without the configuration naming it. A directory holding no manifest, or more
+than one, is refused with an error naming the directory.
 """
 function staged_manifest(directory::AbstractString)
     isdir(directory) ||
@@ -424,12 +389,9 @@ end
     temperature_ratio_path(manifest, label) -> String
 
 The file holding `R_T(A_H)` for the curve labelled `label`, resolved against the directory the
-manifest sits in.
-
-**This is the only route from a manifest to a file, and it resolves `temperature_ratio_file`.**
-There is deliberately no counterpart for `multiplicity_ratio_pivots_file`: that table holds the
-multiplicity ratio `r_ν`, which is a different quantity in the same column position, and a
-function that returned it would be a function whose whole purpose was to be called by mistake.
+manifest sits in. This is the only route from a manifest to a file. No counterpart exists for
+`multiplicity_ratio_pivots_file`, which holds the multiplicity ratio `r_ν` in the same column
+position.
 """
 function temperature_ratio_path(manifest::TemperatureRatioManifest, label::AbstractString)
     curve = manifest_curve(manifest, label)

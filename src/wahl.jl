@@ -2,18 +2,17 @@
     WAHL_LOW_ENERGY
 
 Coefficients of the `Zₚ` model of A. C. Wahl, *Systematics of Fission-Product Yields*, LA-13928
-(2002), Table 2, for the low-energy branch `PE ≤ 8 MeV`. Each entry is `(P₁ … P₅)` of eq. (17),
+(2002), doi:10.2172/809574, Table 2, for the low-energy branch `PE ≤ 8 MeV`. Each entry is
+`(P₁ … P₅)` of eq. (17),
 
 ```
 Par = P₁ + P₂[Z_F − 92] + P₃[A_F − 236] + P₄[PE − 6.551] + P₅[A_F − 236]²
 ```
 
 The even-odd factors `F_Z` and `F_N` are carried but not applied by default; see
-[`wahl_charge_distribution`](@ref) for what turning them on does and does not buy.
-
-Table 2 also lists `FZ SL = 0.0030`, a slope of `F_Z` through the peak regions. Eq. (11d) as the
-report prints it makes `F_Z(A')` constant there, so no slope is applied, and the parameter is not
-carried. Footnote b gives the `F_N` slope as `−0.0006(10)`, consistent with zero.
+[`wahl_charge_distribution`](@ref). The peak-region slope `FZ SL = 0.0030` of Table 2 is not
+carried, since eq. (11d) makes `F_Z(A')` constant there; the `F_N` slope of footnote b,
+`−0.0006(10)`, is consistent with zero.
 """
 const WAHL_LOW_ENERGY = (
     σZ140 = (0.566, 0.0, 0.0064, 0.0109, 0.0),
@@ -42,31 +41,23 @@ const WAHL_VALIDITY = (charge = 90:98, mass = 230:252, excitation = 8.0)
 """
     WahlSystematics
 
-The `Zₚ` model evaluated for one fissioning nucleus: the nine parameters of eq. (17) and the
-mass-number boundaries that divide `A'` into wing, peak and near-symmetry regions.
+The `Zₚ` model evaluated for one fissioning nucleus: the parameters of eq. (17) of LA-13928
+(2002), doi:10.2172/809574, and the mass-number boundaries of eq. (10) that divide `A'` into
+wing, peak and near-symmetry regions. `A'` is the pre-neutron fragment mass, the index of
+fragments in this package, so `ΔZ` and `σ_Z` transfer without a shift; both are quoted for the
+heavy fragment, the convention of [`ChargeDistribution`](@ref) and of eqs. (9c) and (9d).
 
-`A'` is the pre-neutron fragment mass, which is the mass number this package indexes fragments
-by, so `ΔZ` and `σ_Z` transfer without a shift. Both are quoted for the heavy fragment, the
-convention of [`ChargeDistribution`](@ref) and of eqs. (9c) and (9d) of the report.
+`shell` and `symmetric` are empty for a systematics evaluation, which places both regions from
+the boundaries. Where filled, from footnotes a and c of Table A of Wahl, At. Data Nucl. Data
+Tables 39, 1 (1988), doi:10.1016/0092-640X(88)90016-2, they take precedence: `σ_Z(50)` applies
+inside `shell` and the average width outside it, and the even-odd factors are unity inside
+`symmetric`.
 
-`shell` and `symmetric` are empty for a systematics evaluation, which places both regions from the
-boundaries below. They are filled only where a source places them directly — Table A of the 1988
-evaluation does, in footnotes a and c — and then they take precedence: `σ_Z(50)` applies inside
-`shell` and the average width outside it, and the even-odd factors are unity inside `symmetric`.
-
-The boundaries follow eq. (10). `Ba` and `Bb` are the ends of the steep interval where `Zₚ`
-crosses the `Z = 50` shell closure; the report prints `Ba = A'_max` and `Bb = A_F − A'_max`,
-which puts the heavy-side crossing at the lower end. Figs. 18b, 19b and 20b place the labels the
-other way round, and only that reading is continuous with the peak regions on either side, so it
-is the one used. `Bb` then lands within a mass unit of where the evaluated tables put the maximum
-of `ΔZ`, which is what it is defined to be; the constructor records the measurement.
-
-**Parameters fitted to the reaction at hand are the better object and take precedence wherever they
-exist.** Fig. 18 quotes reduced `χ²` of 7.9 for these systematics against 2.9 for a per-reaction
-least-squares fit of the same model; the evaluated tables are the latter, and so is
-[`WAHL_PER_REACTION`](@ref). This is what stands in for them where a reaction has neither, in place
-of a single mean `ΔZ` and `σ_Z` applied at every mass. [`build_charge_distribution`](@ref) picks
-between the two.
+`Ba` and `Bb` bound the interval where `Zₚ` crosses the `Z = 50` shell closure, with
+`Ba = A_F − A'_max` and `Bb = A'_max` as in Figs. 18b, 19b and 20b; the printed eq. (10) swaps
+the two, and only the assignment of the figures is continuous with the adjacent peak regions.
+Per-reaction parameters, [`WAHL_PER_REACTION`](@ref), take precedence where they exist;
+[`build_charge_distribution`](@ref) selects between the two.
 """
 struct WahlSystematics
     Z_F::Int
@@ -94,8 +85,7 @@ struct WahlSystematics
     shell::Vector{UnitRange{Int}}
     symmetric::UnitRange{Int}
 
-    # Spelled out rather than left to the default constructor, and converting at the boundary:
-    # every field is concrete inside the type however the caller arrived at its arguments.
+    # Explicit inner constructor converting every argument to its concrete field type.
     function WahlSystematics(
         Z_F::Integer,
         A_F::Integer,
@@ -162,11 +152,9 @@ _wahl_parameter(coefficients, Z_F::Integer, A_F::Integer, PE::Real) =
     WahlSystematics(Z_F, A_F, PE) -> WahlSystematics
 
 Evaluate the `Zₚ` model for a fissioning nucleus `(Z_F, A_F)` at precursor excitation energy
-`PE` in MeV — zero for spontaneous fission, `Sₙ + Eₙ` for neutron-induced fission.
-
-Throws for a nucleus or an excitation energy outside the range the systematics was fitted over,
-[`WAHL_VALIDITY`](@ref): extrapolating a set of empirical polynomials past their data is not a
-degradation that announces itself in the numbers.
+`PE` in MeV — zero for spontaneous fission, `Sₙ + Eₙ` for neutron-induced fission. Throws for
+a nucleus or an excitation energy outside [`WAHL_VALIDITY`](@ref), the range the systematics was
+fitted over.
 """
 function WahlSystematics(Z_F::Integer, A_F::Integer, PE::Real)
     Z_F in WAHL_VALIDITY.charge || throw(
@@ -200,17 +188,8 @@ function WahlSystematics(Z_F::Integer, A_F::Integer, PE::Real)
     FZSLW = evaluate(:FZSLW)
     FNSLW = evaluate(:FNSLW)
 
-    # Eq. (12): the A' at which Zₚ reaches 50, blended from two estimates.
-    #
-    # Only the second, AK2, satisfies the condition the quantity is named for — substituting it
-    # into Zₚ(A') = A'(Z_F/A_F) + ΔZ_max returns exactly 50, while AK1 returns 49.27 for 236-U
-    # and 48.99 for 240-Pu — which makes the blend look wrong on its face. It is not. `Bb` is by
-    # construction the mass at which ΔZ attains ΔZ_max, and the evaluated tables say where that
-    # is: 125 for 235-U, 124 for 239-Pu, 126 for 252-Cf. The blend gives 124.60, 124.04 and
-    # 126.77, within 0.04 to 0.8 of each; AK2 alone gives 126.47, 125.87 and 126.77 and is worse
-    # in the two cases where the two differ. Dropping AK1 also widens the near-symmetry region
-    # away from the tabulated one and takes the largest ΔZ difference over the heavy branch from
-    # 0.227 to 0.583 for 235-U. The published formula is right and is kept.
+    # Eq. (12): the A' at which Zₚ reaches 50, a blend of two estimates AK1 and AK2 weighted by
+    # F₁. The blend places `Bb`, the mass of maximum ΔZ, closer to the evaluated tables than AK2.
     F₁ = clamp((250 - A_F) / 14, 0.0, 1.0)
     A_max = F₁ * (50 * (A_F / Z_F) - ΔZmax / SL50) + (1 - F₁) * ((50 - ΔZmax) * (A_F / Z_F))
 
@@ -249,10 +228,9 @@ end
 
 Whether the `Zₚ` systematics can be evaluated for a fissioning system at all: the compound
 nucleus inside the fitted `Z_F` and `A_F` ranges of [`WAHL_VALIDITY`](@ref), and a precursor
-excitation energy the mass table can form and the low-energy branch covers.
-
-Asked before constructing, so that a caller offering the systematics as one option among several
-can leave it out where it does not apply instead of catching the constructor's refusal.
+excitation energy the mass table can form and the low-energy branch covers. Queried before
+construction, so that a caller can omit the systematics where it does not apply instead of
+catching the constructor's exception.
 """
 function is_wahl_applicable(table::MassExcessTable, system::FissioningSystem)
     system.compound.Z in WAHL_VALIDITY.charge || return false
@@ -283,10 +261,8 @@ _wahl_peak_dispersion(w::WahlSystematics, A) = w.σZ140 + w.σZSL * (A - 140)
     wahl_polarization(systematics, A) -> Float64
 
 Charge distribution `ΔZ` of the heavy fragment at pre-neutron mass `A`, eqs. (11a), (12b),
-(12d), (12f), (13b) and (14b).
-
-Defined for `A ≥ A_F/2`. The light partner takes `−ΔZ` at its complement, which is how
-[`most_probable_charge`](@ref) is applied here and what eq. (9d) states.
+(12d), (12f), (13b) and (14b). Defined for `A ≥ A_F/2`; the light partner takes `−ΔZ` at its
+complement, as eq. (9d) states and [`most_probable_charge`](@ref) applies.
 """
 function wahl_polarization(systematics::WahlSystematics, A::Real)
     _wahl_check_heavy(systematics, A)
@@ -310,18 +286,13 @@ end
 Dispersion `σ_Z` of the isobaric charge distribution at pre-neutron mass `A`, eqs. (11b), (12c),
 (12e), (12g), (13d) and (14c). Defined for `A ≥ A_F/2`.
 
-This is the **model parameter**, not the quantity an evaluated table tabulates. Wahl's tables
-carry `rms(A) = √(σ_Z(A)² + 1/12)`, eq. (8) of the 1988 evaluation, the second moment of the
-yields over the integer charge lattice; [`wahl_charge_distribution`](@ref) converts to that
-footing, because that is what this package consumes.
-
-Unlike `ΔZ` this is a step function: eqs. (12c) and (12g) hold `σ_Z(50)` flat over the two legs
-adjoining the `Z = 50` crossing while the crossing itself keeps the peak value, and eq. (14c)
-returns the far wing to `σ_Z(B5)` rather than continuing the wing slope. Fig. 18a, p. 31, draws
-both discontinuities.
-
-Where `systematics.shell` is non-empty the regions it names replace all of that, because the
-source that supplied the parameters placed their regions too and the two belong together.
+This is the model parameter; evaluated tables carry `rms(A) = √(σ_Z(A)² + 1/12)`, eq. (8) of
+Wahl, At. Data Nucl. Data Tables 39, 1 (1988), doi:10.1016/0092-640X(88)90016-2, the second
+moment of the yields over the integer charge lattice, and [`wahl_charge_distribution`](@ref)
+converts to that form. Unlike `ΔZ`, `σ_Z` is a step function: eqs. (12c) and (12g) hold
+`σ_Z(50)` flat over the two legs adjoining the `Z = 50` crossing while the crossing keeps the
+peak value, and eq. (14c) returns the far wing to `σ_Z(B5)` (Fig. 18a, p. 31). Where
+`systematics.shell` is non-empty, the regions it names replace this construction.
 """
 function wahl_dispersion(systematics::WahlSystematics, A::Real)
     _wahl_check_heavy(systematics, A)
@@ -344,14 +315,12 @@ end
 The even-odd proton and neutron factors at heavy-fragment mass `A`, eqs. (11d), (11e), (12a),
 (13f), (13h), (14d) and (14e).
 
-Both are `1` through the near-symmetry region, where eq. (12a) sets `F(A) = 1`, and both take
-their peak values through the peak and far-wing regions. Only the wing regions carry a slope.
-
-Where `systematics.symmetric` is non-empty it names that region directly and there are no slopes,
-which is the 1988 evaluation's simpler statement of the same thing.
-
-These are the factors the plain-Gaussian charge distribution of this package does **not** apply.
-[`wahl_charge_distribution`](@ref) can fold them in; what that is worth is set out there.
+Both are `1` through the near-symmetry region, where eq. (12a) sets `F(A) = 1`, take their peak
+values through the peak and far-wing regions, and carry a slope only in the wing regions. Where
+`systematics.symmetric` is non-empty it names the near-symmetry region directly and no slopes
+apply, following Wahl, At. Data Nucl. Data Tables 39, 1 (1988),
+doi:10.1016/0092-640X(88)90016-2. The plain-Gaussian charge distribution of this package does
+not apply these factors; [`wahl_charge_distribution`](@ref) folds them in on request.
 """
 function wahl_even_odd_factors(systematics::WahlSystematics, A::Real)
     _wahl_check_heavy(systematics, A)
@@ -374,12 +343,10 @@ end
 The fractional independent yields `FI(Z, A)` of the `charges` charge numbers nearest `Zₚ(A)`,
 Gaussian modulated by the even-odd factors and renormalized to sum to one.
 
-The renormalization is not optional and is not a truncation correction. LA-13928 p. 21: the factor
-"applied to achieve Σ(FI) = 1.00 for each A, is required because the even-odd factors, F(A),
-destroy the inherent normalization properties of Gaussian distributions". A plain Gaussian keeps
-its own normalization and needs none, which is why nothing else in this package renormalizes.
-
-`F(A)` is composed from the parities of `Z` and `N = A − Z`: `F_Z F_N` for even-even,
+The renormalization compensates the even-odd factors, not truncation; LA-13928 (2002),
+doi:10.2172/809574, p. 21: the factor "applied to achieve Σ(FI) = 1.00 for each A, is required
+because the even-odd factors, F(A), destroy the inherent normalization properties of Gaussian
+distributions". `F(A)` is composed from the parities of `Z` and `N = A − Z`: `F_Z F_N` for even-even,
 `F_Z/F_N` for even-odd, `F_N/F_Z` for odd-even and `1/(F_Z F_N)` for odd-odd.
 """
 function wahl_charge_yield(systematics::WahlSystematics, A::Integer, charges::Integer = 11)
@@ -422,43 +389,29 @@ end
     wahl_charge_distribution(systematics, masses) -> ChargeDistribution
     wahl_charge_distribution(table, system, masses) -> Union{ChargeDistribution,Nothing}
 
-Tabulate the `Zₚ` systematics over heavy-fragment masses `masses`, as the same
-[`ChargeDistribution`](@ref) a measured table would produce. This is the route for a fissioning
-system with no evaluated `ΔZ(A)`, `σ_Z(A)` of its own: it is a fitted systematics rather than a
-measurement, but it carries the mass dependence a single mean value discards.
+Tabulate the `Zₚ` systematics over heavy-fragment masses `masses` as a
+[`ChargeDistribution`](@ref), the route for a fissioning system without an evaluated `ΔZ(A)`,
+`σ_Z(A)`. The systematics is a fit rather than a measurement but carries the mass dependence a
+single mean value discards. Without the even-odd option, `σ_Z` is put on the lattice footing of
+eq. (8) of Wahl, At. Data Nucl. Data Tables 39, 1 (1988), doi:10.1016/0092-640X(88)90016-2.
+The second method returns `nothing` when the mass table cannot form the precursor excitation
+energy.
 
 ```julia
-distribution = wahl_charge_distribution(masses, spontaneous_fission(Nuclide(98, 252)), 126:174)
+distribution = wahl_charge_distribution(mass_table, spontaneous_fission(Nuclide(98, 252)), 126:174)
 ```
 
 # The even-odd option
 
-`even_odd = true` folds in the factors `F_Z` and `F_N` the model carries and this package
-otherwise omits: `p(Z,A)` is built by [`wahl_charge_yield`](@ref), which is a Gaussian modulated
-by `F(A)` and renormalized, and a plain Gaussian is then fitted to it at each mass by its first
-two moments. `ΔZ(A)` is that Gaussian's centre less `Z_UCD(A)`, and `σ_Z(A)` its width. `charges`
-is how many charge numbers the fit runs over.
-
-**This is the construction of the evaluated tables**, which are effective Gaussian parameters of
-exactly this kind rather than the model's own `σ_Z`. It is why those tables oscillate with a
-period of about five masses — `Zₚ` advances by `Z_F/A_F` per mass unit, so even-charge dominance
-recurs every `2A_F/Z_F ≈ 5.1` — and a smooth systematics cannot.
-
-**What it buys, measured against the three evaluated tables.** It reproduces the ripple: the
-modulation it introduces is `0.36` in `ΔZ` and `0.30` in `σ_Z`, against `0.32` and `0.30` actually
-present, and the two correlate at `0.62` for ²³⁵U, `0.36` for ²³⁹Pu and `0.07` for ²⁵²Cf —
-following the even-odd effect's own decline with the mass of the fissioning system.
-
-**What it does not buy.** The mean absolute difference from an evaluated table barely moves,
-because that difference is dominated by the systematics' own parameter error and not by the
-missing even-odd layer. Fig. 18 of LA-13928 quantifies it: reduced `χ²` of 7.9 for the systematics
-against 2.9 for a per-reaction least-squares fit. Eq. (17) predicts the parameters *on average
-across reactions*; an evaluated table was built from that reaction's own fitted parameters. So
-this is the better of two estimates where no table exists, and not a route to reproducing one.
-
-Off by default, because the tabulated distributions this package normally reads already carry the
-even-odd effect inside their fitted widths, and folding the factors in on top of one of those
-would count it twice.
+`even_odd = true` folds in the factors `F_Z` and `F_N`: `p(Z,A)` is built by
+[`wahl_charge_yield`](@ref) over `charges` charge numbers, and a plain Gaussian is fitted to it at
+each mass by its first two moments, `ΔZ(A)` being its centre less `Z_UCD(A)` and `σ_Z(A)` its
+width. This is the construction of the evaluated tables, whose effective Gaussian parameters
+oscillate with a period of `2A_F/Z_F ≈ 5.1` masses as even-charge dominance recurs. The option
+reproduces that ripple but not the per-reaction parameters: eq. (17) of LA-13928 (2002),
+doi:10.2172/809574, predicts parameters on average across reactions. It is off by default
+because tabulated distributions already carry the even-odd effect in their fitted widths, and
+folding the factors in on top would count it twice.
 """
 function wahl_charge_distribution(
     systematics::WahlSystematics,
@@ -472,8 +425,8 @@ function wahl_charge_distribution(
     σ_Z = Dict{Int, Float64}()
     for A in masses
         if even_odd
-            # Already a moment of the charge yields over the lattice, which is the footing an
-            # evaluated table is on, so nothing further is applied.
+            # Already a moment of the charge yields over the lattice, the footing of an evaluated
+            # table, so no lattice correction applies.
             distribution[Int(A)], σ_Z[Int(A)] =
                 _wahl_effective_gaussian(systematics, Int(A), charges)
         else
@@ -497,15 +450,10 @@ end
 """
     _wahl_lattice_dispersion(σ_Z) -> Float64
 
-Wahl eq. (8) of the 1988 evaluation, `rms = √(σ_Z² + 1/12)`.
-
-`σ_Z` is the width of the model's Gaussian; `rms` is the second moment of the yields over the
-integer charge lattice, which is what an evaluated table tabulates and what this package reads as
-a charge dispersion. The two differ by the variance of a unit interval, and the systematics has to
-be put on the second footing before it can stand in for a table.
-
-Measured against the four evaluated tables, applying it lowers the mean absolute difference by
-34 % for ²³³U, 24 % for ²³⁵U, 5 % for ²⁵²Cf and 4 % for ²³⁹Pu — it never makes one worse.
+Eq. (8) of Wahl, At. Data Nucl. Data Tables 39, 1 (1988), doi:10.1016/0092-640X(88)90016-2,
+`rms = √(σ_Z² + 1/12)`. `σ_Z` is the width of the model Gaussian; `rms` is the second moment of
+the yields over the integer charge lattice, the quantity an evaluated table tabulates and this
+package reads as a charge dispersion. The two differ by the variance of a unit interval.
 """
 _wahl_lattice_dispersion(σ_Z::Real) = sqrt(σ_Z^2 + 1 / 12)
 

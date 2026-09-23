@@ -1,16 +1,11 @@
 """
     FragmentQuantity
 
-A model quantity tabulated over fragment configurations, `q(A, Z, TKE)`.
-
-The rank-3 array the whole model is built on. Every observable is a contraction of one of these
-against a weight — the isobaric charge distribution `p(Z,A)` when reducing over charge alone,
-the yield `Y(A,Z,TKE)` otherwise — so the averaging routines take a quantity and a weight and
-differ only in which indices they sum.
-
-Values may be `Float64` or `Measurement{Float64}`. That choice is how a quantity says whether it
-carries an uncertainty, and it is the whole of the decision: everything downstream of the TXE
-partition has none to carry, and comes out bare without anyone writing a rule for it.
+A model quantity tabulated over fragment configurations, `q(A, Z, TKE)`, stored sparsely.
+Every observable is a contraction of one of these against a weight, the isobaric charge
+distribution `p(Z,A)` when reducing over charge alone and the yield `Y(A,Z,TKE)` otherwise.
+Values are `Float64` or `Measurement{Float64}`, the element type stating whether the quantity
+carries an uncertainty; quantities downstream of the `TXE` partition are `Float64`.
 """
 struct FragmentQuantity{T <: Union{Float64, Measurement{Float64}}}
     values::Dict{Tuple{Int, Int, Float64}, T}
@@ -39,15 +34,10 @@ Contract `q(A,Z,TKE)` against a weight over the indices named in `over`, leaving
 ⟨q⟩(x) = Σ q(x,…) W(x,…) / Σ W(x,…)
 ```
 
-`over` is any subset of `(:mass, :charge, :kinetic_energy)`; the result is indexed by whatever
-is left, ascending. Reducing over all three gives a single number — use
-[`total_average`](@ref) for that.
-
-**A configuration enters only where both the quantity and the weight exist**, and it enters both
-sums or neither. That is what keeps a coarse sweep from being diluted by a finer yield grid:
-where the model solved nothing, nothing is averaged, rather than a zero being averaged in. The
-prototype does the same with its `isassigned` guards, and it is the reason a grid mismatch
-costs sampling rather than magnitude.
+`over` names exactly two of `(:mass, :charge, :kinetic_energy)`; the result is indexed by the
+remaining one, ascending. Reducing over all three is [`total_average`](@ref). A configuration
+enters both sums only where both the quantity and the weight exist, so an unsolved
+configuration is omitted rather than averaged in as zero.
 
 Uncertainties propagate by the standard expression for a weighted mean, with both terms,
 
@@ -55,10 +45,9 @@ Uncertainties propagate by the standard expression for a weighted mean, with bot
 δ²⟨q⟩ = Σᵢ [ (Wᵢ/ΣW) δqᵢ ]² + Σᵢ [ ((qᵢ − ⟨q⟩)/ΣW) δWᵢ ]²
 ```
 
-the first from the quantity, the second from the weights. Neither is written out here: the
-arithmetic is done in `Measurement`s and the derivatives fall out, which also keeps the terms
-correlated where they share a source — `Y(A,Z,TKE)` cells at one `(A,TKE)` are `p(Z,A)` times a
-single measurement, and treating them as independent understates the result by a third.
+the first from the quantity, the second from the weights. Both follow from `Measurement`
+arithmetic, which also retains correlations between terms sharing a source, such as the
+`Y(A,Z,TKE)` cells at one `(A,TKE)`, which are `p(Z,A)` times a single measurement.
 """
 function average(
     quantity::FragmentQuantity{Q},
@@ -99,14 +88,10 @@ end
 
 Contract over all three indices, optionally restricting to a set of fragment masses.
 
-`masses` is how the light and heavy groups are separated: pass the light range for `⟨q⟩_L`, the
-heavy range for `⟨q⟩_H`, and nothing for the whole distribution. The prototype takes the same
-argument for the same reason.
-
-Both ranges include `A₀/2` when the domain reaches symmetric fission, because both fragments of
-a symmetric split carry that mass. The two groups therefore sum to slightly more than twice the
-whole, which is a property of the grouping rather than an error.
-
+`masses` separates the fragment groups: the light range gives `⟨q⟩_L`, the heavy range
+`⟨q⟩_H`, and `nothing` the whole distribution. Both ranges include `A₀/2` when the domain
+reaches symmetric fission, so configurations at `A₀/2` enter both groups and the two group
+weights sum to slightly more than the whole. Returns
 `nothing` when no configuration carries both a value and a weight.
 """
 function total_average(
@@ -167,18 +152,12 @@ weights_from(yields::FragmentYield) = FragmentQuantity(copy(yields.values))
 """
     weights_from(domain, distribution, kinetic_energies) -> FragmentQuantity
 
-Use the isobaric charge distribution as the weight, for a run with no experimental yield.
-
-`p(Z,A)` alone, broadcast over every kinetic energy the quantity is tabulated at — which is what
-the prototype falls back on when no `Y(A,TKE)` is supplied, and what its `main_DSE.out` writes in
-place of a yield. Reducing over charge gives the same answer either way: `Y = p·Y(A,TKE)` and
-`Y(A,TKE)` does not depend on `Z`, so it cancels between numerator and denominator.
-
-Reducing over kinetic energy does **not**. A flat weight makes every `TKE` on the grid equally
-likely, so the contraction sits at the midpoint of the grid rather than where the measurement
-does, and every quantity built on `TXE` moves with it. Where no joint `Y(A,TKE)` was measured,
-[`factorized_yield`](@ref) reconstructs one from the two marginals that were, which is a far
-better weight than this.
+Use the isobaric charge distribution as the weight, for a run with no experimental yield:
+`p(Z,A)` broadcast over `kinetic_energies`. Reducing over charge gives the same result as with
+`Y = p·Y(A,TKE)`, since `Y(A,TKE)` does not depend on `Z` and cancels. Reducing over kinetic
+energy does not: a flat weight centres the contraction on the midpoint of the `TKE` grid, and
+every quantity built on `TXE` shifts accordingly. Where no joint `Y(A,TKE)` was measured,
+[`factorized_yield`](@ref) reconstructs one from the measured marginals.
 """
 function weights_from(
     domain::FragmentationDomain,

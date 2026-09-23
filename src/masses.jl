@@ -1,12 +1,9 @@
 """
     MassExcessTable
 
-Tabulated mass excesses with their uncertainties, in MeV, indexed by nuclide.
-
-Values are stored as `Measurement`s so that every quantity derived from them carries its
-uncertainty without the call sites combining variances by hand — and so that a nuclide
-entering an expression twice is treated as correlated with itself rather than as two
-independent draws.
+Tabulated mass excesses with their uncertainties, in MeV, indexed by nuclide. Values are
+`Measurement`s, so derived quantities carry their uncertainty and a nuclide entering an
+expression twice is correlated with itself.
 """
 struct MassExcessTable
     Δ::Dict{Nuclide, Measurement{Float64}}
@@ -37,10 +34,8 @@ end
 
 Layout of the tabulated mass-excess files: one header row, then
 `Z A element mass_excess mass_excess_uncertainty`, whitespace-delimited, with the mass excess and
-its uncertainty in keV.
-
-This is the layout of `data/reference/mass_excess_ame2020.dat`, the one data file the package
-ships.
+its uncertainty in keV. This is the layout of the shipped file
+`data/reference/mass_excess_ame2020.dat`.
 """
 const MASS_EXCESS_SPEC =
     TableSpec([:Z, :A, :symbol, :mass_excess, :mass_excess_uncertainty]; skip = 1)
@@ -48,8 +43,7 @@ const MASS_EXCESS_SPEC =
 """
     HEADERLESS_MASS_EXCESS_SPEC
 
-The same five columns with no header row, the form the table circulated in before the shipped
-copy was given one.
+The same five columns without a header row.
 
 ```julia
 read_mass_excess_table(path; spec = HEADERLESS_MASS_EXCESS_SPEC)
@@ -64,13 +58,8 @@ const KEV_TO_MEV = 1.0e-3
     read_mass_excess_table(path; spec = MASS_EXCESS_SPEC) -> MassExcessTable
 
 Read a mass-excess table, converting from keV to MeV on load so that MeV is the only energy
-unit inside the package.
-
-**Columns are taken by position**, not by header text: charge, mass, element symbol, mass excess,
-uncertainty. Nothing here may be changed to a lookup by name.
-
-Throws if the file repeats a nuclide, which would otherwise leave the winner decided by row
-order.
+unit inside the package. Columns are taken by position, not by header text: charge, mass,
+element symbol, mass excess, uncertainty. Throws if the file repeats a nuclide.
 """
 function read_mass_excess_table(path::AbstractString; spec::TableSpec = MASS_EXCESS_SPEC)
     table = read_delimited_table(path, spec)
@@ -97,11 +86,9 @@ end
 """
     mass_excess(table, nuclide) -> Union{Measurement{Float64},Nothing}
 
-Mass excess in MeV, or `nothing` when the nuclide is absent from the table.
-
-Absence is ordinary rather than exceptional: a deterministic fragmentation domain reaches
-nuclides for which no measured or extrapolated mass exists, and those configurations are
-excluded rather than treated as an error.
+Mass excess in MeV, or `nothing` when the nuclide is absent from the table. A deterministic
+fragmentation domain reaches nuclides with no measured or extrapolated mass; those
+configurations are excluded rather than treated as errors.
 """
 function mass_excess(table::MassExcessTable, nuclide::Nuclide)
     return get(table.Δ, nuclide, nothing)

@@ -11,13 +11,7 @@ const MASS_ENERGY_YIELD_SPEC =
     MassEnergyYield
 
 Measured pre-neutron fragment mass yield `Y(A, TKE)`, on the grid the measurement was reported
-on.
-
-That grid is the measurement's, not the model's. It is common for the two to differ — the
-²⁵²Cf(SF) distribution behind the archived runs is tabulated every 1 MeV while those runs swept
-`TKE` every 2 MeV — so which grid a given average runs on is a question with a numerical answer,
-and [`coverage`](@ref) is what answers it.
-
+on, which may differ from the model's `TKE` grid; [`coverage`](@ref) quantifies the mismatch.
 `A` runs over both fragments, light and heavy, so the distribution sums to 200 % rather than
 100 %.
 """
@@ -49,19 +43,11 @@ end
 """
     read_mass_energy_yield(path; spec = MASS_ENERGY_YIELD_SPEC) -> MassEnergyYield
 
-Read a measured `Y(A, TKE)` distribution.
-
-**Columns are taken by position**, not by header text: mass, total kinetic energy, yield,
-uncertainty. Nothing here may be changed to a lookup by name.
-
-Cells whose yield is not finite are dropped rather than carried: an unmeasured `(A, TKE)` is
-marked `NaN` in these tables, and a missing measurement is not a yield of zero.
-
-A repeated `(A, TKE)` is accepted when both rows carry the same yield and rejected when they do
-not. The ²³⁵U(n,f) distribution lists `A = A₀/2` twice at every kinetic energy, with identical
-values — the symmetric mass written from each side of the split — and it is one measurement, so
-it is counted once. The prototype reaches the same result by iterating `unique(A)` and taking
-the first match. A repeat that disagrees is a real inconsistency in the file and says so.
+Read a measured `Y(A, TKE)` distribution. Columns are taken by position, not by header text:
+mass, total kinetic energy, yield, uncertainty. Cells with a non-finite yield are dropped, since
+an unmeasured `(A, TKE)` is marked `NaN` and is not a yield of zero. A repeated `(A, TKE)` with
+identical yields, such as `A = A₀/2` listed from each side of the split, is counted once; a
+repeat with differing yields throws an `ArgumentError`.
 """
 function read_mass_energy_yield(
     path::AbstractString;
@@ -101,8 +87,8 @@ end
     MEAN_KINETIC_ENERGY_SPEC
 
 Layouts of the two marginals a factorized yield is built from:
-`A Y [Y_uncertainty]` and `A TKE [TKE_uncertainty]`, each with one header row. Both are what a
-retrieval writes for the `Y_vs_A` and `TKE_vs_A` observables.
+`A Y [Y_uncertainty]` and `A TKE [TKE_uncertainty]`, each with one header row, as written by a
+retrieval for the `Y_vs_A` and `TKE_vs_A` observables.
 """
 const MASS_YIELD_SPEC =
     TableSpec([:A, :Y, :Y_uncertainty]; skip = 1, optional = (:Y_uncertainty,))
@@ -121,12 +107,8 @@ const KINETIC_ENERGY_DISPERSION_SPEC = TableSpec([:A, :sigma_TKE]; skip = 1)
 """
     KineticEnergyDispersion
 
-The dispersion `σ_TKE(A)` of `P(TKE|A)`, indexed by fragment mass, with the value used where a
-mass is not tabulated.
-
-The same shape as [`ChargeDistribution`](@ref), and for the same reason: a measured table covers
-the masses the measurement reached, and a reconstruction has to say what it does elsewhere rather
-than stopping. `default` carries the conventional single width.
+The dispersion `σ_TKE(A)` of `P(TKE|A)` in MeV, indexed by fragment mass, with `default`, a
+single width, used where a mass is not tabulated. Structured as [`ChargeDistribution`](@ref).
 """
 struct KineticEnergyDispersion
     σ_TKE::Dict{Int, Float64}
@@ -150,18 +132,16 @@ end
 """
     DEFAULT_KINETIC_ENERGY_DISPERSION
 
-The single width `P(TKE|A)` is given where no table says otherwise, in MeV. Stated rather than
-fitted, and close to what the measured tables carry: yield-weighted, the joint distributions of
-the shipped systems run 7.9 to 9.6 MeV.
+The single width of `P(TKE|A)` used where no table applies, in MeV. A stated value, not a fit;
+the yield-weighted widths of the shipped joint distributions lie between 7.9 and 9.6 MeV.
 """
 const DEFAULT_KINETIC_ENERGY_DISPERSION = 10.0
 
 """
     read_kinetic_energy_dispersion(path; spec, default) -> KineticEnergyDispersion
 
-Read a tabulated `σ_TKE(A)`.
-
-**Columns are taken by position**, not by header text: mass number, then dispersion.
+Read a tabulated `σ_TKE(A)`. Columns are taken by position, not by header text: mass number,
+then dispersion.
 """
 function read_kinetic_energy_dispersion(
     path::AbstractString;
@@ -187,7 +167,7 @@ end
 """
     uniform_kinetic_energy_dispersion(σ_TKE) -> KineticEnergyDispersion
 
-One width at every mass, which is what a reconstruction falls back on with no table.
+One width at every mass, the fallback of a reconstruction without a table.
 """
 uniform_kinetic_energy_dispersion(σ_TKE::Real = DEFAULT_KINETIC_ENERGY_DISPERSION) =
     KineticEnergyDispersion(Dict{Int, Float64}(), σ_TKE, "uniform")
@@ -224,31 +204,18 @@ was not:
 Y(A, TKE) = Y(A) · G(TKE; ⟨TKE⟩(A), σ)
 ```
 
-with `G` a Gaussian normalized over `energies`. `Y(A)` is a measured pre-neutron mass yield and
-`⟨TKE⟩(A)` a measured mean total kinetic energy against the same mass number — for 233-U(n,f),
-for instance, both come from the same experiment.
+with `G` a Gaussian normalized over `energies`, from a measured pre-neutron mass yield `Y(A)` and
+a measured mean total kinetic energy `⟨TKE⟩(A)`. The result is a reconstruction that retains the
+mass dependence of `⟨TKE⟩`; a single mean at every mass over-subtracts at the asymmetric
+splits, where `⟨TKE⟩` is about 20 MeV lower than in the peaks, and inverts the heavy branch of
+`ν(A)`. The mass correlation of the width is carried only as far as `dispersion` supplies it,
+either a measured [`KineticEnergyDispersion`](@ref) or a single width in MeV.
 
-**This is a reconstruction, not a measurement, and it is the mass dependence of `⟨TKE⟩` that
-makes it worth doing.** A single mean kinetic energy applied at every mass over-subtracts at the
-asymmetric splits, where `⟨TKE⟩` is 20 MeV lower than in the peaks, starves the heavy fragment of
-excitation, and turns the rising heavy branch of `ν(A)` into a falling one. Checked directly:
-replacing the measured `Y(A,TKE)` of 235-U(n_th,f) with a mass-independent Gaussian at its own
-`⟨TKE⟩ = 170.5 MeV` takes `ν(160)` from 2.02 down to 0.73 and `⟨ν⟩` from 2.524 to 2.280. Keeping
-the mass dependence is what the factorization is for.
-
-What it cannot recover is the correlation the joint distribution carries. The dispersion of
-`P(TKE|A)` varies with mass, and `dispersion` is either a measured
-[`KineticEnergyDispersion`](@ref) table or a single width applied everywhere. The mass dependence
-is worth supplying where it was measured: across the shipped systems the joint distributions carry
-a `σ_TKE(A)` running from about 6 to 13 MeV, so one width is a summary of a real spread rather
-than a property of the system.
-
-A mass without a tabulated `⟨TKE⟩` is dropped: extrapolating the quantity whose mass dependence
-is the point of the exercise would defeat it. Complementary masses inherit the mean of their
-partner, since `TKE` is a property of the split rather than of one fragment.
-
-**Columns are taken by position** in both files, not by header text: mass and yield in the first,
-mass and mean kinetic energy in the second. Nothing here may be changed to a lookup by name.
+A mass without a tabulated `⟨TKE⟩` is dropped rather than extrapolated. A complementary mass,
+`compound_mass − A`, not tabulated itself inherits the mean of its partner, since `TKE` is a
+property of the split.
+The result is renormalized to `total`. Columns are taken by position in both files, not by
+header text: mass and yield in the first, mass and mean kinetic energy in the second.
 """
 function factorized_yield(
     mass_yield_path::AbstractString,
@@ -308,8 +275,8 @@ function factorized_yield(
         throw(ArgumentError("no mass carries both a yield and a mean kinetic energy; \
                        $(mass_table.path) and $(energy_table.path) do not overlap"))
 
-    # Renormalized to the same 200 % a measured two-fragment distribution carries, so a run on a
-    # factorized yield and a run on a measured one are weighted alike.
+    # Renormalized to the 200 % of a measured two-fragment distribution, so factorized and
+    # measured yields weight a run alike.
     scale = total / running
     for key in keys(values)
         values[key] *= scale
@@ -325,21 +292,12 @@ end
 """
     fragment_charge_probabilities(domain, distribution) -> Dict{Nuclide,Float64}
 
-The isobaric charge probability `p(Z,A)` of every fragment the domain produces.
-
-**Each nuclide gets one value, evaluated against its own mass's `Zₚ`** — not accumulated over
-the fragmentations it appears in, and not inherited from a complementary fragment. Away from
-mass symmetry the distinction is invisible, because `Zₚ(A_L) = Z₀ − Zₚ(A_H)` makes the light
-fragment's Gaussian the mirror of the heavy one's. At `A = A₀/2` it is the whole difference: a
-nuclide there belongs to two different fragmentations with two different probabilities, and the
-yield of a cell `(A, Z)` is a property of the cell.
-
-This is the quantity `Y(A,Z,TKE) = p(Z,A) Y(A,TKE)` is built from. It is deliberately not
-[`fragments`](@ref), which sums a nuclide's contributions to answer a different question — how
-often the domain produces it.
-
-`p` is the analytic Gaussian, unnormalized over the retained charges; see the note in
-`src/charge.jl` for why.
+The isobaric charge probability `p(Z,A)` of every fragment the domain produces, the factor of
+`Y(A,Z,TKE) = p(Z,A) Y(A,TKE)`. Each nuclide receives one value, evaluated against the `Zₚ` of
+its own mass, neither accumulated over the fragmentations it appears in nor inherited from a
+complementary fragment; the distinction matters only at `A = A₀/2`. This differs from
+[`fragments`](@ref), which sums a nuclide's contributions over the domain. `p` is the analytic
+Gaussian, unnormalized over the retained charges; see `src/charge.jl`.
 """
 function fragment_charge_probabilities(
     domain::FragmentationDomain,
@@ -391,11 +349,8 @@ end
 """
     DEFAULT_YIELD_TOTAL
 
-What a fragment yield distribution sums to: 200, because a fission event makes two fragments and
-each mass distribution is quoted as a percentage.
-
-Named rather than written into the normalization, because it is a convention and the convention
-should be visible where it is applied.
+The normalization of a fragment yield distribution: 200, since a fission event produces two
+fragments and each mass distribution is quoted as a percentage.
 """
 const DEFAULT_YIELD_TOTAL = 200.0
 
@@ -409,15 +364,10 @@ Spread the measured `Y(A, TKE)` over charge numbers,
 Y(A, Z, TKE) = p(Z, A) Y(A, TKE)
 ```
 
-and renormalize the result to `total`.
-
-The renormalization is what makes the unnormalized `p(Z,A)` harmless downstream: whatever weight
-the retained charge numbers fail to capture is divided out once, over the whole distribution,
-rather than per mass row. A domain spanning too few charges per mass therefore still yields a
-distribution summing to 200, but the shape it summed from is the honest one.
-
-Cells are taken on the **measurement's** `TKE` grid, not the model's. Use [`coverage`](@ref)
-before averaging a model quantity over these yields.
+and renormalize the result to `total`. The weight not captured by the retained charge numbers
+is divided out once over the whole distribution, not per mass row, so the unnormalized
+`p(Z,A)` does not distort the shape. Cells are taken on the measurement's `TKE` grid, not the
+model's; [`coverage`](@ref) quantifies the overlap.
 """
 function build_fragment_yield(
     domain::FragmentationDomain,
@@ -452,14 +402,9 @@ end
 """
     coverage(yields, energies) -> NamedTuple
 
-How much of a yield distribution a model sweep actually reaches.
-
-Returns the fraction of the total yield that sits on `energies`, the fraction that does not, and
-the two `TKE` grids. A sweep coarser than the measurement leaves yield behind, and an average
-taken without noticing is an average over part of the distribution.
-
-For the archived ²⁵²Cf runs, whose measurement is tabulated every 1 MeV and whose sweep stepped
-2 MeV, the answer is that **half the yield lies off the sweep**.
+The part of a yield distribution a model sweep reaches: `reached`, the fraction of the total
+yield on `energies`; `missed`, the remainder; `swept` and `tabulated`, the two `TKE` grids. A
+sweep coarser than the measurement averages over part of the distribution only.
 
 # Examples
 
@@ -528,7 +473,7 @@ end
 `⟨TKE⟩(A)`, the yield-weighted mean total kinetic energy at each fragment mass.
 
 Defined at every mass the distribution covers, light and heavy; the two halves carry the same
-information, since a fragmentation's `TKE` belongs to the pair rather than to either fragment.
+information, since `TKE` belongs to the pair.
 """
 function mean_kinetic_energy_by_mass(yields::FragmentYield)
     weighted = Dict{Int, Float64}()

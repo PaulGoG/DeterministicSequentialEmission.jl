@@ -33,20 +33,16 @@ const NEUTRON = Nuclide(0, 1)
 """
     CHANNELS
 
-The entrance channels a fissioning system may be declared with: spontaneous fission, and
-thermal, resonance-region and fast neutron-induced fission.
-
-The channel is spelled as the field spells it and not as a reaction code writes it. It is what
-distinguishes a thermal run of a system from a resonance run of the same system, which `n,f`
-alone cannot, and it is what names the system in a path — see [`system_label`](@ref).
+Entrance channels of a fissioning system: spontaneous fission and thermal, resonance-region and
+fast neutron-induced fission. The channel distinguishes systems that share the reaction code
+`n,f` and names the system in a path; see [`system_label`](@ref).
 """
 const CHANNELS = ("sf", "nth", "nres", "nfast")
 
 """
     CHANNEL_REACTION
 
-The reaction code each entrance channel stands for. The code is derived rather than configured,
-because a key that can only be redundant or wrong does not belong in a configuration file.
+Reaction code of each entrance channel, derived from the channel rather than configured.
 """
 const CHANNEL_REACTION =
     Dict("sf" => "0,f", "nth" => "n,f", "nres" => "n,f", "nfast" => "n,f")
@@ -54,7 +50,7 @@ const CHANNEL_REACTION =
 """
     REACTIONS
 
-Neutrons absorbed by the target in each reaction, which is what derives the compound mass
+Number of neutrons absorbed by the target in each reaction, giving the compound mass
 `A₀ = A_target + REACTIONS[reaction]`.
 """
 const REACTIONS = Dict("0,f" => 0, "n,f" => 1)
@@ -62,16 +58,11 @@ const REACTIONS = Dict("0,f" => 0, "n,f" => 1)
 """
     FissioningSystem(compound, target, incident_energy, channel)
 
-The fissioning system, holding both the target and the compound nucleus explicitly.
-
-For spontaneous fission the two coincide and `incident_energy` is zero. For neutron-induced
-fission the compound nucleus is the target plus one neutron, and `incident_energy` is the
-kinetic energy of the incident neutron in MeV.
-
-Keeping both nuclides as separate fields is deliberate: the mass number that defines the
-fragmentation domain is that of the compound nucleus, while validation of a requested fragment
-range and the labelling of a fission case refer to the target. Deriving one from the other at
-use sites is what makes the distinction easy to lose.
+The fissioning system, holding the target and the compound nucleus as separate fields. For
+spontaneous fission the two coincide and `incident_energy` is zero; for neutron-induced fission
+the compound nucleus is the target plus one neutron, and `incident_energy` is the kinetic energy
+of the incident neutron in MeV. The compound nucleus defines the fragmentation domain; the target
+names the fission case.
 
 # Examples
 
@@ -144,9 +135,9 @@ spontaneous_fission(nuclide::Nuclide) = FissioningSystem(nuclide, nuclide, 0.0, 
 The system formed by `target` capturing a neutron of kinetic energy `incident_energy` in MeV,
 on the entrance channel `channel` — one of `"nth"`, `"nres"` or `"nfast"`.
 
-The compound nucleus carries `REACTIONS["n,f"]` more mass units than the target. The channel
-still has to agree with the incident energy: the thermal, resonance and fast boundaries are
-conventions rather than thresholds this package can enforce.
+The compound nucleus carries `REACTIONS["n,f"]` more mass units than the target. Consistency of
+the channel with the incident energy is not checked, the thermal, resonance and fast boundaries
+being conventions rather than thresholds.
 """
 function neutron_induced_fission(
     target::Nuclide,
@@ -164,11 +155,8 @@ end
     system_label(system) -> String
 
 The one token that names a fissioning system, `<ElementSymbol><A><_channel>`: `Cf252_sf`,
-`U235_nth`, `U235_nres`. It is the directory a run writes to, the directory its input is read
-from, and the name of the configuration file that declares it.
-
-The typeset form for a figure or a caption is [`system_notation`](@ref); one name may not mean
-both.
+`U235_nth`, `U235_nres`. It names the output directory of a run, its input directory, and its
+configuration file. The typeset form is [`system_notation`](@ref).
 
 # Examples
 
@@ -188,8 +176,8 @@ system_label(system::FissioningSystem) =
 
 The typeset form of a fissioning system for a figure or a caption: `²⁵²Cf(sf)`, `²³⁵U(nth,f)`.
 
-The channel appears as the plain field spelling inside the reaction parentheses, because that is
-how the fission literature writes it and it survives a terminal, a PDF and a grep equally.
+The channel appears in its plain spelling inside the reaction parentheses, following the
+notation of the fission literature.
 
 # Examples
 
@@ -220,7 +208,7 @@ end
     symmetric_mass(system) -> Float64
 
 The mass number of a symmetric split of the compound nucleus, `A₀ / 2`. Not generally an
-integer; used to validate requested heavy-fragment ranges.
+integer; requested heavy-fragment ranges are validated against it.
 """
 symmetric_mass(system::FissioningSystem) = system.compound.A / 2
 

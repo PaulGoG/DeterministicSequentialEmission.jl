@@ -41,21 +41,16 @@ is_solved(sequence::EmissionSequence) = sequence.temperature !== nothing
 """
     EmissionChain
 
-The full sequential emission from one initial fragment at one `(A, Z, TKE)`.
+The full sequential emission from one initial fragment at one `(A, Z, TKE)`, characterised by
+two distinct counts.
 
-Two counts characterise it and they are not interchangeable.
-
-`possible` is `n`, the number of prompt neutrons emitted: the chain is continued while the
-residual can still afford a separation energy once the kinetic energy carried away by the
-neutrons already emitted is returned. Because `n` is an integer at every configuration, the
-post-neutron fragment mass `A_p = A − n` is an integer without rounding — which is the reason
-the model treats emission sequentially rather than through an integrated temperature
-distribution.
-
-`solved` is `k_max ≤ n`, the number of sequences whose equation admits an acceptable
-temperature. Quantities defined only where a temperature exists — `T`, `Ē_r`, `⟨ε⟩` — are
-averaged over `k_max`; padding the remainder with zeros would dilute a temperature with values
-that are not temperatures.
+# Fields
+- `possible`: `n`, the number of prompt neutrons emitted. The chain continues while the
+  residual can afford a separation energy once the kinetic energy carried away by the neutrons
+  already emitted is returned. `n` is an integer, so the post-neutron fragment mass
+  `A_p = A − n` is an integer without rounding.
+- `solved`: `k_max ≤ n`, the number of sequences whose equation admits an acceptable
+  temperature. `T`, `Ē_r` and `⟨ε⟩` are averaged over these `k_max` sequences only.
 """
 struct EmissionChain
     fragment::Nuclide
@@ -93,25 +88,18 @@ end
 
 The prompt neutron multiplicity `ν`, zero for a chain that emits nothing.
 
-`ν` is the sequence average of the emission index. The model reduces every per-sequence
-quantity `q_k` the same way — Tudora, *EPJA* 54, 87 (2018) eq. (12); *EPJA* 56, 84 (2020)
-eq. (4); the 2021 review eq. (20) —
+`ν` is the sequence average of the emission index. Every per-sequence quantity `q_k` is reduced
+by the same operator, eq. (12) of Tudora, *EPJA* 54, 87 (2018), doi:10.1140/epja/i2018-12521-7;
+eq. (4) of Tudora, *EPJA* 56, 84 (2020), doi:10.1140/epja/s10050-020-00123-x; eq. (20) of Tudora, EPJ Web Conf. 256, 00017 (2021),
+doi:10.1051/epjconf/202125600017,
 
 ```
 ⟨q⟩ = (1/n) Σ_{k=1}^{n} q_k
 ```
 
-and `ν` is that operator evaluated at `q_k = k`, so `ν = (1 + 2 + … + n)/n = (n+1)/2`. It is
-the multiplicity of the averaged emission sequence, and it is the quantity with an experimental
-counterpart to compare against.
-
-It is **deliberately not** `n`, and the two are not interchangeable. `n` counts the sequences
-of one configuration; `ν` is a sequence average, obtained exactly as `⟨T⟩`, `⟨ε⟩` and `⟨Ē_r⟩`
-are. [`post_neutron_mass`](@ref) takes `n`, not `ν`, and the reason is stated there.
-
-Yield-weighted over the archived ²⁵²Cf(SF) run the two come out at `⟨ν⟩_pair = 3.48` against
-`⟨n⟩_pair = 5.01`, with the measured multiplicity at 3.757. Both conventions are settled and
-preserved; see the note in `post_neutron_mass` for what follows from holding both.
+evaluated at `q_k = k`, so `ν = (1 + 2 + … + n)/n = (n+1)/2`. It is the multiplicity of the
+averaged emission sequence and the quantity compared with measurement. It differs from `n`, the
+number of sequences, which [`post_neutron_mass`](@ref) uses.
 """
 neutron_multiplicity(chain::EmissionChain) =
     chain.possible == 0 ? 0.0 : (chain.possible + 1) / 2
@@ -119,20 +107,12 @@ neutron_multiplicity(chain::EmissionChain) =
 """
     post_neutron_mass(chain) -> Int
 
-The mass number of the last residual fragment, `A_p = A − n`. An integer by construction.
+The mass number of the last residual fragment, `A_p = A − n`, an integer by construction.
 
-`n`, not `ν`. This is a property of the chain rather than an average over it: the model steps
-the cascade to exhaustion and `A − n` is the nucleus it ends on. Integer `A_p` without rounding
-is the reason for treating emission sequentially at all — a global treatment yields only an
-averaged `ν(A,Z,TKE)`, so its `A − ν` must be rounded, which obstructs independent fission
-product yields (Tudora, *EPJA* 58, 126 (2022), §2.4).
-
-The two conventions are held together deliberately and are not reconciled. Stated plainly so
-nobody has to rediscover it: over the archived ²⁵²Cf(SF) run the chain removes 5.01 nucleons per
-fission while `ν` reports 3.48, so a naive `⟨A⟩ − ⟨A_p⟩ = ⟨ν⟩` identity does not hold here and
-should not be asserted anywhere downstream. `A_p` answers "which nucleus is left", `ν` answers
-"how many neutrons does the averaged sequence carry"; they are different questions and the
-model does not claim they have the same answer.
+`A_p` uses `n`, not `ν`: it is a property of the chain, the nucleus on which the cascade ends,
+rather than a sequence average. A global treatment yields only an averaged `ν(A,Z,TKE)`, whose
+`A − ν` must be rounded (Tudora, *EPJA* 58, 126 (2022), doi:10.1140/epja/s10050-022-00766-y, §2.4). Consequently
+`⟨A⟩ − ⟨A_p⟩` equals the yield average of `n`, not `⟨ν⟩`.
 """
 post_neutron_mass(chain::EmissionChain) = chain.fragment.A - chain.possible
 
@@ -162,9 +142,7 @@ end
         -> EmissionChain
 
 Solve the sequential equations for one fragment, starting from its excitation energy at full
-acceleration.
-
-Two stages, and the distinction between them is what separates `k_max` from `n`.
+acceleration. Two stages separate `k_max` from `n`.
 
 The first solves
 
@@ -227,7 +205,7 @@ function emission_chain(
     end
 
     # Second stage: emissions that remain possible once the neutrons' kinetic energy is
-    # returned. These have no temperature but are prompt neutrons all the same.
+    # returned. These carry no temperature but count towards `n`.
     residual += carried_away
     while true
         Sₙ = neutron_separation_energy(table, emitting)

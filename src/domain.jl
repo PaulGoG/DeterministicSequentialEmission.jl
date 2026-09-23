@@ -33,14 +33,7 @@ is_symmetric(fragmentation::Fragmentation) = fragmentation.heavy.A == fragmentat
 
 The deterministic set of fragmentations the model sweeps: every heavy mass in
 `heavy_masses`, each with `charges_per_mass` charge numbers around `Zₚ(A)`, paired with its
-complement.
-
-Entries are sorted by heavy mass and then by heavy charge, as whole rows. The prototype sorted
-the mass and charge columns independently and then looked each value up by `(A, Z)`, taking the
-first match. Sorting whole rows is `O(N log N)` against that lookup's `O(N²)` and cannot depend
-on a first match, but the stronger claim once made here — that the column-wise sort mispairs a
-mass with a charge — was checked and could not be reproduced: over a full domain the two agree
-on every row, because the charges are grouped by `unique(sort(A))` and so stay with their mass.
+complement. Entries are sorted as whole rows by heavy mass and then by heavy charge.
 """
 struct FragmentationDomain
     system::FissioningSystem
@@ -83,11 +76,8 @@ end
 
 Build the fragmentation domain: heavy masses from symmetric fission to a maximum asymmetry in
 steps of one mass unit, each carrying an odd number of charge numbers centred on
-`Zₚ(A) = Z_UCD(A) + ΔZ(A)`, weighted by the isobaric charge distribution.
-
-`heavy_masses` is validated against the **compound** nucleus, which is the nucleus that
-actually splits. Validating against the target instead — as the prototype does — happens to
-agree only when the lower bound sits exactly at `A₀/2`.
+`Zₚ(A) = Z_UCD(A) + ΔZ(A)`, weighted by the isobaric charge distribution. `heavy_masses` is
+validated against the compound nucleus, the nucleus that splits.
 
 # Examples
 
@@ -139,9 +129,8 @@ function fragmentation_domain(
         σ_Z = charge_dispersion(distribution, A_heavy)
         Zₚ = most_probable_charge(system, A_heavy, ΔZ)
         for Z_heavy in charge_numbers(Zₚ, charges_per_mass)
-            # Both fragments have to be nuclei. Too many charge numbers per mass, or a Zₚ near
-            # the edge of the range, walks the window off one end and asks for a fragment with
-            # no protons or with all of them.
+            # Both fragments must carry protons; a wide charge window or a Zₚ near the edge of
+            # the range can leave one fragment with none.
             0 < Z_heavy < system.compound.Z || throw(
                 ArgumentError(
                     "charge number $Z_heavy at A_H = $A_heavy leaves no protons for one " *
@@ -171,19 +160,11 @@ end
     fragments(domain) -> Vector{Nuclide}
 
 Every distinct nuclide the domain produces as a fragment, light and heavy, each once, in
-ascending `(A, Z)`.
-
-The set, not a weighting. It exists so per-nuclide quantities — `Sₙ(A,Z)`, `a(A,Z)` — can be
-evaluated once each rather than recomputed at every configuration and every emission sequence,
-which is what makes the prototype's averaging routines quadratic.
-
-**It carries no probability, deliberately.** A nuclide's weight depends on what is being asked:
-the isobaric charge distribution `p(Z,A)` for building yields, which is
-[`fragment_charge_probabilities`](@ref); the yield `Y(A,Z,TKE)` for averaging a model quantity;
-neither of which is a property of the domain. An earlier version returned a summed probability
-here, which was well defined and answered a question nothing asks.
-
-See [`distinct_splits`](@ref) for the pair-level view, which is not the same collection.
+ascending `(A, Z)`. Per-nuclide quantities such as `Sₙ(A,Z)` and `a(A,Z)` are evaluated once
+over this set rather than at every configuration and emission sequence. The set carries no
+probability, since a nuclide's weight depends on the quantity: `p(Z,A)` for building yields,
+[`fragment_charge_probabilities`](@ref), or `Y(A,Z,TKE)` for averaging a model quantity. See
+[`distinct_splits`](@ref) for the pair-level view, which is a different collection.
 """
 function fragments(domain::FragmentationDomain)
     seen = Set{Nuclide}()
@@ -197,18 +178,14 @@ end
 """
     distinct_splits(domain) -> Vector{Fragmentation}
 
-Every physical split the domain contains, each once.
-
-Away from mass symmetry this is just `domain.entries`. At `A_H == A_L == A₀/2` it is not: the
-domain enumerates `(H=Z, L=Z₀−Z)` and `(H=Z₀−Z, L=Z)`, which label the **same** split from the
-two sides. They are kept apart in `entries` because each labels a different heavy fragment and
-carries that fragment's own `p(Z,A)` — correct for a fragment-indexed sweep, and what the
-archived run writes. Counted as splits, they are one.
-
-A sum over pairs does not iterate this: it iterates `entries` and halves the yield of every
-mass-symmetric one (`_pair_weight`), which also covers the self-complementary split
-`(Z₀/2, Z₀/2)` that this list keeps at the yield of two fragments. The survivor here is the
-`Z_H >= Z_L` labelling, so the result does not depend on iteration order.
+Every physical split the domain contains, each once. Away from mass symmetry this is
+`domain.entries`. At `A_H == A_L == A₀/2` the domain enumerates `(H=Z, L=Z₀−Z)` and
+`(H=Z₀−Z, L=Z)`, which label the same split from both sides; `entries` keeps both, each carrying
+its heavy fragment's own `p(Z,A)` as a fragment-indexed sweep requires, while this list keeps the
+`Z_H >= Z_L` labelling, so the result does not depend on iteration order. A sum over pairs
+iterates `entries` instead and halves the yield of every mass-symmetric one (`_pair_weight`),
+which also covers the self-complementary split `(Z₀/2, Z₀/2)` that this list keeps at the yield
+of two fragments.
 
 # Examples
 

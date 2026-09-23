@@ -2,19 +2,19 @@
     WahlReactionParameters
 
 `Zₚ`-model parameters determined for one fission reaction by least squares, rather than estimated
-for it from a trend across reactions.
+from a trend across reactions. Fields are Table A of A. C. Wahl, *Atomic Data and Nuclear Data
+Tables* **39**, 1 (1988), doi:10.1016/0092-640X(88)90016-2, p. 7, which fits the model to the
+evaluated fractional independent yields of that reaction.
 
-Fields are Table A of A. C. Wahl, *Atomic Data and Nuclear Data Tables* **39**, 1 (1988), p. 7,
-which fits the model to the evaluated fractional independent yields of that reaction. `assumed`
-names the parameters the evaluation could not determine and fixed by assumption, which the table
-marks with parentheses; they carry no uncertainty and should not be read as measurements.
+# Fields
 
-`channels` are the entrance channels the fit covers, which is what keeps a reaction reaching the
-same compound nucleus at a different excitation energy from claiming these parameters.
-
-`shell` is where the narrow dispersion `σ_Z(50)` applies and `symmetric` where the even-odd
-factors are set to one, both as footnotes a and c of that table give them. Each covers the `Z = 50`
-closure and its complement by mass, so both legs of the range appear where the table gives two.
+- `assumed`: parameters the evaluation fixed by assumption, parenthesised in the table; they
+  carry no uncertainty and are not measurements.
+- `channels`: entrance channels the fit covers, so that a reaction reaching the same compound
+  nucleus at a different excitation energy does not match.
+- `shell`, `symmetric`: where the narrow dispersion `σ_Z(50)` applies and where the even-odd
+  factors are unity, as footnotes a and c of Table A give them. Each covers the `Z = 50` closure
+  and its complement by mass, so both legs appear where the table gives two.
 """
 struct WahlReactionParameters
     label::String
@@ -33,8 +33,7 @@ struct WahlReactionParameters
     symmetric::UnitRange{Int}
     assumed::Vector{Symbol}
 
-    # Spelled out rather than left to the default constructor, so the fields are built from
-    # exactly these types and inference never has to consider a conversion that cannot happen.
+    # Explicit inner constructor taking exactly the concrete field types, with no conversion.
     function WahlReactionParameters(
         label::String,
         channels::Vector{String},
@@ -89,10 +88,9 @@ end
 """
     WAHL_PER_REACTION
 
-Table A of the 1988 evaluation, keyed by the charge and mass of the fissioning nucleus.
-
-The four reactions it covers are the four that evaluation was made for. Values with their
-uncertainties, as published:
+Table A of Wahl, At. Data Nucl. Data Tables 39, 1 (1988), doi:10.1016/0092-640X(88)90016-2,
+keyed by the charge and mass of the fissioning nucleus, for the four reactions that evaluation
+covers. Values with their uncertainties, as published:
 
 | Parameter | U235T | U233T | PU239T | CF252S |
 |---|---|---|---|---|
@@ -105,13 +103,11 @@ uncertainties, as published:
 | `ΔA'_Z` | 0.9(2) | (0.9) | (0.9) | (0.7) |
 | `ΔZ_max` | 0.7(1) | (0.7) | (0.7) | (0.5) |
 
-Parenthesised values were assumed rather than determined, and are listed in each entry's
-`assumed` field.
-
-Note that `σ_Z` here is a single average over the mass range rather than a sloped function: the
-1988 evaluation takes `σ_Z(A) = σ_Z` outside the shell region and `σ_Z(50)` inside it. It is the
-model's Gaussian width, so [`wahl_charge_distribution`](@ref) puts it on the lattice footing of
-eq. (8) before returning a [`ChargeDistribution`](@ref).
+Parenthesised values were assumed rather than determined and are listed in each entry's
+`assumed` field. `σ_Z` is a single average over the mass range: the 1988 evaluation takes
+`σ_Z(A) = σ_Z` outside the shell region and `σ_Z(50)` inside it. It is the model's Gaussian
+width, which [`wahl_charge_distribution`](@ref) puts on the lattice footing of eq. (8) before
+returning a [`ChargeDistribution`](@ref).
 """
 const WAHL_PER_REACTION = Dict(
     (92, 236) => WahlReactionParameters(
@@ -187,18 +183,15 @@ const WAHL_PER_REACTION = Dict(
 """
     wahl_reaction_parameters(system) -> Union{WahlReactionParameters,Nothing}
 
-The per-reaction `Zₚ` parameters for a fissioning system, or `nothing` where the 1988 evaluation
-covers no such reaction.
+The per-reaction `Zₚ` parameters for a fissioning system, or `nothing` where Wahl, At. Data
+Nucl. Data Tables 39, 1 (1988), doi:10.1016/0092-640X(88)90016-2, covers no such reaction.
 
-Matched on the fissioning nucleus **and** the entrance channel. The nucleus alone is not enough:
-²⁴⁰Pu(sf) and ²³⁹Pu(n_th,f) reach the same compound nucleus 6.53 MeV apart, and over that gap
-eq. (17) moves `σ_Z` by 0.071 — twelve times the uncertainty Table A quotes on the fitted value.
-A reaction that far from the one a fit was made for is better served by the systematics, which at
-least takes the excitation energy as an argument.
-
-The channels each entry admits are the ones its fit covers. `nres` joins `nth` because the two
-differ by the incident energy alone: at the 580 eV resonance ²³⁵U's compound excitation is
-6.546097 MeV against 6.545517 MeV at thermal, which moves no parameter in the sixth decimal.
+Matched on the fissioning nucleus and the entrance channel: ²⁴⁰Pu(sf) and ²³⁹Pu(n_th,f) reach
+the same compound nucleus 6.53 MeV apart, over which eq. (17) of LA-13928 (2002),
+doi:10.2172/809574, moves `σ_Z` by twelve times the uncertainty Table A quotes, so such a
+reaction falls through to the systematics.
+`nres` is admitted with `nth`, the two differing only by an incident energy that moves no
+parameter at the sixth decimal.
 """
 function wahl_reaction_parameters(system::FissioningSystem)
     parameters = get(WAHL_PER_REACTION, (system.compound.Z, system.compound.A), nothing)
@@ -209,24 +202,17 @@ end
 """
     WahlSystematics(parameters, PE) -> WahlSystematics
 
-Carry per-reaction parameters through the region functions of the `Zₚ` model.
+Carry per-reaction parameters through the region functions of the `Zₚ` model. The regions and
+their boundaries are those of LA-13928 (2002), doi:10.2172/809574; the parameters within them
+are those of Table A of Wahl, At. Data Nucl. Data Tables 39, 1 (1988),
+doi:10.1016/0092-640X(88)90016-2, for this reaction. The near-symmetry slope `SL50` and the wing
+slopes, absent from Table A, come from the systematics.
 
-The regions and their boundaries are those of LA-13928 — the later and fuller statement of the
-same model — while the parameters within them are the ones the 1988 evaluation determined for
-this reaction. Parameters that Table A does not carry, the near-symmetry slope `SL50` and the two
-wing slopes, are taken from the systematics, which is the only source for them.
-
-`σ_Z` has no slope here: the 1988 evaluation uses one average width outside the shell region, and
-footnotes a and c of Table A say where that region and the near-symmetry region are, so those
-ranges are carried through and take precedence over eq. (10)'s boundaries.
-
-The footnotes place their ranges in fission-product mass while this package indexes pre-neutron
-fragment mass. The two differ by `ν(A')`, which at the `Z = 50` closure these ranges sit on is at
-the minimum of its sawtooth — 0.2 to 0.7 neutrons across the four reactions — so the difference is
-below the one-mass-unit resolution of the ranges themselves and no shift is applied. Shifting them
-by one unit changes the mean absolute difference of `σ_Z` from the four evaluated tables by 6 %,
-which is the size of that ambiguity; ignoring the footnotes altogether costs 27 %, and for ²⁵²Cf a
-factor of 3.4.
+`σ_Z` carries no slope, one average width applying outside the shell region, and the shell and
+near-symmetry ranges of footnotes a and c take precedence over the boundaries of eq. (10). The
+footnote ranges, given in fission-product mass, are applied to pre-neutron mass without a shift,
+since `ν(A')` at the `Z = 50` closure, 0.2 to 0.7 neutrons, is below their one-mass-unit
+resolution.
 """
 function WahlSystematics(parameters::WahlReactionParameters, PE::Real)
     systematics = WahlSystematics(parameters.Z_F, parameters.A_F, PE)
@@ -268,25 +254,21 @@ end
 """
     build_charge_distribution(table, system, masses; even_odd, charges) -> ChargeDistribution
 
-The best isobaric charge distribution available for a fissioning system, resolved in order.
+The best isobaric charge distribution available for a fissioning system, resolved in three
+layers, each falling through to the next where it cannot answer:
 
-Three layers, each falling through to the next where it cannot answer:
+1. Per-reaction parameters. [`WAHL_PER_REACTION`](@ref) carries the `Zₚ` parameters of Wahl,
+   At. Data Nucl. Data Tables 39, 1 (1988), doi:10.1016/0092-640X(88)90016-2, fitted by least
+   squares to the measured fractional independent yields of four reactions.
+2. The systematics. LA-13928 (2002), doi:10.2172/809574, eq. (17), for any nucleus inside
+   [`WAHL_VALIDITY`](@ref); Fig. 18 of that report gives a reduced `χ²` of 7.9 against 2.9 for a
+   per-reaction fit.
+3. The conventional means `ΔZ = −0.5`, `σ_Z = 0.6` at every mass, the yield-weighted averages of
+   the evaluated tables, without mass dependence.
 
-1. **Model with this reaction's own data.** [`WAHL_PER_REACTION`](@ref) carries the `Zₚ`
-   parameters the 1988 evaluation determined for this reaction by least squares against its
-   measured fractional independent yields. Best where it exists; it exists for four reactions.
-2. **The systematics.** LA-13928 eq. (17) estimates the same parameters from a trend across
-   reactions, for any nucleus inside [`WAHL_VALIDITY`](@ref). Fig. 18 of that report puts the
-   cost of the estimate at a reduced `χ²` of 7.9 against 2.9 for a per-reaction fit.
-3. **The conventional means.** `ΔZ = −0.5`, `σ_Z = 0.6` at every mass, which carry no mass
-   dependence at all. They are the yield-weighted averages of the tables the first two layers
-   approximate, which is what justifies them and also what limits them.
-
-The layer used is recorded in the returned distribution's `source`, with its citation, so a run's
-metadata says which one answered rather than leaving it to be inferred.
-
-An evaluated table read from a file is better than any of these and is not a layer here: supply
-one through `charge_distribution_file` and this function is not consulted.
+The layer used is recorded with its citation in the returned distribution's `source`. An
+evaluated table supplied through `charge_distribution_file` supersedes all three layers, and this
+function is then not called.
 """
 function build_charge_distribution(
     table::MassExcessTable,

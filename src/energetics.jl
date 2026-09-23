@@ -23,17 +23,14 @@ Total excitation energy shared by the complementary fragments at full accelerati
 TXE = Q + E*_CN − TKE
 ```
 
-Returns `nothing` when `TXE ≤ 0`, which is not a physical configuration and is the reason a
-deterministic sweep over TKE produces fewer records than its declared grid.
+Returns `nothing` when `TXE ≤ 0`, an unphysical configuration; a deterministic sweep over TKE
+therefore produces fewer records than its declared grid. `TKE` carries no uncertainty, being the
+swept independent variable of the model.
 
-`TKE` enters without an uncertainty because it is the swept independent variable of the model,
-not a measurement.
-
-**Uncertainty propagation stops here.** `TXE` carries the uncertainty of the mass excesses it
-was built from, but the TXE partition methods that consume it — modelling at scission,
-`E*_H/TXE (A_H)`, `R_T (A_H)` — are fitted curves with no quoted uncertainty, so `E*_L`
-and `E*_H` inherit none. Carrying a `σ` past the partition would report the mass-excess
-contribution while silently omitting the dominant model term.
+Uncertainty propagation stops here. `TXE` carries the uncertainty of the mass excesses, but the
+TXE partition methods that consume it — modelling at scission, `E*_H/TXE (A_H)`, `R_T (A_H)` —
+are fitted curves without quoted uncertainty, so `E*_L` and `E*_H` inherit none; a propagated
+`σ` would omit the dominant model term.
 """
 function total_excitation_energy(
     Q::Measurement{Float64},
@@ -119,10 +116,8 @@ end
 """
     Exclusion
 
-Why one `(fragmentation, TKE)` configuration was left out of a sweep.
-
-The prototype drops such configurations silently, so coverage cannot be audited from its
-output: the archived ²⁵²Cf(SF) run writes 9819 records against a declared grid of 12 495.
+Why one `(fragmentation, TKE)` configuration was left out of a sweep, recorded so that the
+coverage of the declared grid can be audited.
 """
 struct Exclusion
     fragmentation::Fragmentation
@@ -137,23 +132,16 @@ end
 """
     _validate_kinetic_energies(kinetic_energies)
 
-Check the swept `TKE` grid the way [`fragmentation_domain`](@ref) checks the mass range.
-
-It is the other swept axis of the model and it was reaching the sweep unvalidated, which is not
-harmless: `TXE = Q + E*_CN − TKE`, so a negative `TKE` *raises* the excitation energy and the
-configuration passes the `TXE > 0` test. A grid of `[-50.0, -10.0]` produced 490 accepted
-configurations and no complaint. An empty grid produced a sweep of zero records, which looks
-like a physical exclusion rather than a bad argument.
-
-Ascending and distinct is required rather than merely tidy: the sweep emits in grid order, so a
-permuted grid permutes the output for no stated reason.
+Check the swept `TKE` grid as [`fragmentation_domain`](@ref) checks the mass range: non-empty,
+finite, positive and strictly ascending. A negative `TKE` raises `TXE = Q + E*_CN − TKE` and
+would pass the `TXE > 0` test; an empty grid would give a sweep of zero records,
+indistinguishable from physical exclusion; and the sweep emits in grid order.
 """
 function _validate_kinetic_energies(kinetic_energies::AbstractVector{<:Real})
     isempty(kinetic_energies) &&
         throw(ArgumentError("the kinetic energy grid is empty; nothing would be swept"))
-    # Ascending and distinct fall out of one adjacency test, which also keeps this off Base's
-    # `allunique` specialisation for abstractly typed vectors — a path the static analysis
-    # cannot follow through its reinterpret and reshape layers.
+    # One adjacency test covers ascent and distinctness and avoids Base's `allunique` path for
+    # abstractly typed vectors, which static analysis cannot follow through reinterpret/reshape.
     start = firstindex(kinetic_energies)
     for index in eachindex(kinetic_energies)
         TKE = Float64(kinetic_energies[index])

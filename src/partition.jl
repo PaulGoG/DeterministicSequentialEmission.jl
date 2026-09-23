@@ -2,17 +2,9 @@
     SegmentedCurve(masses, values, source = "")
 
 A piecewise-linear function of heavy-fragment mass, given as segment endpoints `(A_H, y)` in
-ascending `A_H`.
-
-This is how `E*_H/TXE (A_H)` and `R_T (A_H)` are supplied: a handful of points fitted elsewhere,
-joined by straight lines. The alternative — the raw point-by-point values — is unusable as an
-input, because it is too scattered and too incompletely covered in `A_H` to fit.
-
-`source` records the file the curve was read from, so that a run can say which tabulation it
-partitioned with rather than leaving that to whoever staged it.
-
-Outside the tabulated range the function is undefined on both sides: `nothing` below the first
-point as above the last, so a fit is never extrapolated past the data that supported it.
+ascending `A_H`. `E*_H/TXE (A_H)` and `R_T (A_H)` are supplied in this form. `source` records
+the file the curve was read from and enters the run metadata. Outside the tabulated range the
+function evaluates to `nothing` on both sides, so a fit is never extrapolated.
 """
 struct SegmentedCurve
     masses::Vector{Int}
@@ -107,25 +99,19 @@ end
     PartitionMethod
 
 How the total excitation energy is divided between the complementary fragments at full
-acceleration.
-
-The partition happens at scission, but not every method models it there: two of the three
-divide `TXE` directly at full acceleration using a curve fitted elsewhere.
-
-Whatever the method, the result carries no uncertainty. The curves quote none, so `E*_L` and
-`E*_H` inherit none — which is why uncertainty propagation stops at `TXE`.
+acceleration. `ScissionModelling` models the division at scission; the two curve-based
+methods divide `TXE` directly at full acceleration. The curves quote no uncertainty, so `E*_L`
+and `E*_H` carry none and uncertainty propagation stops at `TXE`.
 """
 abstract type PartitionMethod end
 
 """
     ExcitationEnergyRatio(curve)
 
-Partition by `E*_H/TXE` as a function of `A_H`, supplied as a segmented curve.
-
-The ratio is normally obtained from modelling at scission in a separate code, then handed to the
-prompt-emission calculation as a tabulated curve. No manifest describes one, because no package
-of this toolchain produces it — which is why this method takes a file path where
-[`TemperatureRatio`](@ref) takes a run record.
+Partition by `E*_H/TXE` as a function of `A_H`, supplied as a segmented curve. The ratio is
+obtained from modelling at scission in a separate code and supplied as a tabulated file,
+without a run manifest; [`TemperatureRatio`](@ref), by contrast, is resolved through a run
+record. Every point must lie in `(0, 1)`.
 """
 struct ExcitationEnergyRatio <: PartitionMethod
     curve::SegmentedCurve
@@ -155,8 +141,8 @@ With both fragments in the Fermi-gas regime, `E*_{L,H} = a_{L,H} T_{L,H}²` give
 E*_H/TXE = 1 / (1 + (a_L/a_H) R_T²)
 ```
 
-so the temperature ratio and the level density parameters together fix the split. `R_T` is the
-input parameter by which several prompt-emission codes partition `TXE` directly.
+so the temperature ratio and the level density parameters together fix the split. Every point
+of the curve must be positive.
 """
 struct TemperatureRatio{M <: LevelDensityModel} <: PartitionMethod
     curve::SegmentedCurve
@@ -208,10 +194,8 @@ end
     TEMPERATURE_RATIO_CURVE_SPEC
 
 Layout of a tabulated `R_T(A_H)`: one header row, then `A_H,R_T` and an optional
-`R_T_uncertainty`, comma-delimited. This is what a temperature-ratio run writes.
-
-The uncertainty is read past and discarded: the partition carries none downstream, for the reason
-[`PartitionMethod`](@ref) gives.
+`R_T_uncertainty`, comma-delimited, as written by a temperature-ratio run. The uncertainty is
+read and discarded, since the partition carries none downstream; see [`PartitionMethod`](@ref).
 """
 const TEMPERATURE_RATIO_CURVE_SPEC = TableSpec(
     [:A_H, :R_T, :R_T_uncertainty];
@@ -224,11 +208,8 @@ const TEMPERATURE_RATIO_CURVE_SPEC = TableSpec(
     EXCITATION_RATIO_CURVE_SPEC
 
 Layout of a tabulated `E*_H/TXE (A_H)`: one header row, then `A_H,excitation_ratio` and an
-optional `excitation_ratio_uncertainty`, comma-delimited.
-
-A separate spec from [`TEMPERATURE_RATIO_CURVE_SPEC`](@ref) rather than one shared spec naming its
-ordinate `value`, because the two tabulate different quantities and a column named for neither
-would put the reader back to inferring from the file name what the file holds.
+optional `excitation_ratio_uncertainty`, comma-delimited. Counterpart of
+[`TEMPERATURE_RATIO_CURVE_SPEC`](@ref) for the excitation-energy ratio.
 """
 const EXCITATION_RATIO_CURVE_SPEC = TableSpec(
     [:A_H, :excitation_ratio, :excitation_ratio_uncertainty];
@@ -240,30 +221,20 @@ const EXCITATION_RATIO_CURVE_SPEC = TableSpec(
 """
     read_segmented_curve(path; spec = TEMPERATURE_RATIO_CURVE_SPEC) -> SegmentedCurve
 
-Read a curve tabulated against heavy-fragment mass.
+Read a curve tabulated against heavy-fragment mass. Columns are taken by position, not by
+header text: the abscissa is the first column of `spec` and the ordinate the second.
 
-**Columns are taken by position**, not by header text: the abscissa is the first column of `spec`
-and the ordinate the second, whatever the file calls them. The spec names them only so that the
-code reads like the table it is reading; nothing here may be changed to a lookup by header text,
-because that would couple this package to the header a producer happens to write.
+The format is that of a temperature-ratio extraction, which tabulates `R_T = T_L/T_H` at every
+integer `A_H` of its fit range, so [`SegmentedCurve`](@ref) evaluates only tabulated points and
+no interpolation occurs. The breakpoints of the extraction's piecewise-linear fit of `r_ν` are
+not equivalent, because `R_T = √[(1−r_ν)/(R_a r_ν)]` inherits the shell structure of
+`R_a(A_H)`; see [`temperature_ratio_path`](@ref).
 
-Written for the output of a temperature-ratio extraction, which takes `R_T = T_L/T_H` from
-experimental `ν(A)` and writes it at **every integer `A_H`** of its fit range. Fed whole to
-[`SegmentedCurve`](@ref) that is exact rather than an approximation: every abscissa the model
-evaluates is itself a tabulated point, so no interpolation happens. Handing over only the
-breakpoints of that extraction's own piecewise-linear fit would not be equivalent — it fits the
-multiplicity ratio `r_ν`, and `R_T = √[(1−r_ν)/(R_a r_ν)]` is not piecewise linear where `r_ν`
-is, because the level density parameter ratio `R_a(A_H)` carries the shell structure. That is also
-why the pivots file is never the file to read; see [`temperature_ratio_path`](@ref).
-
-Two things to expect rather than diagnose later. Each curve spans its own fit range, not the
-configured `A_H` range, so a set that starts late or stops short leaves [`partition`](@ref)
-returning `nothing` outside that range — correct, since the alternative is extrapolating a fit
-past its data. And the ratio averaging must match: `R_T` produced for this consumer should come from a
-run with `ratio_averaging = "mean_of_ratios"`, because the partition re-expands it with
-per-`(A_H, Z_H)` level density parameters and reduces over `Z` afterwards, which inverts a
-`Z`-averaged multiplicity ratio with `⟨a_L/a_H⟩` rather than `⟨a_L⟩/⟨a_H⟩`. That setting is
-recorded in the run identifier the file name carries.
+Each curve spans its own fit range, and [`partition`](@ref) returns `nothing` outside it. `R_T`
+should come from a run with `ratio_averaging = "mean_of_ratios"`, since the partition applies
+per-`(A_H, Z_H)` level density parameters and reduces over `Z` afterwards, which corresponds to
+`⟨a_L/a_H⟩` rather than `⟨a_L⟩/⟨a_H⟩`; the setting is recorded in the run identifier the file
+name carries.
 """
 function read_segmented_curve(
     path::AbstractString;
@@ -278,15 +249,10 @@ end
 """
     segment_coverage(method, heavy_masses) -> NamedTuple
 
-Which heavy masses of a sweep the curve actually covers.
-
-Returns the masses it does not reach and the fraction it does. A curve is a fit over the range
-its data supported, and nothing ties that range to the domain being swept: a curve read from a
-file carries its own range and may start late or stop short.
-
-Worth checking rather than discovering, because [`partition`](@ref) returns `nothing` outside
-the tabulated range and that exclusion is indistinguishable from a physical one — a fragmentation the
-model could not solve and a fragmentation no curve reaches look identical downstream.
+The heavy masses of a sweep covered by the partition input: `covered`, the fraction reached,
+and `uncovered`, the masses not reached. A curve carries its own fit range, independent of the
+swept domain. [`partition`](@ref) returns `nothing` outside that range, which is
+indistinguishable downstream from a physically excluded fragmentation.
 
 # Examples
 
@@ -309,7 +275,7 @@ function segment_coverage(
     return _coverage(A -> method.curve(A) !== nothing, heavy_masses)
 end
 
-# No curve to cover the range here: a heavy mass is reached where the extra-deformation table
+# Scission modelling has no curve: a heavy mass is covered where the extra-deformation table
 # holds a nuclide of that mass.
 function segment_coverage(method::ScissionModelling, heavy_masses)
     tabulated = Set(nuclide.A for nuclide in keys(method.deformation))
@@ -339,9 +305,8 @@ const EXTRA_DEFORMATION_SPEC = TableSpec([:A, :Z, :E_def]; skip = 1)
 """
     read_extra_deformation(path; spec = EXTRA_DEFORMATION_SPEC) -> Dict{Nuclide,Float64}
 
-Read extra-deformation energies in MeV, indexed by nuclide.
-
-**Columns are taken by position**, not by header text: mass, charge, `ΔE_def`.
+Read extra-deformation energies in MeV, indexed by nuclide. Columns are taken by position, not
+by header text: mass, charge, `ΔE_def`.
 """
 function read_extra_deformation(
     path::AbstractString;
@@ -436,25 +401,14 @@ end
 """
     _self_complementary(fragmentation) -> Bool
 
-Whether the two fragments are the same nuclide, `A_H == A_L` **and** `Z_H == Z_L`.
+Whether the two fragments are the same nuclide, `A_H == A_L` and `Z_H == Z_L`.
 
-Such a split must divide `TXE` evenly, and the reason is a symmetry rather than a convention:
-the fragments are indistinguishable, so `a_L == a_H` and `T_L == T_H` identically, hence
-`E*_L == E*_H` and `R_T == 1`. No curve in `A_H` can know this — `R_T(A_H)` and
-`E*_H/TXE (A_H)` are fitted, and nothing makes them pass through `1` and `0.5` at
-`A₀/2`. Evaluated there with the ²⁵²Cf literature value `R_T = 1.2` the temperature-ratio
-method returns `E*_H/TXE = 0.41`, dividing energy unequally between two copies of the
-same nucleus.
-
-Guarding on it restores the behaviour of the prototype, which special-cased
-`A_L == A_H && Z_L == Z_H` in all three methods. `ScissionModelling` needs no guard and
-does not carry one: identical fragments give `a_L/a_H == 1` and `ΔE_def^L == ΔE_def^H`, so it
-divides evenly on its own arithmetic, and short-circuiting it would skip its check that the
-energy remaining at scission is non-negative.
-
-Both archived thesis curves happen to satisfy the constraint through their first
-pivot — `R_T(126) = 1.0` and `E*_H/TXE (126) = 0.5` — which is why the reference runs are
-unaffected either way.
+Such a split divides `TXE` evenly by symmetry: the fragments are indistinguishable, so
+`a_L == a_H` and `T_L == T_H`, hence `E*_L == E*_H` and `R_T == 1`. Fitted curves `R_T(A_H)`
+and `E*_H/TXE (A_H)` are not constrained to pass through `1` and `0.5` at `A₀/2`, so the two
+curve-based methods apply this guard. `ScissionModelling` does not: identical fragments give
+`a_L/a_H == 1` and `ΔE_def^L == ΔE_def^H`, so its arithmetic divides evenly and its check that
+the energy remaining at scission is non-negative still applies.
 """
 _self_complementary(fragmentation::Fragmentation) =
     fragmentation.heavy == fragmentation.light

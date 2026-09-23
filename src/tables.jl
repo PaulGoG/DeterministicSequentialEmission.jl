@@ -1,20 +1,14 @@
 """
     TableSpec(columns; delimiter = ' ', skip = 0, optional = ())
 
-How to read one whitespace- or character-delimited data table.
+Layout of one whitespace- or character-delimited data table.
 
-`columns` names the fields in order; `skip` is the number of leading lines to discard, which
-is 1 for a file carrying a header row and 0 for one that does not. Names in `optional` may be
-absent from the file: a table is accepted if it provides every required column, in order,
-followed by any leading prefix of the optional ones.
-
-That last rule is what lets one reader serve both a hand-staged table and the output of a
-retrieval, which emits an uncertainty column only when the underlying measurements carry
-uncertainties.
-
-Column names are the spec's own, for readability at the call site. **They are never matched
-against the file's header**: a table is read by position, and `skip` discards the header row
-unexamined.
+`columns` names the fields in order; `skip` is the number of leading lines to discard, 1 for a
+file with a header row and 0 otherwise. Names in `optional` may be absent from the file: a table
+is accepted if it provides every required column, in order, followed by any leading prefix of the
+optional ones, which admits retrieval output carrying an uncertainty column only when the
+measurements do. Column names serve the call site and are never matched against the file header:
+a table is read by position, and `skip` discards the header row unexamined.
 
 # Examples
 
@@ -45,8 +39,8 @@ struct TableSpec
                 ArgumentError("optional column $name is not among the spec's columns"),
             )
         end
-        # Optional columns must form a suffix, otherwise "a leading prefix of the optional
-        # ones" is not a well-defined shape.
+        # Optional columns form a suffix, so that "a leading prefix of the optional ones" is
+        # well defined.
         required = length(names) - length(optional_names)
         for (index, name) in enumerate(names)
             if index <= required
@@ -77,13 +71,10 @@ required_columns(spec::TableSpec) =
 """
     DelimitedTable
 
-One delimited table read from disk: `columns` maps each column name to its still-unparsed text,
-`path` records where it came from, and `present` lists the columns the file actually supplied.
-
-`Table` here is the head noun of the thing itself — a delimited table is what the format is, and
-what [`TableSpec`](@ref) describes. It is not the `Table` suffix that
-[`MassExcessTable`](@ref) and [`ShellCorrectionTable`](@ref) carry, which asserts a lookup keyed
-by nucleon number; `Delimited` is the qualifier that keeps the two apart.
+One delimited table read from disk, as described by a [`TableSpec`](@ref): `columns` maps each
+column name to its unparsed text, `present` lists the columns the file supplied, `path` records
+its origin and `rows` the number of data rows. Unlike [`MassExcessTable`](@ref) and
+[`ShellCorrectionTable`](@ref), it is not a lookup keyed by nucleon number.
 """
 struct DelimitedTable
     columns::Dict{Symbol, Vector{String}}
@@ -91,8 +82,7 @@ struct DelimitedTable
     path::String
     rows::Int
 
-    # Explicit, so Julia generates no `Any`-accepting fallback whose conversion paths would
-    # have to be reasoned about.
+    # Explicit inner constructor, so no `Any`-accepting fallback is generated.
     function DelimitedTable(
         columns::Dict{Symbol, Vector{String}},
         present::Vector{Symbol},
@@ -124,13 +114,9 @@ end
     read_delimited_table(path, spec) -> DelimitedTable
 
 Read a delimited table according to `spec`, failing with a message that names the file and the
-offending line.
-
-**Columns are taken by position.** `spec.columns` names them in the order they appear; the header
-row is discarded by `skip` without being examined, and no name is ever matched against it.
-
-Repeated delimiters are treated as one, so space-padded fixed-width layouts read correctly
-without a separate code path.
+offending line. Columns are taken by position in the order of `spec.columns`; the header row is
+discarded by `skip` unexamined. Repeated delimiters are treated as one, so space-padded
+fixed-width layouts are read without a separate code path.
 """
 function read_delimited_table(path::AbstractString, spec::TableSpec)
     isfile(path) || throw(ArgumentError("data file does not exist: $path"))
@@ -212,12 +198,8 @@ column(table::DelimitedTable, name::Symbol) = table.columns[name]
 """
     integer_column(table, name) -> Vector{Int}
 
-Parse a nucleon-number column, accepting an integral value written as a float.
-
-Nucleon numbers are integers, but the files that carry them are not all written by hand:
-`data/U235_nth/charge_distribution_vs_A.dat` tabulates its mass column as `118.0`, `119.0`, …, because a
-generator wrote it out in floating point. Read strictly as `Int` that file cannot be loaded at
-all. A value with a fractional part is still an error, and says so.
+Parse a nucleon-number column, accepting an integral value written as a float (`118.0`), as
+produced by generators that write in floating point. A value with a fractional part is an error.
 """
 function integer_column(table::DelimitedTable, name::Symbol)
     has_column(table, name) || throw(

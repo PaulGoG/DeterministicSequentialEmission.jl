@@ -2,11 +2,10 @@
     ChargeDistribution
 
 Charge polarization `ΔZ(A)` and dispersion `σ_Z(A)` of the isobaric charge distribution, indexed
-by fragment mass number, with the values used where a mass is not tabulated.
-
-The defaults `⟨ΔZ⟩ = -0.5` and `⟨σ_Z⟩ = 0.6` are the conventional means applied when no `Zₚ`
-systematics is available for the fission case under study. `ΔZ` is quoted for the **heavy**
-fragment and carries the opposite sign for the light one.
+by fragment mass number, with the values used where a mass is not tabulated. The defaults
+`⟨ΔZ⟩ = -0.5` and `⟨σ_Z⟩ = 0.6` are the conventional means applied when no `Zₚ` systematics is
+available for the fission case. `ΔZ` is quoted for the heavy fragment and carries the opposite
+sign for the light one.
 """
 struct ChargeDistribution
     ΔZ::Dict{Int, Float64}
@@ -41,30 +40,17 @@ const CHARGE_DISTRIBUTION_SPEC = TableSpec([:A, :dZ, :sigma_Z]; skip = 1)
 const DEFAULT_CHARGE_POLARIZATION = -0.5
 const DEFAULT_CHARGE_DISPERSION = 0.6
 
-# `p(Z,A)` is stored as the analytic Gaussian and is deliberately NOT renormalized over the
-# charges a domain retains. Summed over five charges at the tabulated Wahl dispersions it runs
-# 0.984 to 1.076 across mass rows — the discrete-lattice ripple at small `σ_Z`, not truncation,
-# since the tails beyond the retained charges are under 0.01 %.
-#
-# Renormalizing would hide a real cost. Retaining too few charge numbers per mass should show up
-# as lost weight, and it does; dividing it away would make a three-charge domain look as complete
-# as a seven-charge one. Where it must not survive — `Y(A,Z,TKE) = p(Z,A) Y(A,TKE)`, where `p`
-# is an absolute weight and the yields are then re-binned into `A_p` — the yield construction
-# normalizes exactly, so nothing downstream inherits the spread.
-#
-# `FissionTemperatureRatio.jl` renormalizes within each mass number instead. The two therefore
-# differ at the percent level by construction, which is expected rather than a discrepancy to
-# chase.
+# `p(Z,A)` is the analytic Gaussian, not renormalized over the charges a domain retains, so a
+# narrow charge window shows as lost weight. The yield construction `Y(A,Z,TKE) = p(Z,A) Y(A,TKE)`
+# normalizes exactly, so no downstream quantity inherits the deviation of Σ_Z p from unity.
 
 """
     read_charge_distribution(path; spec, default_charge_polarization, default_charge_dispersion)
         -> ChargeDistribution
 
-Read a tabulated `ΔZ(A)`, `σ_Z(A)`.
-
-**Columns are taken by position**, not by header text: mass number, polarization, dispersion.
-Nothing here may be changed to a lookup by name, because that would couple this package to the
-header text of a file another package writes.
+Read a tabulated `ΔZ(A)`, `σ_Z(A)`. Columns are taken by position, not by header text: mass
+number, polarization, dispersion, so the reader is independent of the header text of files
+written by other packages.
 """
 function read_charge_distribution(
     path::AbstractString;
@@ -182,14 +168,10 @@ end
 """
     charge_numbers(Zₚ, count) -> UnitRange{Int}
 
-The `count` integer charge numbers nearest `Zₚ`, centred on it.
-
-`count` must be odd so that the set is symmetric about the rounded most probable charge; an
-even count would have to break the tie in one direction and silently bias the domain.
-
-Rounding follows Julia's default, ties to even, so a `Zₚ` landing exactly halfway between two
-integers — which happens at symmetric fission under the mean polarization, where
-`Zₚ = Z₀/2 − 0.5` — resolves downwards for an even neighbour and upwards for an odd one.
+The `count` integer charge numbers nearest `Zₚ`, centred on it. `count` must be odd, so that
+the set is symmetric about the rounded most probable charge. Rounding follows Julia's default,
+ties to even: a `Zₚ` exactly halfway between two integers, as at symmetric fission under the
+mean polarization (`Zₚ = Z₀/2 − 0.5`), rounds to the even neighbour.
 """
 function charge_numbers(Zₚ::Real, count::Integer)
     isodd(count) ||
