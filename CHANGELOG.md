@@ -37,6 +37,8 @@ here.
 - `run_identifier`, built from the configuration keys that change a result.
 - Figures in `plotting/`, redrawn from the written tables.
 - `check.jl`: the formatting gate, then the test suite.
+- A References page in the documentation listing every source with its DOI, through
+  `DocumenterCitations.jl`; docstrings cite by DOI as well.
 
 ### Changed
 

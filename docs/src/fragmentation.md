@@ -26,7 +26,7 @@ a run that has one should use it.
 
 The distinction between layers 1 and 2 is where the parameters of the same model come from. Table A
 of the 1988 evaluation fits `ΔZ(140)`, `∂ΔZ/∂A'`, `σ_Z`, `F_Z` and `F_N` to the measured fractional
-independent yields of one reaction; eq. (17) of LA-13928 estimates the same quantities from `Z_F`,
+independent yields of one reaction; eq. (17) of LA-13928 [Wahl2002](@cite) estimates the same quantities from `Z_F`,
 `A_F` and the excitation energy, for reactions that have no fit. Fig. 18 of that report puts the
 cost of the estimate at a reduced `χ²` of 7.9 against 2.9. Measured against the four evaluated
 tables this package reads, the fitted parameters halve the mean absolute difference in `ΔZ` for

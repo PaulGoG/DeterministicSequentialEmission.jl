@@ -2,6 +2,9 @@ include(joinpath(@__DIR__, "activate.jl"))
 
 using DeterministicSequentialEmission
 using Documenter
+using DocumenterCitations
+
+bib = CitationBibliography(joinpath(@__DIR__, "src", "refs.bib"); style = :numeric)
 
 DocMeta.setdocmeta!(
     DeterministicSequentialEmission,
@@ -29,7 +32,9 @@ makedocs(;
         "Energetics and partition" => "energetics.md",
         "Emission and spectrum" => "emission.md",
         "Yields and observables" => "observables.md",
+        "References" => "references.md",
     ],
+    plugins = [bib],
 )
 
 deploydocs(;

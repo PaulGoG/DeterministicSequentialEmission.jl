@@ -4,7 +4,8 @@ CurrentModule = DeterministicSequentialEmission
 
 # DeterministicSequentialEmission
 
-Prompt neutron emission from fission fragments, treated sequence by sequence.
+Prompt neutron emission from fission fragments, treated sequence by sequence. The literature behind
+the formulation and the input data is listed with DOIs under [References](references.md).
 
 The model solves the energy conservation equation of every emission sequence separately,
 
