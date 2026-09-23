@@ -11,9 +11,8 @@ input, because it is too scattered and too incompletely covered in `A_H` to fit.
 `source` records the file the curve was read from, so that a run can say which tabulation it
 partitioned with rather than leaving that to whoever staged it.
 
-Outside the tabulated range the first segment is extended below the first point, and the
-function is undefined above the last. That asymmetry reproduces the prototype, whose published
-curves always end at `A_H_max`.
+Outside the tabulated range the function is undefined on both sides: `nothing` below the first
+point as above the last, so a fit is never extrapolated past the data that supported it.
 """
 struct SegmentedCurve
     masses::Vector{Int}
@@ -85,10 +84,11 @@ end
 """
     (curve)(A) -> Union{Float64,Nothing}
 
-Evaluate the curve at heavy-fragment mass `A`, or `nothing` above the last point or where the
-interpolated value is non-positive.
+Evaluate the curve at heavy-fragment mass `A`, or `nothing` outside the tabulated range or where
+the interpolated value is non-positive.
 """
 function (curve::SegmentedCurve)(A::Integer)
+    A < first(curve.masses) && return nothing
     for index in 2:length(curve)
         if curve.masses[index] >= A
             x₀ = curve.masses[index - 1]
@@ -257,9 +257,9 @@ is, because the level density parameter ratio `R_a(A_H)` carries the shell struc
 why the pivots file is never the file to read; see [`temperature_ratio_path`](@ref).
 
 Two things to expect rather than diagnose later. Each curve spans its own fit range, not the
-configured `A_H` range, so a set that stops short leaves [`partition`](@ref) returning `nothing`
-above its last point — correct, since the alternative is extrapolating a fit past its last
-datum. And the ratio averaging must match: `R_T` produced for this consumer should come from a
+configured `A_H` range, so a set that starts late or stops short leaves [`partition`](@ref)
+returning `nothing` outside that range — correct, since the alternative is extrapolating a fit
+past its data. And the ratio averaging must match: `R_T` produced for this consumer should come from a
 run with `ratio_averaging = "mean_of_ratios"`, because the partition re-expands it with
 per-`(A_H, Z_H)` level density parameters and reduces over `Z` afterwards, which inverts a
 `Z`-averaged multiplicity ratio with `⟨a_L/a_H⟩` rather than `⟨a_L⟩/⟨a_H⟩`. That setting is
@@ -281,12 +281,11 @@ end
 Which heavy masses of a sweep the curve actually covers.
 
 Returns the masses it does not reach and the fraction it does. A curve is a fit over the range
-its data supported, and nothing ties that range to the domain being swept: the
-prototype anchors its last segment point at `A_H_max` by construction, but a curve read from a
-file carries its own range and may stop short.
+its data supported, and nothing ties that range to the domain being swept: a curve read from a
+file carries its own range and may start late or stop short.
 
-Worth checking rather than discovering, because [`partition`](@ref) returns `nothing` above the
-last point and that exclusion is indistinguishable from a physical one — a fragmentation the
+Worth checking rather than discovering, because [`partition`](@ref) returns `nothing` outside
+the tabulated range and that exclusion is indistinguishable from a physical one — a fragmentation the
 model could not solve and a fragmentation no curve reaches look identical downstream.
 
 # Examples

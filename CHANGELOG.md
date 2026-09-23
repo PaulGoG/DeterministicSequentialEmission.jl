@@ -66,6 +66,11 @@ here. This changelog begins with the rewrite.
 
 ### Changed
 
+- `SegmentedCurve` is undefined below its first point as it is above the last, so a fit is
+  never extrapolated past the data that supported it. `segment_coverage` reports a low-end gap
+  the same way it reports one at the high end. No shipped curve starts above `heavy_mass_min`,
+  so no shipped result moves.
+
 - `wahl_charge_distribution` puts the systematics on the footing of the tables it stands in for.
   Wahl eq. (8) of the 1988 evaluation gives `rms = √(σ_Z² + 1/12)`: `σ_Z` is the width of the
   model's Gaussian, `rms` the second moment of the yields over the integer charge lattice, and it

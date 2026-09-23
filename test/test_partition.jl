@@ -12,13 +12,13 @@
     # Undefined above the last point; the published parameterizations end at A_H_max.
     @test segments(175) === nothing
 
-    # Below the first point the first segment is extended rather than clamped.
-    @test segments(125) ≈ 0.5 + (0.14 - 0.5) * (125 - 126) / (130 - 126)
+    # Undefined below the first point as well: a fit is not extrapolated on either side.
+    @test segments(125) === nothing
 
     # A segment crossing zero leaves the function undefined there rather than negative.
     crossing = SegmentedCurve([(120, 1.0), (140, -1.0)])
     @test crossing(130) === nothing
-    @test crossing(125) > 0
+    @test crossing(121) ≈ 0.9
 
     @test_throws ArgumentError SegmentedCurve([(126, 0.5)])
     @test_throws ArgumentError SegmentedCurve([(150, 0.5), (126, 0.1)])
@@ -53,6 +53,13 @@ end
     report = segment_coverage(short, 126:174)
     @test report.uncovered == collect(151:174)
     @test report.covered ≈ 25 / 49
+
+    # A fit that starts above the first heavy mass leaves the low end uncovered, as one that
+    # stops short leaves the high end.
+    late = ExcitationEnergyRatio(SegmentedCurve([(130, 0.5), (174, 0.6)]))
+    report = segment_coverage(late, 126:174)
+    @test report.uncovered == collect(126:129)
+    @test report.covered ≈ 45 / 49
 
     whole = ExcitationEnergyRatio(
         SegmentedCurve([(126, 0.5), (130, 0.14), (150, 0.607), (174, 0.865)]),
