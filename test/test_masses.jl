@@ -3,7 +3,9 @@
     @test length(table) > 3000
     @test haskey(table, NEUTRON)
 
-    # Converted from keV on load, so MeV is the only energy unit inside the package.
+    # Converted from keV on load, so MeV is the only energy unit inside the package. The value
+    # is the evaluation's 8071.31806 keV after the single-precision pass the shipped table went
+    # through; data/README.md records the pass.
     neutron = mass_excess(table, NEUTRON)
     @test value(neutron) ≈ 8.07131787109 atol = 1e-9
     @test uncertainty(neutron) ≈ 4.4e-7 atol = 1e-9

@@ -148,11 +148,23 @@ Run the extraction with `ratio_averaging = "mean_of_ratios"` for this consumer; 
 The remaining tables are one-off downloads:
 
 **`reference/mass_excess_ame2020.dat`** — the 2020 atomic mass evaluation.
-W. J. Huang, M. Wang, F. G. Kondev, G. Audi, S. Naimi, *Chinese Physics C* **45**, 030002 (2021);
-M. Wang, W. J. Huang, F. G. Kondev, G. Audi, S. Naimi, *Chinese Physics C* **45**, 030003 (2021).
-Distributed by the Atomic Mass Data Center, <https://www-nds.iaea.org/amdc/>. The evaluation is
-distributed with no header line at all; `HEADERLESS_MASS_EXCESS_SPEC` reads it in that form, and
-the copy shipped here carries one.
+W. J. Huang, M. Wang, F. G. Kondev, G. Audi, S. Naimi, *Chinese Physics C* **45**, 030002 (2021),
+[doi:10.1088/1674-1137/abddb0](https://doi.org/10.1088/1674-1137/abddb0);
+M. Wang, W. J. Huang, F. G. Kondev, G. Audi, S. Naimi, *Chinese Physics C* **45**, 030003 (2021),
+[doi:10.1088/1674-1137/abddaf](https://doi.org/10.1088/1674-1137/abddaf).
+The source is the unrounded mass table `mass.mas20` of the Atomic Mass Data Center, published at
+<https://www-nds.iaea.org/amdc/ame2020/mass_1.mas20.txt> (file dated 3 March 2021, MD5
+`6d28b75833cf53c7cc230223f63da6f6`). The shipped table carries that file's mass excess and
+uncertainty for all 3558 nuclides, including the 1008 values the evaluation marks with `#` as
+estimated — the mark itself is not carried, so the table does not tell an estimated mass from a
+measured one — after one pass through single precision: every entry is the source rounded to
+the nearest `Float32` and printed with eight decimals, verified row by row against the source on
+23 September 2026. The pass moves a mass excess by at most 0.006 keV, and by at most 0.004 keV
+over 70 ≤ A ≤ 180, where it exceeds the evaluation's own uncertainty for ⁸⁶Kr alone, by 0.04 eV;
+elsewhere only for ¹H, ²H, ³H and ³He. No quantity computed here is sensitive to it, and the
+table is kept as it is so that the reference values the tests pin keep their meaning.
+`HEADERLESS_MASS_EXCESS_SPEC` reads the same five columns without a header line, the form the
+table circulated in before the shipped copy was given one.
 
 **`reference/shell_corrections_gilbert_cameron.dat`** — shell corrections `S(N)` and `S(Z)`,
 Table III of A. Gilbert and A. G. W. Cameron, *Canadian Journal of Physics* **43**, 1446 (1965),

@@ -48,8 +48,8 @@ const MASS_EXCESS_SPEC =
 """
     HEADERLESS_MASS_EXCESS_SPEC
 
-The same five columns with no header row at all, which is how the atomic mass evaluation is
-distributed.
+The same five columns with no header row, the form the table circulated in before the shipped
+copy was given one.
 
 ```julia
 read_mass_excess_table(path; spec = HEADERLESS_MASS_EXCESS_SPEC)
