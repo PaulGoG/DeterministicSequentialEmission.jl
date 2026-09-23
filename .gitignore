@@ -20,6 +20,8 @@
 !/plots/multiplicity_vs_experiment.pdf
 !/plots/prompt_neutron_spectrum.png
 !/plots/prompt_neutron_spectrum.pdf
+!/plots/multiplicity_vs_experiment.toml
+!/plots/prompt_neutron_spectrum.toml
 
 # Libraries do not pin a manifest; each environment resolves against [compat].
 Manifest*.toml

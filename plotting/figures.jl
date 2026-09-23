@@ -14,18 +14,27 @@
 #   <data>/<system>/spectrum_maxwellian_ratio_vs_E/*.dat     E spectrum_maxwellian_ratio [...]
 #
 # which is the layout that package writes. Columns are taken by position, not by header text.
-# Both directories default to beside the project and neither is version-controlled; nothing here
-# knows where yours lives.
+# Both directories default to data/ under the project and neither is version-controlled.
+#
+# Each figure is written to plots/ as PDF and PNG, beside a TOML sidecar that names, for every
+# system drawn, the run directory, the commit recorded in its metadata, and the measured files.
 
 include(joinpath(@__DIR__, "activate.jl"))
+include(joinpath(@__DIR__, "theme.jl"))
 
-using CairoMakie, MathTeXEngine
 using Printf
+using TOML
+
+set_theme!(PUBLICATION_THEME)
 
 const ROOT = dirname(@__DIR__)
 const FIGURES = joinpath(ROOT, "plots")
 const RESULTS = length(ARGS) >= 1 ? ARGS[1] : joinpath(ROOT, "data", "sims")
 const MEASURED = length(ARGS) >= 2 ? ARGS[2] : joinpath(ROOT, "data")
+
+# LaTeXStrings reaches this environment only through Makie; its string type is taken from the
+# macro.
+const MathText = typeof(L"")
 
 """
 One fissioning system: the token that names its directories, the typeset notation it is drawn
@@ -33,14 +42,14 @@ under, and the evaluated total multiplicity it is compared against — ENDF/B-VI
 induced systems and the Axton standard for 252-Cf.
 
 `label` is the system token, as `system_label` returns it; `notation` is the typeset form, as
-`system_notation` returns it. One name may not mean both. They are written out here rather than
-called, because this environment draws from tables and does not load the package.
+`system_notation` returns it. They are written out here rather than called, because this
+environment draws from tables and does not load the package.
 """
 struct Case
     label::String
-    notation::Any
+    notation::MathText
     compound_mass::Int
-    measured::Float64
+    evaluated::Float64
 end
 
 const CASES = [
@@ -50,59 +59,55 @@ const CASES = [
     Case("U233_nth", L"$^{233}$U(nth,f)", 234, 2.4968),
 ]
 
-# One common abscissa, so the panels can be read against each other and the inner tick labels
-# dropped. Nothing is plotted outside it.
-const MASS_RANGE = (76.0, 176.0)
+# Measured masses drawn. Outside this window the yields vanish and the measured uncertainties
+# are unbounded.
+const MASS_WINDOW = (76.0, 176.0)
 
-# The heavy branch alone, which is where a charge distribution is tabulated. Wide enough for the
-# widest window any shipped system sweeps.
-const CHARGE_MASS_RANGE = (115.0, 176.0)
+# Energies drawn in the spectrum. Below the window the measured ratio is dominated by detector
+# thresholds, above it by counting statistics in the tail.
+const ENERGY_WINDOW = (0.08, 11.0)
 
-const THEME = Theme(
-    fonts = (; regular = texfont(:text), bold = texfont(:bold), italic = texfont(:italic)),
-    fontsize = 9,
-    figure_padding = 6,
-    Axis = (
-        xgridstyle = :dash,
-        ygridstyle = :dash,
-        xgridcolor = (:grey, 0.12),
-        ygridcolor = (:grey, 0.12),
-        xminorticksvisible = false,
-        yminorticksvisible = false,
-        xtickalign = 1,
-        ytickalign = 1,
-        xticksize = 3,
-        yticksize = 3,
+# Measured mean laboratory energy of the 252-Cf prompt fission neutron spectrum [MeV].
+const MEASURED_MEAN_ENERGY = 2.13
+
+# Maxwellian temperature taken when a run's configuration records none [MeV].
+const FALLBACK_MAXWELLIAN_TEMPERATURE = 1.42
+
+# Margin on either side of the data range, as a fraction of that range, and the band reserved
+# above the data for two lines of in-axis annotation.
+const MARGIN = 0.05
+const ANNOTATION_BAND = 0.30
+
+const SPECTRUM_TICKS =
+    ([0.1, 0.2, 0.5, 1.0, 2.0, 5.0, 10.0], ["0.1", "0.2", "0.5", "1", "2", "5", "10"])
+
+# Sources of the isobaric charge distribution. Colour and line style are fixed per source.
+const CHARGE_SOURCES = (
+    (
+        file = "charge_distribution_vs_A.dat",
+        label = "Used by the run",
+        linestyle = :solid,
+        colour = BLACK,
+    ),
+    (
+        file = "charge_distribution_vs_A_wahl_per_reaction.dat",
+        label = L"$Z_p$ model, fitted parameters",
+        linestyle = :dashdot,
+        colour = REDDISH_PURPLE,
+    ),
+    (
+        file = "charge_distribution_vs_A_wahl_systematics.dat",
+        label = L"$Z_p$ model, systematics",
+        linestyle = :dash,
+        colour = VERMILION,
+    ),
+    (
+        file = "charge_distribution_vs_A_mean.dat",
+        label = "Mean values",
+        linestyle = :dot,
+        colour = SKY_BLUE,
     ),
 )
-
-const PALETTE = [
-    RGBf(0.835, 0.369, 0.0),
-    RGBf(0.0, 0.620, 0.451),
-    RGBf(0.800, 0.475, 0.655),
-    RGBf(0.337, 0.706, 0.914),
-    RGBf(0.941, 0.667, 0.0),
-    RGBf(0.494, 0.184, 0.557),
-]
-const MARKERS = [:circle, :rect, :utriangle, :diamond, :star5, :cross]
-# Colour carries the series family and style carries the role, so the figures survive greyscale.
-const LINESTYLES = [:solid, :dash, :dashdot, :dot, (:dot, :dense), :solid]
-
-"Read a two- or three-column file: abscissa, value, optional uncertainty."
-function read_columns(path)
-    x = Float64[]
-    y = Float64[]
-    σ = Float64[]
-    for (index, line) in enumerate(eachline(path))
-        index == 1 && continue
-        fields = split(strip(line))
-        length(fields) >= 2 || continue
-        push!(x, parse(Float64, fields[1]))
-        push!(y, parse(Float64, fields[2]))
-        push!(σ, length(fields) >= 3 ? something(tryparse(Float64, fields[3]), 0.0) : 0.0)
-    end
-    return x, y, σ
-end
 
 """
 The directory of the run to draw for one system, or `nothing` when none has been written.
@@ -123,9 +128,7 @@ function run_directory(case::Case)
 end
 
 "The totals a run wrote, by name."
-function read_totals(case::Case)
-    directory = run_directory(case)
-    directory === nothing && return Dict{String, Float64}()
+function read_totals(directory::AbstractString)
     path = joinpath(directory, "totals.dat")
     totals = Dict{String, Float64}()
     isfile(path) || return totals
@@ -138,25 +141,77 @@ function read_totals(case::Case)
     return totals
 end
 
-curve(case::Case, name) = read_columns(joinpath(run_directory(case), name))
+"The commit recorded in a run's `metadata.toml`, under `[run]` or at top level."
+function gitcommit(directory::AbstractString)
+    path = joinpath(directory, "metadata.toml")
+    metadata = isfile(path) ? TOML.parsefile(path) : Dict{String, Any}()
+    run = get(metadata, "run", Dict{String, Any}())
+    commit = run isa AbstractDict ? get(run, "gitcommit", nothing) : nothing
+    commit === nothing && (commit = get(metadata, "gitcommit", nothing))
+    if commit === nothing
+        @warn "no gitcommit recorded for the run" path
+        return "unrecorded"
+    end
+    return string(commit)
+end
 
-function measured_sets(system, observable)
-    directory = joinpath(MEASURED, system, observable)
-    isdir(directory) || return Tuple{String, String}[]
-    files = sort(filter(name -> endswith(name, ".dat"), readdir(directory)))
-    return [(_author(name), joinpath(directory, name)) for name in files]
+"The Maxwellian temperature [MeV] a run's configuration takes the spectrum ratio against."
+function maxwellian_temperature(directory::AbstractString)
+    path = joinpath(directory, "configuration.toml")
+    if isfile(path)
+        spectrum = get(TOML.parsefile(path), "spectrum", nothing)
+        if spectrum isa AbstractDict
+            temperature = get(spectrum, "maxwellian_temperature", nothing)
+            temperature isa Real && return Float64(temperature)
+        end
+    end
+    @warn "no spectrum.maxwellian_temperature in the run configuration; taking \
+        $(FALLBACK_MAXWELLIAN_TEMPERATURE) MeV" path
+    return FALLBACK_MAXWELLIAN_TEMPERATURE
+end
+
+"""
+A measured dataset: its author–year label, the file it was read from, and the points inside the
+drawn window with their uncertainties, zero where none is reported.
+"""
+struct MeasuredSet
+    label::String
+    path::String
+    x::Vector{Float64}
+    y::Vector{Float64}
+    σ::Vector{Float64}
 end
 
 # Files are named <accession>_<author>_<year>.dat by the retrieval.
-function _author(name)
+function author_year(name::AbstractString)
     parts = split(replace(name, ".dat" => ""), "_")
-    length(parts) >= 3 || return name
+    length(parts) >= 3 || return String(name)
     author = replace(parts[2], "." => ". ")
-    author = replace(author, "Goeoek" => "Göök", "Budtz-jorgensen" => "Budtz-Jørgensen")
+    author = replace(
+        author,
+        "Goeoek" => "Göök",
+        "Budtz-jorgensen" => "Budtz-Jørgensen",
+        "Al-adili" => "Al-Adili",
+    )
     return strip(last(split(author, ". "))) * " " * parts[3]
 end
 
-function _available(case::Case)
+"The measured datasets of one observable of one system, restricted to `window`."
+function load_measured(system::AbstractString, observable::AbstractString, window)
+    directory = joinpath(MEASURED, system, observable)
+    sets = MeasuredSet[]
+    isdir(directory) || return sets
+    for name in sort(filter(endswith(".dat"), readdir(directory)))
+        path = joinpath(directory, name)
+        x, y, σ = read_columns(path)
+        keep = first(window) .<= x .<= last(window)
+        any(keep) || continue
+        push!(sets, MeasuredSet(author_year(name), path, x[keep], y[keep], σ[keep]))
+    end
+    return sets
+end
+
+function available(case::Case)
     directory = run_directory(case)
     if directory !== nothing && isfile(joinpath(directory, "nu_vs_A.dat"))
         println("  ", rpad(case.label, 10), " ", basename(directory))
@@ -168,128 +223,255 @@ function _available(case::Case)
     return false
 end
 
-function figure_multiplicity()
-    set_theme!(THEME)
-    drawable = filter(_available, CASES)
+"Axis limits spanning the finite `values`, widened by `MARGIN` of their range on either side."
+function padded_limits(values)
+    finite = filter(isfinite, collect(Float64, values))
+    isempty(finite) && throw(ArgumentError("no finite values to set axis limits from"))
+    low, high = extrema(finite)
+    span = high > low ? high - low : max(abs(high), 1.0)
+    return (low - MARGIN * span, high + MARGIN * span)
+end
+
+"As `padded_limits`, with the margin taken in decades for a logarithmic axis."
+function padded_log_limits(values)
+    positive = filter(v -> isfinite(v) && v > 0, collect(Float64, values))
+    isempty(positive) &&
+        throw(ArgumentError("no positive values to set logarithmic axis limits from"))
+    low, high = padded_limits(log10.(positive))
+    return (exp10(low), exp10(high))
+end
+
+"Ordinate limits spanning a model curve and every measured value; error bars may reach into the
+margins and the annotation band above."
+function ordinate_limits(model::AbstractVector{<:Real}, sets::Vector{MeasuredSet})
+    values = collect(Float64, model)
+    for set in sets
+        append!(values, set.y)
+    end
+    return padded_limits(values)
+end
+
+panel(slot; kwargs...) = Axis(slot; xlabelpadding = 8, ylabelpadding = 8, kwargs...)
+
+# Legends hold at most three entries per row.
+legend_rows(entries::Integer) = cld(entries, 3)
+
+"Error bars, then markers, of one measured dataset; returns the marker plot for the legend."
+function draw_measured!(axis::Axis, set::MeasuredSet)
+    colour, marker = dataset_style(set.label)
+    any(>(0), set.σ) &&
+        errorbars!(axis, set.x, set.y, set.σ; color = (colour, 0.5), linewidth = 1.5)
+    return scatter!(
+        axis,
+        set.x,
+        set.y;
+        color = colour,
+        marker = marker,
+        markersize = 14,
+        strokecolor = darker(colour),
+        strokewidth = 1.5,
+    )
+end
+
+"""
+    label_guide!(slot, value, label, limits; side)
+
+Label a reference line where it meets the axis frame: above the frame for a vertical guide at
+`x = value` (`side = :top`), right of it for a horizontal guide at `y = value` (`side = :right`).
+A transparent overlay axis in the same layout cell carries the label as its only tick, so the
+layout reserves room for it and it cannot collide with the data.
+"""
+function label_guide!(slot, value::Real, label, limits::Tuple{Real, Real}; side::Symbol)
+    common = (; backgroundcolor = :transparent, xgridvisible = false, ygridvisible = false)
+    if side === :top
+        overlay = Axis(
+            slot;
+            common...,
+            xaxisposition = :top,
+            xticks = ([value], [label]),
+            xticksvisible = false,
+            xticklabelsize = ANNOTATION_SIZE,
+            xticklabelcolor = GUIDE_LABEL_COLOUR,
+            xticklabelpad = 6,
+            xlabelvisible = false,
+        )
+        hideydecorations!(overlay)
+        xlims!(overlay, limits...)
+    elseif side === :right
+        overlay = Axis(
+            slot;
+            common...,
+            yaxisposition = :right,
+            yticks = ([value], [label]),
+            yticksvisible = false,
+            yticklabelsize = ANNOTATION_SIZE,
+            yticklabelcolor = GUIDE_LABEL_COLOUR,
+            yticklabelpad = 8,
+            ylabelvisible = false,
+        )
+        hidexdecorations!(overlay)
+        ylims!(overlay, limits...)
+    else
+        throw(ArgumentError("side must be :top or :right, got :$side"))
+    end
+    hidespines!(overlay)
+    return overlay
+end
+
+"The provenance entry of one system: the run drawn, its commit, and the measured files used."
+function system_record(directory::AbstractString, sets::Vector{MeasuredSet})
+    return Dict{String, Any}(
+        "run" => basename(directory),
+        "gitcommit" => gitcommit(directory),
+        "measured" => String[relpath(set.path, MEASURED) for set in sets],
+    )
+end
+
+function export_figure(figure::Figure, name::AbstractString, systems::Dict{String, Any})
+    path = joinpath(FIGURES, name)
+    save(path * ".pdf", figure)
+    save(path * ".png", figure; px_per_unit = 4)
+    open(path * ".toml", "w") do io
+        TOML.print(
+            io,
+            Dict{String, Any}("figure" => name, "systems" => systems);
+            sorted = true,
+        )
+    end
+    println("wrote ", path, ".pdf")
+    return nothing
+end
+
+"""
+Draw ν(A) for every system with a run, one stacked panel each, with the measured datasets as
+markers and the model as the black line. Each panel carries the A₀/2 guide, the system notation,
+and ⟨ν⟩ against the evaluated value; all panels share one mass range.
+"""
+function figure_multiplicity(drawable::Vector{Case})
     isempty(drawable) && return nothing
+    panels = map(drawable) do case
+        directory = run_directory(case)
+        A, ν, _ = read_columns(joinpath(directory, "nu_vs_A.dat"))
+        # Measured points are compared only where the run solved the model: the run's own mass
+        # range, within the outer window.
+        window =
+            (max(first(MASS_WINDOW), minimum(A)), min(last(MASS_WINDOW), maximum(A)))
+        sets = load_measured(case.label, "nu_vs_A", window)
+        (; case, directory, A, ν, sets)
+    end
 
-    figure = Figure(size = (510, 30 + 140 * length(drawable)))
-    summary = String[]
+    masses = Float64[]
+    for p in panels
+        append!(masses, p.A)
+        foreach(set -> append!(masses, set.x), p.sets)
+        push!(masses, p.case.compound_mass / 2)
+    end
+    xlimits = padded_limits(masses)
 
-    for (row, case) in pairs(drawable)
-        A, ν, _ = curve(case, "nu_vs_A.dat")
-        totals = read_totals(case)
-        modelled = get(totals, "nu_per_fission", NaN)
-        push!(
-            summary,
-            @sprintf(
-                "%-24s ⟨ν⟩ = %.4f   evaluated %.4f   %+.1f %%",
-                string(case.notation),
-                modelled,
-                case.measured,
-                100 * (modelled - case.measured) / case.measured
-            )
-        )
-
-        axis = Axis(
-            figure[2 * row, 1];
+    n = length(panels)
+    figure = Figure(size = (900, 600 + 350 * (n - 1)))
+    provenance = Dict{String, Any}()
+    for (row, p) in pairs(panels)
+        bottom = row == n
+        cell = GridLayout(figure[row, 1])
+        has_legend = !isempty(p.sets)
+        slot = cell[has_legend ? 2 : 1, 1]
+        axis = panel(
+            slot;
             ylabel = L"\nu(A)",
-            xlabel = row == length(drawable) ? L"Fragment mass $A$" : "",
-            xticks = 80:10:170,
-            xticklabelsvisible = row == length(drawable),
+            xlabel = L"Fragment mass $A$",
+            xlabelvisible = bottom,
+            xticklabelsvisible = bottom,
+            xticks = 80:10:180,
         )
 
-        handles = []
+        symmetric = p.case.compound_mass / 2
+        vlines!(axis, [symmetric]; color = GUIDE_COLOUR, linestyle = :dash, linewidth = 1.5)
+        begin_panel!()
+        handles = Any[]
         labels = Any[]
-        for (index, (author, path)) in pairs(measured_sets(case.label, "nu_vs_A"))
-            index > length(PALETTE) && break
-            A_measured, ν_measured, σ = read_columns(path)
-            keep = first(MASS_RANGE) .<= A_measured .<= last(MASS_RANGE)
-            handle = scatter!(
-                axis,
-                A_measured[keep],
-                ν_measured[keep];
-                color = (PALETTE[index], 0.7),
-                marker = MARKERS[index],
-                markersize = 4,
-            )
-            any(>(0), σ[keep]) && errorbars!(
-                axis,
-                A_measured[keep],
-                ν_measured[keep],
-                σ[keep];
-                color = (PALETTE[index], 0.3),
-                linewidth = 0.5,
-            )
-            push!(handles, handle)
-            push!(labels, author)
+        for set in p.sets
+            push!(handles, draw_measured!(axis, set))
+            push!(labels, set.label)
         end
-        model = lines!(axis, A, ν; color = :black, linewidth = 1.6)
-        push!(handles, model)
+        push!(handles, lines!(axis, p.A, p.ν; color = :black, linewidth = 3))
         push!(labels, "This model")
 
-        symmetric = case.compound_mass / 2
-        vlines!(axis, [symmetric]; color = (:grey, 0.55), linestyle = :dot, linewidth = 0.8)
+        low, high = ordinate_limits(p.ν, p.sets)
+        ylimits = (low, high + ANNOTATION_BAND * (high - low))
+        xlims!(axis, xlimits...)
+        ylims!(axis, ylimits...)
+        label_guide!(slot, symmetric, L"A_0/2", xlimits; side = :top)
+
+        modelled = get(read_totals(p.directory), "nu_per_fission", NaN)
+        evaluated = p.case.evaluated
+        deviation = 100 * (modelled - evaluated) / evaluated
+        @printf(
+            "  %-10s ⟨ν⟩ = %.4f   evaluated %.4f   %+.1f %%\n",
+            p.case.label,
+            modelled,
+            evaluated,
+            deviation
+        )
+        takeaway = MathText(
+            @sprintf(
+                "\$\\langle \\nu \\rangle = %.2f\$, evaluated %.2f (\$%+.1f\$ %%)",
+                modelled,
+                evaluated,
+                deviation
+            )
+        )
+        # The upper left is clear of the sawtooth: light fragments far from symmetry emit least.
         text!(
             axis,
-            symmetric + 1.5,
-            3.4;
-            text = L"A_0/2",
-            color = (:grey, 0.75),
-            fontsize = 7,
+            0.03,
+            0.96;
+            text = p.case.notation,
+            space = :relative,
             align = (:left, :top),
+            fontsize = ANNOTATION_SIZE,
         )
         text!(
             axis,
-            last(MASS_RANGE) - 2,
-            0.1;
-            text = case.notation,
-            fontsize = 9,
-            align = (:right, :bottom),
+            0.03,
+            0.96;
+            text = takeaway,
+            space = :relative,
+            align = (:left, :top),
+            offset = (0, -ANNOTATION_LINE),
+            fontsize = ANNOTATION_SIZE,
         )
-        xlims!(axis, MASS_RANGE...)
-        ylims!(axis, 0.0, 3.5)
 
-        Legend(
-            figure[2 * row - 1, 1],
-            handles,
-            labels;
-            orientation = :horizontal,
-            nbanks = 1,
-            framevisible = false,
-            padding = (0, 0, 0, 0),
-            colgap = 8,
-            patchsize = (12, 2),
-            labelsize = 7.5,
-        )
+        if has_legend
+            Legend(
+                cell[1, 1],
+                handles,
+                labels;
+                nbanks = legend_rows(length(handles)),
+                tellwidth = false,
+                tellheight = true,
+                padding = (0, 0, 0, 0),
+                colgap = 16,
+                patchsize = (35, 20),
+            )
+            rowgap!(cell, 8)
+        end
+        provenance[p.case.label] = system_record(p.directory, p.sets)
     end
+    n > 1 && rowgap!(figure.layout, 12)
 
-    # Gaps are set once the layout is complete: a legend row tight against its panel, and a
-    # wider separation between systems.
-    for row in 1:length(drawable)
-        rowgap!(figure.layout, 2 * row - 1, 2)
-        row < length(drawable) && rowgap!(figure.layout, 2 * row, 8)
-    end
-
-    path = joinpath(FIGURES, "multiplicity_vs_experiment")
-    save(path * ".pdf", figure)
-    save(path * ".png", figure; px_per_unit = 3)
-    foreach(println, summary)
-    println("wrote ", path, ".pdf")
+    export_figure(figure, "multiplicity_vs_experiment", provenance)
     return nothing
 end
 
 maxwellian(E, T) = 2 / sqrt(π) * T^(-3 / 2) * sqrt(E) * exp(-E / T)
 
-# Where the retrieved sets have useful statistics. Below this the ratio is dominated by detector
-# thresholds, above it by counting statistics in the tail.
-const LOW = 0.08
-const HIGH = 11.0
-const T_M = 1.42     # the Maxwellian temperature every retrieved set is reported against
-
-function figure_spectrum()
-    set_theme!(THEME)
-    case = first(CASES)
+"""
+Draw the 252-Cf prompt neutron spectrum as its ratio to a Maxwellian at the run's `T_M`, the
+model as the black line and the measured ratios as markers. The unity guide is labelled with
+`T_M`, and ⟨E⟩ is compared to the measured value in the lower left.
+"""
+function figure_spectrum(case::Case)
     directory = run_directory(case)
     path = directory === nothing ? "" : joinpath(directory, "spectrum_vs_E.dat")
     if !isfile(path)
@@ -297,276 +479,263 @@ function figure_spectrum()
         return nothing
     end
     E, N, _ = read_columns(path)
-    totals = read_totals(case)
-    @printf(
-        "⟨E⟩ = %.4f MeV against a Maxwellian at T_M = %.2f MeV\n",
-        get(totals, "mean_E", NaN),
-        T_M
-    )
+    T_M = maxwellian_temperature(directory)
+    mean_E = get(read_totals(directory), "mean_E", NaN)
+    @printf("  ⟨E⟩ = %.4f MeV against a Maxwellian at T_M = %.2f MeV\n", mean_E, T_M)
 
-    inside = LOW .<= E .<= HIGH
-    ratio = N[inside] ./ maxwellian.(E[inside], T_M)
+    low, high = ENERGY_WINDOW
+    inside = low .<= E .<= high
+    energies = E[inside]
+    ratio = N[inside] ./ maxwellian.(energies, T_M)
+    sets = load_measured(case.label, "spectrum_maxwellian_ratio_vs_E", ENERGY_WINDOW)
 
-    figure = Figure(size = (510, 300))
-    axis = Axis(
-        figure[2, 1];
+    xlimits = padded_log_limits(vcat(energies, (set.x for set in sets)...))
+    ylimits = ordinate_limits(vcat(ratio, 1.0), sets)
+
+    figure = Figure(size = (900, 600))
+    has_legend = !isempty(sets)
+    slot = figure[has_legend ? 2 : 1, 1]
+    axis = panel(
+        slot;
         xscale = log10,
+        xticks = SPECTRUM_TICKS,
         xlabel = L"Laboratory neutron energy $E$ [MeV]",
         ylabel = L"N(E)\,/\,M(E,\,T_\mathrm{M})",
     )
 
-    handles = []
+    hlines!(axis, [1.0]; color = GUIDE_COLOUR, linestyle = :dash, linewidth = 1.5)
+    begin_panel!()
+    handles = Any[]
     labels = Any[]
-    for (index, (author, file)) in
-        pairs(measured_sets(case.label, "spectrum_maxwellian_ratio_vs_E"))
-        index > length(PALETTE) && break
-        energies, observed, σ = read_columns(file)
-        keep = LOW .<= energies .<= HIGH
-        any(keep) || continue
-        handle = scatter!(
-            axis,
-            energies[keep],
-            observed[keep];
-            color = (PALETTE[index], 0.6),
-            marker = MARKERS[index],
-            markersize = 3.5,
+    for set in sets
+        push!(handles, draw_measured!(axis, set))
+        push!(labels, set.label)
+    end
+    push!(handles, lines!(axis, energies, ratio; color = :black, linewidth = 3))
+    push!(labels, "This model")
+
+    xlims!(axis, xlimits...)
+    ylims!(axis, ylimits...)
+    guide = MathText(@sprintf("\$T_\\mathrm{M} = %.2f\$ MeV", T_M))
+    label_guide!(slot, 1.0, guide, ylimits; side = :right)
+
+    # Below the data at low energy: every measured ratio there stays near unity.
+    takeaway = MathText(
+        @sprintf(
+            "\$\\langle E \\rangle = %.3f\$ MeV, measured %.2f MeV",
+            mean_E,
+            MEASURED_MEAN_ENERGY
         )
-        any(>(0), σ[keep]) && errorbars!(
-            axis,
-            energies[keep],
-            observed[keep],
-            σ[keep];
-            color = (PALETTE[index], 0.25),
-            linewidth = 0.5,
+    )
+    text!(
+        axis,
+        0.03,
+        0.04;
+        text = takeaway,
+        space = :relative,
+        align = (:left, :bottom),
+        fontsize = ANNOTATION_SIZE,
+    )
+    text!(
+        axis,
+        0.03,
+        0.04;
+        text = case.notation,
+        space = :relative,
+        align = (:left, :bottom),
+        offset = (0, ANNOTATION_LINE),
+        fontsize = ANNOTATION_SIZE,
+    )
+
+    if has_legend
+        Legend(
+            figure[1, 1],
+            handles,
+            labels;
+            nbanks = legend_rows(length(handles)),
+            tellwidth = false,
+            tellheight = true,
+            padding = (0, 0, 0, 0),
+            colgap = 16,
+            patchsize = (35, 20),
         )
-        push!(handles, handle)
-        push!(labels, author)
+        rowgap!(figure.layout, 8)
     end
 
-    model = lines!(axis, E[inside], ratio; color = :black, linewidth = 1.8)
-    push!(handles, model)
-    push!(labels, "This model")
-    hlines!(axis, [1.0]; color = (:grey, 0.6), linestyle = :dot, linewidth = 0.8)
-
-    text!(
-        axis,
-        LOW * 1.04,
-        0.635;
-        text = case.notation,
-        fontsize = 9,
-        align = (:left, :bottom),
-    )
-    text!(
-        axis,
-        HIGH * 0.97,
-        0.635;
-        text = L"T_\mathrm{M} = 1.42\ \mathrm{MeV}",
-        fontsize = 8,
-        color = (:grey, 0.8),
-        align = (:right, :bottom),
-    )
-    ticks = [0.1, 0.2, 0.5, 1, 2, 5, 10]
-    axis.xticks = (ticks, [t < 1 ? string(t) : string(Int(t)) for t in ticks])
-    xlims!(axis, LOW, HIGH)
-    ylims!(axis, 0.62, 1.18)
-
-    Legend(
-        figure[1, 1],
-        handles,
-        labels;
-        orientation = :horizontal,
-        nbanks = 1,
-        framevisible = false,
-        padding = (0, 0, 0, 0),
-        colgap = 10,
-        patchsize = (12, 2),
-        labelsize = 7.5,
-    )
-    rowgap!(figure.layout, 1, 4)
-
-    path = joinpath(FIGURES, "prompt_neutron_spectrum")
-    save(path * ".pdf", figure)
-    save(path * ".png", figure; px_per_unit = 3)
-    println("wrote ", path, ".pdf")
+    provenance = Dict{String, Any}(case.label => system_record(directory, sets))
+    export_figure(figure, "prompt_neutron_spectrum", provenance)
     return nothing
 end
 
 """
-The quantities internal to the sequential treatment, against fragment mass, for every system a
-run wrote. None has an experimental counterpart — they are intermediate to the emission chain,
-not observables — so the comparison that means anything is between systems, and between a system
-and the shape its own sawtooth implies.
-
-Diagnostic rather than published: not tracked, and regenerated by whoever wants it.
+Draw the quantities internal to the sequential treatment against fragment mass, one panel each
+in a 2 × 2 grid, every system as a line in its fixed style. None has a measured counterpart, so
+the comparison is between systems.
 """
-function figure_residual_quantities()
-    set_theme!(THEME)
-    drawable = filter(_available, CASES)
+function figure_residual_quantities(drawable::Vector{Case})
     isempty(drawable) && return nothing
-
-    panels = (
+    quantities = (
         ("E_star_vs_A.dat", L"E^*(A)\ [\mathrm{MeV}]"),
-        ("E_r_vs_A.dat", L"\bar{E}_r(A)\ [\mathrm{MeV}]"),
+        ("E_r_vs_A.dat", L"\bar{E}_\mathrm{r}(A)\ [\mathrm{MeV}]"),
         ("T_vs_A.dat", L"\langle T \rangle(A)\ [\mathrm{MeV}]"),
         ("eps_vs_A.dat", L"\langle \varepsilon \rangle(A)\ [\mathrm{MeV}]"),
     )
+    directories = Dict(case.label => run_directory(case) for case in drawable)
+    tables = Dict{Tuple{Int, String}, Tuple{Vector{Float64}, Vector{Float64}}}()
+    for (index, (name, _)) in pairs(quantities), case in drawable
+        path = joinpath(directories[case.label], name)
+        isfile(path) || continue
+        A, value, _ = read_columns(path)
+        tables[(index, case.label)] = (A, value)
+    end
+    isempty(tables) && return nothing
+    xlimits = padded_limits(reduce(vcat, [table[1] for table in values(tables)]))
 
-    figure = Figure(size = (510, 340))
-    handles = []
-    labels = Any[]
-    for (index, (name, ylabel)) in pairs(panels)
+    shown = [
+        case for case in drawable if
+        any(haskey(tables, (index, case.label)) for index in eachindex(quantities))
+    ]
+    has_legend = length(shown) > 1
+    first_row = has_legend ? 2 : 1
+
+    figure = Figure(size = (1200, 950))
+    handles = Dict{String, Any}()
+    for (index, (_, ylabel)) in pairs(quantities)
         row, column = fldmod1(index, 2)
-        axis = Axis(
-            figure[row + 1, column];
+        axis = panel(
+            figure[first_row + row - 1, column];
             ylabel = ylabel,
-            xlabel = row == 2 ? L"Fragment mass $A$" : "",
-            xticks = 80:20:160,
+            xlabel = L"Fragment mass $A$",
+            xlabelvisible = row == 2,
             xticklabelsvisible = row == 2,
+            xticks = 80:20:180,
         )
-        for (position, case) in pairs(drawable)
-            directory = run_directory(case)
-            directory === nothing && continue
-            path = joinpath(directory, name)
-            isfile(path) || continue
-            A, quantity, _ = read_columns(path)
-            handle = lines!(
-                axis,
-                A,
-                quantity;
-                color = PALETTE[position],
-                linestyle = LINESTYLES[position],
-                linewidth = 1.3,
-            )
-            if index == 1
-                push!(handles, handle)
-                push!(labels, case.notation)
-            end
+        ordinates = Float64[]
+        for case in shown
+            haskey(tables, (index, case.label)) || continue
+            A, value = tables[(index, case.label)]
+            colour, linestyle = SYSTEM_STYLE[case.label]
+            curve =
+                lines!(axis, A, value; color = colour, linestyle = linestyle, linewidth = 3)
+            get!(handles, case.label, curve)
+            append!(ordinates, value)
         end
-        xlims!(axis, MASS_RANGE...)
+        xlims!(axis, xlimits...)
+        isempty(ordinates) || ylims!(axis, padded_limits(ordinates)...)
     end
 
-    Legend(
-        figure[1, 1:2],
-        handles,
-        labels;
-        orientation = :horizontal,
-        framevisible = false,
-        padding = (0, 0, 0, 0),
-        colgap = 14,
-        patchsize = (16, 2),
-        labelsize = 8,
-    )
-    rowgap!(figure.layout, 1, 4)
-    rowgap!(figure.layout, 2, 6)
-    colgap!(figure.layout, 1, 14)
+    if has_legend
+        Legend(
+            figure[1, 1:2],
+            [handles[case.label] for case in shown],
+            [case.notation for case in shown];
+            tellwidth = false,
+            tellheight = true,
+            padding = (0, 0, 0, 0),
+            colgap = 24,
+            patchsize = (50, 20),
+        )
+    end
+    rowgap!(figure.layout, 10)
+    colgap!(figure.layout, 12)
 
-    path = joinpath(FIGURES, "residual_quantities")
-    save(path * ".pdf", figure)
-    save(path * ".png", figure; px_per_unit = 3)
-    println("wrote ", path, ".pdf")
+    provenance = Dict{String, Any}(
+        case.label => system_record(directories[case.label], MeasuredSet[]) for
+        case in shown
+    )
+    export_figure(figure, "residual_quantities", provenance)
     return nothing
 end
 
 """
-The isobaric charge distribution each run was weighted by, against the alternatives it could have
-taken: the `Zₚ` model with the parameters fitted to this reaction, the same model with its
-parameters estimated from the systematics, and the conventional means that carry no mass
-dependence.
-
-Every run writes all of them, so this draws tables rather than recomputing anything. Read it as a
-diagnostic of the *input*. The gap between the fitted and the estimated parameters is what a
-system without a fit of its own inherits; the gap between either and the used table is what the
-model still misses; and the flat means are the floor all three improve on.
+Draw the isobaric charge distribution each run was weighted by, ΔZ(A) and σ_Z(A) in two columns
+with one row per system, against the fitted-parameter and systematics `Zₚ` model and the mean
+values. All rows share one heavy-fragment mass range.
 """
-function figure_charge_distribution()
-    set_theme!(THEME)
-    drawable = filter(_available, CASES)
+function figure_charge_distribution(drawable::Vector{Case})
     isempty(drawable) && return nothing
+    directories = [run_directory(case) for case in drawable]
+    tables = Dict{Tuple{String, String}, NTuple{3, Vector{Float64}}}()
+    for (case, directory) in zip(drawable, directories), source in CHARGE_SOURCES
+        path = joinpath(directory, source.file)
+        isfile(path) && (tables[(case.label, source.file)] = read_columns(path))
+    end
+    isempty(tables) && return nothing
+    xlimits = padded_limits(reduce(vcat, [table[1] for table in values(tables)]))
 
-    sources = (
-        ("charge_distribution_vs_A.dat", "Used by the run", :solid, :black),
-        (
-            "charge_distribution_vs_A_wahl_per_reaction.dat",
-            L"$Z_p$ model, fitted parameters",
-            :dashdot,
-            PALETTE[2],
-        ),
-        (
-            "charge_distribution_vs_A_wahl_systematics.dat",
-            L"$Z_p$ model, systematics",
-            :dash,
-            PALETTE[1],
-        ),
-        ("charge_distribution_vs_A_mean.dat", "Mean values", :dot, PALETTE[4]),
-    )
+    present = [
+        source for source in CHARGE_SOURCES if
+        any(haskey(tables, (case.label, source.file)) for case in drawable)
+    ]
+    has_legend = length(present) > 1
+    first_row = has_legend ? 2 : 1
 
-    figure = Figure(size = (510, 40 + 105 * length(drawable)))
-    # Keyed by file name rather than taken from the first panel, so a source that only some
-    # systems have still reaches the legend.
-    entries = Dict{String, Any}()
+    n = length(drawable)
+    figure = Figure(size = (1200, 600 + 350 * (n - 1)))
+    handles = Dict{String, Any}()
     for (row, case) in pairs(drawable)
-        directory = run_directory(case)
-        directory === nothing && continue
-        bottom = row == length(drawable)
-        for (column, (ylabel, index)) in pairs(((L"\Delta Z(A)", 2), (L"\sigma_Z(A)", 3)))
-            axis = Axis(
-                figure[row + 1, column];
+        bottom = row == n
+        for (column, ylabel) in pairs((L"\Delta Z(A)", L"\sigma_Z(A)"))
+            axis = panel(
+                figure[first_row + row - 1, column];
                 ylabel = ylabel,
-                xlabel = bottom ? L"Heavy fragment mass $A_H$" : "",
+                xlabel = L"Heavy fragment mass $A_\mathrm{H}$",
+                xlabelvisible = bottom,
                 xticklabelsvisible = bottom,
+                xticks = 110:10:180,
             )
-            for (name, label, style, colour) in sources
-                path = joinpath(directory, name)
-                isfile(path) || continue
-                A, second, third = read_columns(path)
-                handle = lines!(
+            ordinates = Float64[]
+            for source in CHARGE_SOURCES
+                haskey(tables, (case.label, source.file)) || continue
+                A, ΔZ, σ_Z = tables[(case.label, source.file)]
+                value = column == 1 ? ΔZ : σ_Z
+                curve = lines!(
                     axis,
                     A,
-                    index == 2 ? second : third;
-                    color = colour,
-                    linestyle = style,
-                    linewidth = index == 2 ? 1.4 : 1.2,
+                    value;
+                    color = source.colour,
+                    linestyle = source.linestyle,
+                    linewidth = 3,
                 )
-                index == 2 && get!(entries, name, (handle, label))
+                get!(handles, source.file, curve)
+                append!(ordinates, value)
             end
-            column == 2 && text!(
+            xlims!(axis, xlimits...)
+            isempty(ordinates) || ylims!(axis, padded_limits(ordinates)...)
+            # ΔZ falls with mass, leaving the upper right clear.
+            column == 1 && text!(
                 axis,
                 0.97,
-                0.06;
+                0.95;
                 text = case.notation,
-                fontsize = 8.5,
-                align = (:right, :bottom),
                 space = :relative,
+                align = (:right, :top),
+                fontsize = ANNOTATION_SIZE,
             )
-            # One range for every panel. The systems sweep different heavy-mass windows, and
-            # letting each autoscale while only the bottom row carries tick labels would leave
-            # the upper panels read against the wrong axis.
-            xlims!(axis, CHARGE_MASS_RANGE...)
         end
     end
 
-    present = [entries[name] for (name, _, _, _) in sources if haskey(entries, name)]
-    Legend(
-        figure[1, 1:2],
-        first.(present),
-        last.(present);
-        orientation = :horizontal,
-        framevisible = false,
-        padding = (0, 0, 0, 0),
-        colgap = 14,
-        patchsize = (16, 2),
-        labelsize = 7.5,
-    )
-    rowgap!(figure.layout, 1, 4)
-    for gap in 2:(size(figure.layout)[1] - 1)
-        rowgap!(figure.layout, gap, 6)
+    if has_legend
+        Legend(
+            figure[1, 1:2],
+            [handles[source.file] for source in present],
+            [source.label for source in present];
+            nbanks = 2,
+            tellwidth = false,
+            tellheight = true,
+            padding = (0, 0, 0, 0),
+            colgap = 24,
+            patchsize = (50, 20),
+        )
     end
-    colgap!(figure.layout, 1, 16)
+    rowgap!(figure.layout, 10)
+    colgap!(figure.layout, 12)
 
-    path = joinpath(FIGURES, "charge_distribution")
-    save(path * ".pdf", figure)
-    save(path * ".png", figure; px_per_unit = 3)
-    println("wrote ", path, ".pdf")
+    provenance = Dict{String, Any}(
+        case.label => system_record(directory, MeasuredSet[]) for
+        (case, directory) in zip(drawable, directories)
+    )
+    export_figure(figure, "charge_distribution", provenance)
     return nothing
 end
 
@@ -580,10 +749,11 @@ function main()
         measurements with ExforFissionData.jl and lay them out as described at the top of this \
         file.""" directory = MEASURED
     println("drawing from:")
-    figure_multiplicity()
-    figure_spectrum()
-    figure_residual_quantities()
-    figure_charge_distribution()
+    drawable = filter(available, CASES)
+    figure_multiplicity(drawable)
+    figure_spectrum(first(CASES))
+    figure_residual_quantities(drawable)
+    figure_charge_distribution(drawable)
     return nothing
 end
 
