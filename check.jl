@@ -3,7 +3,7 @@
 #     julia check.jl            format in place, then test
 #     julia check.jl --check    fail on formatting differences, do not rewrite
 #
-# Mirrors the gate that CI applies, so a failure is reproducible locally.
+# The same gate the CI workflow applies once it is enabled, so a failure is reproducible locally.
 
 const DIRECTORIES = ("src", "test", "scripts", "plotting", "docs")
 

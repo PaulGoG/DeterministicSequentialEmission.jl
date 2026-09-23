@@ -44,7 +44,7 @@ DeterministicSequentialEmission.jl/
 │   └── sims/             written by a run, data/sims/<system>/<run> — not tracked
 ├── plots/                the two figures above, and the diagnostic panels, which are not tracked
 ├── formatter/            pinned JuliaFormatter, so the gate cannot drift
-├── check.jl              the gate CI applies: format, then test
+├── check.jl              the gate: format, then test
 ├── activate.jl           activates and instantiates the root environment
 └── Project.toml
 ```
@@ -102,7 +102,7 @@ julia docs/make.jl
 `check.jl --check` verifies the formatting without rewriting anything, then runs the test suite
 with its static analysis.
 
-Before committing, apply the gate CI applies — format against `.JuliaFormatter.toml` with the
+Before committing, apply the gate — format against `.JuliaFormatter.toml` with the
 pinned formatter, then run the tests:
 
 ```
@@ -247,7 +247,8 @@ second moment — over the whole domain.
 
 | Component | State |
 |---|---|
-| Package environment, test and docs environments, CI | done |
+| Package environment, test and docs environments | done |
+| Continuous integration, dependency updates, docs deployment | dormant until the public release, under `.github/dormant/` |
 | Tabular input contract, `ExforFissionData.jl`-compatible | done |
 | Mass data, `Q`, `S_n`, `TXE` with uncertainties | done |
 | Fragmentation domain, `Z_p(A)`, `p(Z,A)` | done |
