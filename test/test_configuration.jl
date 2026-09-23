@@ -272,6 +272,12 @@ end
 
         configuration = _configuration(directory)
         identifier = run_identifier(configuration)
+        parameters = run_parameters(configuration)
+        @test parameters["AHmin"] == 126
+        @test parameters["AHmax"] == 174
+        @test parameters["ldm"] == "BSFG"
+        @test parameters["part"] == "excitation_ratio"
+        @test Set(keys(parameters)) ⊆ Set(values(RUN_IDENTIFIER_ABBREVIATIONS))
         # Every token is `<abbreviation>=<value>`, and every abbreviation is in the table.
         abbreviations = Set(values(RUN_IDENTIFIER_ABBREVIATIONS))
         for piece in split(identifier, "_")

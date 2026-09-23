@@ -246,7 +246,7 @@ at all — the same rule seen from the other side.
 
 ## Output files and run identifiers
 
-A run writes to `results/<system>/<run>`, and an output follows the same
+A run writes to `data/sims/<system>/<run>`, and an output follows the same
 `<quantity>_vs_<abscissa>` rule as an input, so it can be fed back in without translation:
 
 | File | Content |
@@ -260,7 +260,9 @@ A run writes to `results/<system>/<run>`, and an output follows the same
 | `spectrum_vs_E.dat` | the laboratory prompt neutron spectrum |
 | `Y_vs_A.dat`, `Y_vs_Z.dat`, `Y_vs_TKE.dat` | the fragment yield projections |
 | `totals.dat` | one row per quantity averaged over the whole run |
-| `metadata.toml` | how it was produced: configuration, commit, machine |
+| `metadata.toml` | how it was produced: configuration, commit, environment, machine |
+| `configuration.toml` | the configuration the run loaded, copied |
+| `Manifest.toml` | the resolved environment the run executed in, copied |
 
 **A run-identifier token is the configuration key it came from.** Spelling every key out in full
 would put some two hundred characters into every directory name, so the keys are abbreviated — and
@@ -270,4 +272,4 @@ suite asserts that every token it uses has one and that no two keys share a toke
 
 The identifier says which keys it covers rather than claiming all of them. What it leaves out — the
 input file paths, the spectrum grid, `significant_digits` — is written in full into the metadata
-beside the result, and [`run_identifier`](@ref) records the reason for each.
+beside the result, and [`run_parameters`](@ref) records the reason for each.

@@ -1,10 +1,10 @@
 # Validation figures: the model against measurement.
 #
-#   julia plotting/figures.jl [results directory] [data directory]
+#   julia plotting/figures.jl [runs directory] [data directory]
 #
-# Nothing is solved here. The model side is read from what scripts/run.jl wrote under results/,
-# so a figure is redrawn from tables rather than by running the model again, and the numbers on
-# the page are the numbers in the files. Run the pipeline first:
+# Nothing is solved here. The model side is read from what scripts/run.jl wrote under
+# data/sims/, so a figure is redrawn from tables rather than by running the model again, and
+# the numbers on the page are the numbers in the files. Run the pipeline first:
 #
 #   julia scripts/run.jl config/Cf252_sf.toml
 #
@@ -23,8 +23,8 @@ using CairoMakie, MathTeXEngine
 using Printf
 
 const ROOT = dirname(@__DIR__)
-const FIGURES = joinpath(ROOT, "figures")
-const RESULTS = length(ARGS) >= 1 ? ARGS[1] : joinpath(ROOT, "results")
+const FIGURES = joinpath(ROOT, "plots")
+const RESULTS = length(ARGS) >= 1 ? ARGS[1] : joinpath(ROOT, "data", "sims")
 const MEASURED = length(ARGS) >= 2 ? ARGS[2] : joinpath(ROOT, "data")
 
 """
@@ -107,14 +107,17 @@ end
 """
 The directory of the run to draw for one system, or `nothing` when none has been written.
 
-A run writes to `results/<system>/<run identifier>`, so a system may hold several. The most
-recently written one is drawn, and which that was is stated on the terminal rather than left to
-be inferred from the figure.
+A run writes to `data/sims/<system>/<run identifier>`, so a system may hold several. The
+most recently written one is drawn, runs moved aside with a `#N` suffix are skipped, and
+which that was is stated on the terminal rather than left to be inferred from the figure.
 """
 function run_directory(case::Case)
     system = joinpath(RESULTS, case.label)
     isdir(system) || return nothing
-    runs = filter(isdir, readdir(system; join = true))
+    runs = filter(
+        path -> isdir(path) && !occursin('#', basename(path)),
+        readdir(system; join = true),
+    )
     isempty(runs) && return nothing
     return last(sort(runs; by = mtime))
 end
@@ -570,7 +573,7 @@ end
 function main()
     mkpath(FIGURES)
     isdir(RESULTS) || @warn """
-        no results directory; solve the systems first with \
+        no runs directory; solve the systems first with \
         `julia scripts/run.jl config/<system>.toml`.""" directory = RESULTS
     isdir(MEASURED) || @warn """
         no data directory; the figures will carry the model curves alone. Retrieve the \

@@ -12,14 +12,14 @@
 /data/reference/*
 !/data/reference/mass_excess_ame2020.dat
 
-# Pipeline output. Each run writes its tables and metadata under its own system directory; the
-# two figures the README shows are tracked, and everything else a run draws is not.
-/results/
-/figures/*
-!/figures/multiplicity_vs_experiment.png
-!/figures/multiplicity_vs_experiment.pdf
-!/figures/prompt_neutron_spectrum.png
-!/figures/prompt_neutron_spectrum.pdf
+# Pipeline output. Each run writes its tables and provenance under data/sims/<system>/<run>,
+# which the data/ rule above already ignores. The two figures the README shows are tracked, and
+# everything else a run draws is not.
+/plots/*
+!/plots/multiplicity_vs_experiment.png
+!/plots/multiplicity_vs_experiment.pdf
+!/plots/prompt_neutron_spectrum.png
+!/plots/prompt_neutron_spectrum.pdf
 
 # Libraries do not pin a manifest; each environment resolves against [compat].
 Manifest*.toml

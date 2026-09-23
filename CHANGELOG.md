@@ -66,6 +66,14 @@ here. This changelog begins with the rewrite.
 
 ### Changed
 
+- Run output follows the DrWatson layout: `scripts/run.jl` writes the tables to
+  `data/sims/<system>/<run>` and the figures land in `plots/`; `results/` and `figures/` are
+  gone. `write_results(result, directory)` takes the directory and writes tables only, refusing
+  one that already holds a run. The provenance — `metadata.toml` with the commit from DrWatson's
+  `tag!`, the platform, and copies of the configuration and the resolved `Manifest.toml` — is
+  written by the script from the new `run_metadata`. `run_identifier` is `savename` over the
+  new `run_parameters`; directory names do not change. `run_pipeline` no longer writes.
+
 - `SegmentedCurve` is undefined below its first point as it is above the last, so a fit is
   never extrapolated past the data that supported it. `segment_coverage` reports a low-end gap
   the same way it reports one at the high end. No shipped curve starts above `heavy_mass_min`,

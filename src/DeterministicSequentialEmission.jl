@@ -15,7 +15,7 @@ configuration, the post-neutron fragment mass `A_p = A − n` is an integer with
 """
 module DeterministicSequentialEmission
 
-using Dates: Dates
+using DrWatson: savename
 using Measurements: Measurement, measurement, value
 using SpecialFunctions: gamma_inc
 using TOML: TOML
@@ -162,13 +162,20 @@ export EmissionSequence,
     post_neutron_mass,
     sequence_average
 export Configuration, load_configuration
-export RunResult, run_pipeline, write_results, run_identifier, RUN_IDENTIFIER_ABBREVIATIONS
+export RunResult,
+    run_pipeline,
+    write_results,
+    run_parameters,
+    run_identifier,
+    run_metadata,
+    RUN_IDENTIFIER_ABBREVIATIONS
 
 """
     PACKAGE_ROOT
 
-The directory the package was loaded from. Default input and output locations are taken relative
-to it, so a pipeline runs unchanged from any working directory and on any machine.
+The directory the package was loaded from. The default input location is taken relative to it,
+so a configuration loads unchanged from any working directory. Nothing is written relative to
+it: where a run lands is the caller's decision, and `scripts/run.jl` makes it.
 """
 const PACKAGE_ROOT = dirname(@__DIR__)
 

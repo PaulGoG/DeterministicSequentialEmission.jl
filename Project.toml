@@ -4,13 +4,13 @@ version = "0.1.0-DEV"
 authors = ["Paul-Adrian Gogîță"]
 
 [deps]
-Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
+DrWatson = "634d3b9d-ee7a-5ddf-bec9-22491ea816e1"
 Measurements = "eff96d63-e80a-5855-80a2-b1b0885c5ab7"
 SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 
 [compat]
-Dates = "1"
+DrWatson = "2.19"
 Measurements = "2"
 SpecialFunctions = "2.9.0"
 TOML = "1"

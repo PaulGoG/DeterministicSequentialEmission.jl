@@ -17,16 +17,21 @@ naming the offending key when it cannot.
 
 [`run_pipeline`](@ref) sweeps the fragmentation domain against the kinetic energy grid, solves
 the emission chain at every configuration the physics admits, contracts the result against the
-yield weights, and hands a [`RunResult`](@ref) to [`write_results`](@ref). A configuration is
-dropped only where the physics excludes it — a non-positive `TXE`, a partition the segments do
-not cover, a fragment the mass table cannot reach — and the counts of attempted and solved
-configurations are written alongside the results, so the coverage of a run can be audited from
-its own output.
+yield weights, and returns a [`RunResult`](@ref). A configuration is dropped only where the
+physics excludes it — a non-positive `TXE`, a partition the segments do not cover, a fragment
+the mass table cannot reach — and the counts of attempted and solved configurations are written
+alongside the results, so the coverage of a run can be audited from its own output.
 
-The tables land in `results/<system>/<run>`, where the system is [`system_label`](@ref) and the
-run is [`run_identifier`](@ref). Two runs of one system that differ in anything the identifier
-covers therefore land in different directories rather than one displacing the other, and a
-directory name states what produced it.
+`scripts/run.jl` writes the result on the DrWatson layout. The tables go to
+`data/sims/<system>/<run>` through [`write_results`](@ref), where the system is
+[`system_label`](@ref) and the run is [`run_identifier`](@ref) — `savename` over
+[`run_parameters`](@ref) — so two runs of one system that differ in anything the identifier
+covers land in different directories, and a directory name states what produced it. Beside the
+tables the script writes `metadata.toml` — [`run_metadata`](@ref) from the library, plus the
+identifier, the paths, the commit through DrWatson's `tag!`, and the platform — and copies of
+the configuration and the resolved `Manifest.toml`, so a result traces to configuration,
+commit, environment and hardware from its own directory. A directory that already holds a run
+is moved aside as `<run>#1`, `<run>#2`, … rather than overwritten.
 
 ```@autodocs
 Modules = [DeterministicSequentialEmission]

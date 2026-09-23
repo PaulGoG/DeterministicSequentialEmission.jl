@@ -12,7 +12,7 @@ const Curve = Vector{Tuple{Float64, Float64}}
 
 What one run produced: the domain it swept, the averaged observables against fragment mass and
 against total kinetic energy, the totals, and the prompt neutron spectrum where one was asked
-for. [`write_results`](@ref) writes it; [`run_pipeline`](@ref) does both.
+for. [`run_pipeline`](@ref) produces it; [`write_results`](@ref) writes it.
 
 Curves are [`Curve`](@ref)s.
 """
@@ -91,17 +91,19 @@ function Base.show(io::IO, result::RunResult)
 end
 
 """
-    run_pipeline(configuration; write = true) -> RunResult
+    run_pipeline(configuration) -> RunResult
 
 Solve every configuration the domain and the kinetic energy grid span, contract the results
-against the yield weights, and write the tables.
+against the yield weights, and return the result. Nothing is written here:
+[`write_results`](@ref) writes the tables to a directory of the caller's choosing, and
+`scripts/run.jl` adds the provenance beside them.
 
 The sweep is deterministic: no sampling, no seeds. A configuration is dropped only where the
 physics excludes it — a non-positive `TXE`, a partition the segments do not cover, a fragment
 the mass table cannot reach — and the counts of attempted and solved configurations are
 reported so that the coverage of a run can be audited from its own output.
 """
-function run_pipeline(configuration::Configuration; write::Bool = true)
+function run_pipeline(configuration::Configuration)
     domain = fragmentation_domain(
         configuration.system,
         configuration.charge_distribution,
@@ -211,7 +213,6 @@ function run_pipeline(configuration::Configuration; write::Bool = true)
         _mean_kinetic_energy(weights),
         mean_lab,
     )
-    write && write_results(result)
     return result
 end
 
@@ -334,13 +335,13 @@ const RUN_IDENTIFIER_ABBREVIATIONS = Dict(
 )
 
 """
-    run_identifier(configuration) -> String
+    run_parameters(configuration) -> Dict{String, Any}
 
-The token that names one run of one fissioning system, built from the configuration keys that
-change the result.
+The configuration values that change the result, keyed by the token each contributes to the
+run identifier.
 
-Every token is a configuration key abbreviated through [`RUN_IDENTIFIER_ABBREVIATIONS`](@ref),
-and a key with no entry there throws rather than being given a token on the spot.
+Every key is abbreviated through [`RUN_IDENTIFIER_ABBREVIATIONS`](@ref), and a key with no
+entry there throws rather than being given a token on the spot.
 
 **It covers the scalar and enumerated keys, and it says which rather than claiming all of them.**
 `deformed_branch` appears only under Gilbert-Cameron and `total` only where a yield was loaded,
@@ -355,18 +356,8 @@ and `maxwellian_temperature` change the tabulation of an already-solved spectrum
 physics, though the grid does move the first moment reported in `totals.dat`, which is a property
 of what was written. `significant_digits` changes how a number is rendered. And the system is not
 a token either: it names the directory the identifier sits in.
-
-# Examples
-
-```jldoctest
-julia> RUN_IDENTIFIER_ABBREVIATIONS["heavy_mass_max"]
-"AHmax"
-
-julia> RUN_IDENTIFIER_ABBREVIATIONS["charges_per_mass"]
-"nZ"
-```
 """
-function run_identifier(configuration::Configuration)
+function run_parameters(configuration::Configuration)
     entries = Pair{String, Any}[
         "incident_energy" => configuration.system.incident_energy,
         "heavy_mass_min" => first(configuration.heavy_masses),
@@ -386,7 +377,7 @@ function run_identifier(configuration::Configuration)
     fragment_yield = configuration.fragment_yield
     fragment_yield === nothing || push!(entries, "total" => fragment_yield.total)
 
-    tokens = String[]
+    parameters = Dict{String, Any}()
     for (key, value) in entries
         haskey(RUN_IDENTIFIER_ABBREVIATIONS, key) || throw(
             ArgumentError(
@@ -394,10 +385,31 @@ function run_identifier(configuration::Configuration)
                  entry in RUN_IDENTIFIER_ABBREVIATIONS",
             ),
         )
-        push!(tokens, string(RUN_IDENTIFIER_ABBREVIATIONS[key], "=", _token(value)))
+        parameters[RUN_IDENTIFIER_ABBREVIATIONS[key]] = value
     end
-    sort!(tokens)
-    return join(tokens, "_")
+    return parameters
+end
+
+"""
+    run_identifier(configuration) -> String
+
+The token that names one run of one fissioning system: DrWatson's `savename` over
+[`run_parameters`](@ref), tokens sorted and joined by `_`, every value rendered by one
+rule — integers and integer-valued reals without a decimal part, everything else as
+printed — so one grid has one spelling.
+
+# Examples
+
+```jldoctest
+julia> RUN_IDENTIFIER_ABBREVIATIONS["heavy_mass_max"]
+"AHmax"
+
+julia> RUN_IDENTIFIER_ABBREVIATIONS["charges_per_mass"]
+"nZ"
+```
+"""
+function run_identifier(configuration::Configuration)
+    return savename(run_parameters(configuration); connector = "_", val_to_string = _token)
 end
 
 _token(x::Integer) = string(x)
@@ -415,30 +427,27 @@ _method_token(::ExcitationEnergyRatio) = "excitation_ratio"
 _method_token(::ScissionModelling) = "scission"
 
 """
-    write_results(result; directory) -> String
+    write_results(result, directory) -> String
 
-Write a run to `directory/<system>/<run>`: one two-column file per curve, a table of totals, and
-a `metadata.toml` recording the configuration, the package version, the commit and the platform.
+Write the tables of a run into `directory`: one two-column file per curve, the fragment yield
+projections, the charge distribution the run used beside the ones it could have used, and a
+table of totals.
 
-The system is [`system_label`](@ref) and the run is [`run_identifier`](@ref), so two runs of one
-system that differ in anything the identifier covers land in different directories rather than
-one displacing the other, and a directory name states what produced it.
-
-Nothing is overwritten in place. A directory that already holds a run is moved aside with a
-numbered suffix first, so a second run of the same configuration cannot destroy the first.
+`directory` is created. One that already holds a run is refused rather than overwritten, so a
+caller that wants a second run of one configuration beside the first moves the first aside;
+`scripts/run.jl` does, numbering it `#1`, `#2`, …. The provenance record is not written here:
+[`run_metadata`](@ref) supplies what the library knows about a run, and the script adds the
+rest and writes the whole.
 """
-function write_results(
-    result::RunResult;
-    directory::AbstractString = joinpath(PACKAGE_ROOT, "results"),
-)
-    configuration = result.configuration
-    destination = joinpath(
-        directory,
-        system_label(configuration.system),
-        run_identifier(configuration),
+function write_results(result::RunResult, directory::AbstractString)
+    isfile(joinpath(directory, "totals.dat")) && throw(
+        ArgumentError(
+            "$(directory) already holds a run; write_results never overwrites one, move it \
+             aside first",
+        ),
     )
-    _preserve(destination)
-    mkpath(destination)
+    configuration = result.configuration
+    mkpath(directory)
 
     digits = configuration.significant_digits
     curves = (
@@ -453,7 +462,7 @@ function write_results(
     )
     for (name, header, values) in curves
         isempty(values) && continue
-        open(joinpath(destination, name), "w") do io
+        open(joinpath(directory, name), "w") do io
             println(io, header)
             for (x, y) in values
                 println(io, _significant(x, digits), " ", _significant(y, digits))
@@ -469,7 +478,7 @@ function write_results(
             ("Y_vs_TKE.dat", "TKE Y", :kinetic_energy),
         )
             projection = yield_over(fragment_yield, dimension)
-            open(joinpath(destination, name), "w") do io
+            open(joinpath(directory, name), "w") do io
                 println(io, header)
                 for (x, Y) in projection
                     println(
@@ -483,9 +492,9 @@ function write_results(
         end
     end
 
-    _write_charge_distributions(destination, configuration, digits)
+    _write_charge_distributions(directory, configuration, digits)
 
-    open(joinpath(destination, "totals.dat"), "w") do io
+    open(joinpath(directory, "totals.dat"), "w") do io
         println(io, "quantity value")
         for (name, quantity) in (
             ("nu_per_fragment", result.total_multiplicity),
@@ -500,11 +509,7 @@ function write_results(
             println(io, name, " ", _significant(quantity, digits))
         end
     end
-
-    open(joinpath(destination, "metadata.toml"), "w") do io
-        _write_metadata(io, result)
-    end
-    return destination
+    return directory
 end
 
 """
@@ -601,115 +606,64 @@ function _write_charge_distribution(
     return path
 end
 
-# Never overwrite a run. The previous one moves to <name>#1, <name>#2, … in the manner of
-# DrWatson's safesave, without taking the dependency for one function.
-function _preserve(destination::AbstractString)
-    isdir(destination) || return nothing
-    index = 1
-    while ispath("$(destination)#$(index)")
-        index += 1
-    end
-    mv(destination, "$(destination)#$(index)")
-    return nothing
-end
-
 _significant(x::Real, digits::Integer) =
     isfinite(x) ? string(round(Float64(x); sigdigits = digits)) : string(Float64(x))
 
-function _write_metadata(io::IO, result::RunResult)
+"""
+    run_metadata(result) -> Dict{String, Any}
+
+What the library knows about a run, as nested tables ready for `TOML.print`: `"system"`, the
+fissioning system; `"model"`, every modelling choice and input the configuration resolved;
+`"result"`, the totals. The caller adds what only it knows — the run identifier, the paths,
+the commit, the platform — and writes the whole; `scripts/run.jl` does.
+"""
+function run_metadata(result::RunResult)
     configuration = result.configuration
-    println(
-        io,
-        "# Written by DeterministicSequentialEmission.jl. Every field records what the",
-    )
-    println(
-        io,
-        "# run actually used, so a result can be traced to a configuration, a commit",
-    )
-    println(io, "# and a machine without consulting anything outside this directory.")
-    println(io)
-    println(io, "[run]")
-    println(io, "identifier = ", repr(run_identifier(configuration)))
-    println(io, "configuration = ", repr(configuration.source))
-    println(io, "data_directory = ", repr(configuration.data_directory))
-    println(io, "written = ", repr(string(Dates.now())))
-    println(io, "package_version = ", repr(string(_package_version())))
-    println(io, "commit = ", repr(_git_commit()))
-    println(io)
-    println(io, "[system]")
-    println(io, "label = ", repr(system_label(configuration.system)))
-    println(io, "notation = ", repr(system_notation(configuration.system)))
-    println(io, "target_A = ", configuration.system.target.A)
-    println(io, "target_Z = ", configuration.system.target.Z)
-    println(io, "channel = ", repr(configuration.system.channel))
-    println(io, "reaction = ", repr(reaction(configuration.system)))
-    println(io, "incident_energy_MeV = ", configuration.system.incident_energy)
-    println(io, "compound_A = ", configuration.system.compound.A)
-    println(io, "compound_Z = ", configuration.system.compound.Z)
-    println(io)
-    println(io, "[model]")
-    println(
-        io,
-        "heavy_masses = [",
-        first(configuration.heavy_masses),
-        ", ",
-        last(configuration.heavy_masses),
-        "]",
-    )
-    println(io, "charges_per_mass = ", configuration.charges_per_mass)
-    println(
-        io,
-        "kinetic_energies_MeV = [",
-        first(configuration.kinetic_energies),
-        ", ",
-        step(configuration.kinetic_energies),
-        ", ",
-        last(configuration.kinetic_energies),
-        "]",
-    )
-    println(io, "level_density = ", repr(sprint(show, configuration.model)))
-    println(io, "cross_section = ", repr(sprint(show, configuration.cross_section)))
-    println(io, "maximum_temperature_MeV = ", configuration.maximum_temperature)
-    println(io, "partition = ", repr(sprint(show, configuration.method)))
-    # Which tabulation the partition actually used. A curve staged by hand used to leave no
-    # trace of the run that produced it; the file name a producing run writes carries its own
-    # run identifier, so recording the resolved path here closes that gap.
-    println(io, "partition_curve = ", repr(_curve_source(configuration.method)))
-    println(io, "charge_distribution = ", repr(configuration.charge_distribution.source))
-    println(io, "mass_excess = ", repr(configuration.mass_excess_table.source))
-    println(io, "significant_digits = ", configuration.significant_digits)
-    println(io, "maxwellian_temperature_MeV = ", configuration.maxwellian_temperature)
     grid = configuration.spectrum_grid
-    println(
-        io,
-        "spectrum_grid_MeV = ",
-        grid === nothing ? repr("none") :
-        string("[", first(grid), ", ", last(grid), ", ", length(grid), "]"),
-    )
     fragment_yield = configuration.fragment_yield
-    println(
-        io,
-        "yield = ",
-        repr(fragment_yield === nothing ? "none" : sprint(show, fragment_yield)),
+    system = Dict{String, Any}(
+        "label" => system_label(configuration.system),
+        "notation" => system_notation(configuration.system),
+        "target_A" => configuration.system.target.A,
+        "target_Z" => configuration.system.target.Z,
+        "channel" => configuration.system.channel,
+        "reaction" => reaction(configuration.system),
+        "incident_energy_MeV" => configuration.system.incident_energy,
+        "compound_A" => configuration.system.compound.A,
+        "compound_Z" => configuration.system.compound.Z,
     )
-    println(io)
-    println(io, "[result]")
-    println(io, "nu_per_fission = ", 2 * result.total_multiplicity)
-    println(io, "mean_TKE_MeV = ", result.mean_kinetic_energy)
-    println(io, "mean_E_MeV = ", result.mean_neutron_lab_energy)
-    println(io, "configurations_solved = ", result.configurations_solved)
-    println(io, "configurations_attempted = ", result.configurations_attempted)
-    println(io, "yield_reached = ", result.yield_reached)
-    println(io, "segment_coverage = ", result.segment_coverage)
-    println(io)
-    println(io, "[platform]")
-    println(io, "julia = ", repr(string(VERSION)))
-    println(io, "hostname = ", repr(gethostname()))
-    println(io, "cpu = ", repr(_cpu_model()))
-    println(io, "cpu_threads = ", Sys.CPU_THREADS)
-    println(io, "threads = ", Threads.nthreads())
-    println(io, "total_memory_gb = ", round(Sys.total_memory() / 2^30; digits = 2))
-    return nothing
+    model = Dict{String, Any}(
+        "heavy_masses" =>
+            [first(configuration.heavy_masses), last(configuration.heavy_masses)],
+        "charges_per_mass" => configuration.charges_per_mass,
+        "kinetic_energies_MeV" => [
+            first(configuration.kinetic_energies),
+            step(configuration.kinetic_energies),
+            last(configuration.kinetic_energies),
+        ],
+        "level_density" => sprint(show, configuration.model),
+        "cross_section" => sprint(show, configuration.cross_section),
+        "maximum_temperature_MeV" => configuration.maximum_temperature,
+        "partition" => sprint(show, configuration.method),
+        "partition_curve" => _curve_source(configuration.method),
+        "charge_distribution" => configuration.charge_distribution.source,
+        "mass_excess" => configuration.mass_excess_table.source,
+        "significant_digits" => configuration.significant_digits,
+        "maxwellian_temperature_MeV" => configuration.maxwellian_temperature,
+        "spectrum_grid_MeV" => grid === nothing ? "none" : [first(grid), last(grid)],
+        "spectrum_points" => grid === nothing ? 0 : length(grid),
+        "yield" => fragment_yield === nothing ? "none" : sprint(show, fragment_yield),
+    )
+    totals = Dict{String, Any}(
+        "nu_per_fission" => 2 * result.total_multiplicity,
+        "mean_TKE_MeV" => result.mean_kinetic_energy,
+        "mean_E_MeV" => result.mean_neutron_lab_energy,
+        "configurations_solved" => result.configurations_solved,
+        "configurations_attempted" => result.configurations_attempted,
+        "yield_reached" => result.yield_reached,
+        "segment_coverage" => result.segment_coverage,
+    )
+    return Dict{String, Any}("system" => system, "model" => model, "result" => totals)
 end
 
 _curve_source(method::TemperatureRatio) =
@@ -717,28 +671,3 @@ _curve_source(method::TemperatureRatio) =
 _curve_source(method::ExcitationEnergyRatio) =
     isempty(method.curve.source) ? "supplied in memory" : method.curve.source
 _curve_source(::ScissionModelling) = "none; the partition is modelled at scission"
-
-function _package_version()
-    project = joinpath(PACKAGE_ROOT, "Project.toml")
-    isfile(project) || return v"0.0.0"
-    document = TOML.parsefile(project)
-    return VersionNumber(get(document, "version", "0.0.0"))
-end
-
-function _git_commit()
-    repository = PACKAGE_ROOT
-    isdir(joinpath(repository, ".git")) || return "not a git checkout"
-    try
-        commit = readchomp(`git -C $repository rev-parse HEAD`)
-        dirty = !isempty(readchomp(`git -C $repository status --porcelain`))
-        return dirty ? commit * "-dirty" : commit
-    catch
-        return "unavailable"
-    end
-end
-
-function _cpu_model()
-    info = Sys.cpu_info()
-    isempty(info) && return "unknown"
-    return String(first(info).model)
-end

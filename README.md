@@ -15,7 +15,7 @@ densities in the Fermi-gas regime. Because the number of sequences `n` is an int
 configuration, the post-neutron fragment mass `A_p = A − n` is an integer too, without rounding —
 which is what makes the model suitable for independent fission product yields.
 
-![Prompt neutron multiplicity against fragment mass, four fissioning systems](figures/multiplicity_vs_experiment.png)
+![Prompt neutron multiplicity against fragment mass, four fissioning systems](plots/multiplicity_vs_experiment.png)
 
 The sawtooth is the signature observable, and it is not fitted: the total excitation energy is
 shared between the fragments by a temperature ratio `R_T(A_H)` extracted from measured `ν(A)` by
@@ -23,7 +23,7 @@ a companion package, the emission chain is then solved configuration by configur
 result is contracted against the measured fragment yield `Y(A, TKE)`. Total multiplicities come
 out within −7 % to +5 % of the evaluated values, with no parameter adjusted per system.
 
-![Prompt fission neutron spectrum of 252-Cf as a ratio to a Maxwellian](figures/prompt_neutron_spectrum.png)
+![Prompt fission neutron spectrum of 252-Cf as a ratio to a Maxwellian](plots/prompt_neutron_spectrum.png)
 
 The spectrum is the same statement in energy. Model and measurement are both absolute here —
 the model spectrum integrates to one neutron by construction, and every retrieved set is
@@ -41,9 +41,8 @@ DeterministicSequentialEmission.jl/
 ├── test/                 test suite, own environment (Aqua, JET, ExplicitImports)
 ├── docs/                 Documenter site, own environment
 ├── data/                 input data — see data/README.md; only the mass evaluation ships
-├── figures/              the two figures above, and a diagnostic panel of the
-│                        residual quantities, which is not tracked
-├── results/              written by a run, results/<system>/<run> — not tracked
+│   └── sims/             written by a run, data/sims/<system>/<run> — not tracked
+├── plots/                the two figures above, and the diagnostic panels, which are not tracked
 ├── formatter/            pinned JuliaFormatter, so the gate cannot drift
 ├── check.jl              the gate CI applies: format, then test
 ├── activate.jl           activates and instantiates the root environment
@@ -65,10 +64,11 @@ Solve one fissioning system:
 julia scripts/run.jl config/Cf252_sf.toml
 ```
 
-That writes `results/Cf252_sf/<run>/`: `nu_vs_A.dat`, `T_vs_A.dat`, `E_star_vs_A.dat`, the
+That writes `data/sims/Cf252_sf/<run>/`: `nu_vs_A.dat`, `T_vs_A.dat`, `E_star_vs_A.dat`, the
 residual quantities, the projections against total kinetic energy, the fragment yield
-projections, the laboratory spectrum, a table of totals, and a `metadata.toml` recording the
-configuration, the package version, the commit and the platform. `<run>` is the run identifier,
+projections, the laboratory spectrum, a table of totals, and the provenance — `metadata.toml`
+recording the configuration, the package version, the commit and the platform, beside copies of
+the configuration and the resolved `Manifest.toml`. `<run>` is the run identifier,
 built from the configuration keys that change the result, so two runs of one system that differ
 in any of them land side by side rather than one displacing the other. Nothing is overwritten — a
 directory that already holds a run is moved aside with a numbered suffix first.
@@ -128,7 +128,7 @@ that cannot be honoured fails on load, naming the key.
 
 A system is named `<ElementSymbol><A>_<entrance channel>` — the channel as the field spells it, not
 as EXFOR codes it — and that one token names the configuration, the input tree under `data/` and
-the output tree under `results/`. It is also what separates the thermal run of ²³⁵U from the
+the output tree under `data/sims/`. It is also what separates the thermal run of ²³⁵U from the
 resonance one, which the reaction code `n,f` alone cannot.
 
 The last two are where the data runs out rather than where the model does. No joint `Y(A, TKE)`

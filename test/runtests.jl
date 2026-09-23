@@ -38,12 +38,15 @@ include("physics.jl")
         using JET
         using JET: AnyFrameModule
         using Measurements: Measurements
+        using DrWatson: DrWatson
         # Measurements.jl keeps per-term derivatives in a dictionary whose iteration JET
-        # cannot follow; the reports raised there are about that dependency's internals, not
-        # about this package, so they are excluded by frame rather than silenced wholesale.
+        # cannot follow, and DrWatson's savename takes an empty `expand` default whose element
+        # type JET cannot resolve; the reports raised there are about those dependencies'
+        # internals, not about this package, so they are excluded by frame rather than
+        # silenced wholesale.
         JET.test_package(
             DeterministicSequentialEmission;
-            ignored_modules = (AnyFrameModule(Measurements),),
+            ignored_modules = (AnyFrameModule(Measurements), AnyFrameModule(DrWatson)),
         )
     end
 end

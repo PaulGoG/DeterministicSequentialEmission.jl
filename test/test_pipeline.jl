@@ -85,8 +85,11 @@ CHARGE_DISTRIBUTION_AVAILABLE &&
 
             configuration =
                 load_configuration(joinpath(root, "Cf252_sf.toml"); data_directory = data)
-            result = run_pipeline(configuration; write = false)
-            destination = write_results(result; directory = joinpath(root, "results"))
+            result = run_pipeline(configuration)
+            destination = joinpath(root, "results")
+            @test write_results(result, destination) == destination
+            # A directory that already holds a run is refused, not overwritten.
+            @test_throws ArgumentError write_results(result, destination)
 
             used = joinpath(destination, "charge_distribution_vs_A.dat")
             per_reaction =
@@ -140,9 +143,21 @@ CHARGE_DISTRIBUTION_AVAILABLE &&
             @test charge_dispersion(fitted, 130) < charge_dispersion(model, 130)
             @test charge_polarization(fitted, 130) != charge_polarization(model, 130)
 
-            # The run metadata names the resolved curve, so the partition input is traceable too.
-            metadata = read(joinpath(destination, "metadata.toml"), String)
-            @test occursin("partition_curve", metadata)
-            @test occursin("R_T.csv", metadata)
+            # The provenance record is the script's to write, not the library's.
+            @test !isfile(joinpath(destination, "metadata.toml"))
+
+            # What the library supplies of it names the resolved curve, so the partition input
+            # is traceable, and is TOML-representable as it stands, an undefined total included.
+            metadata = run_metadata(result)
+            @test Set(keys(metadata)) == Set(["system", "model", "result"])
+            @test metadata["system"]["label"] == "Cf252_sf"
+            @test metadata["result"]["configurations_solved"] ==
+                  result.configurations_solved
+            @test metadata["model"]["partition_curve"] == configuration.method.curve.source
+            @test endswith(metadata["model"]["partition_curve"], "R_T.csv")
+            parsed = TOML.parse(sprint(io -> TOML.print(io, metadata; sorted = true)))
+            @test parsed["system"]["label"] == "Cf252_sf"
+            @test isequal(parsed["result"]["mean_E_MeV"], metadata["result"]["mean_E_MeV"])
+            @test parsed["model"]["heavy_masses"] == [126, 140]
         end
     end
