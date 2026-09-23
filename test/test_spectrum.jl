@@ -256,3 +256,14 @@ end
     barren = emission_chain(table, model, cross_section, fragmentation.light, 0.0)
     @test pair_weights(MultiplicityWeighting(), barren, barren, split) === nothing
 end
+
+@testset "a pair sum halves the yield at mass symmetry" begin
+    # The fragment yield counts both fragments of a symmetric split on the heavy side, so a sum
+    # over heavy fragments would give that split twice the weight of an asymmetric one.
+    @test DeterministicSequentialEmission._pair_weight(fragmentation_at(126, 49), 3.0) ==
+          1.5
+    @test DeterministicSequentialEmission._pair_weight(fragmentation_at(126, 50), 3.0) ==
+          1.5
+    @test DeterministicSequentialEmission._pair_weight(fragmentation_at(127, 50), 3.0) ==
+          3.0
+end

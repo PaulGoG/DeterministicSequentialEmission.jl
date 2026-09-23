@@ -205,14 +205,10 @@ two sides. They are kept apart in `entries` because each labels a different heav
 carries that fragment's own `p(Z,A)` — correct for a fragment-indexed sweep, and what the
 archived run writes. Counted as splits, they are one.
 
-So anything summing a *pair* quantity — `ν_pair`, `TKE_p`, the pair spectrum — must iterate this
-rather than `entries`, or it counts the symmetric splits twice.
-
-The prototype guards the same case with the three-way branch in its partitioning routines: push
-both fragments when `A_L != A_H`; push both once, skipping a repeat, when the masses match but
-the charges do not; and push a single cell when the fragments are the same nuclide. The rule
-here is the same, with the survivor chosen as the `Z_H >= Z_L` labelling so it does not depend
-on iteration order.
+A sum over pairs does not iterate this: it iterates `entries` and halves the yield of every
+mass-symmetric one (`_pair_weight`), which also covers the self-complementary split
+`(Z₀/2, Z₀/2)` that this list keeps at the yield of two fragments. The survivor here is the
+`Z_H >= Z_L` labelling, so the result does not depend on iteration order.
 
 # Examples
 

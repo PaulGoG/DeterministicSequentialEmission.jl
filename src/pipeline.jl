@@ -227,10 +227,26 @@ function _pairs(contracted)::Curve
     return out
 end
 
+"""
+    _pair_weight(fragmentation, yield) -> Float64
+
+The weight of one fragmentation in a sum over pairs, from the fragment yield of its heavy side.
+
+The yield is normalised to 200 over both fragments of every split, so a sum over the heavy
+fragments alone counts an asymmetric split once, at the yield of the split. At mass symmetry
+the heavy side holds both fragments: the two labellings `(Z, Z₀−Z)` and `(Z₀−Z, Z)` of one
+split are both heavy-side entries, and the self-complementary nuclide `(A₀/2, Z₀/2)` carries the
+yield of two fragments. Halving every mass-symmetric entry restores the yield of the split and
+makes the heavy-side sum exactly half the sum over all fragments, which is the form the total
+average takes — Tudora, Hambsch, Tobosaru, *EPJA* **54**, 87 (2018), text after eq. (16).
+"""
+_pair_weight(fragmentation::Fragmentation, yield::Float64) =
+    is_symmetric(fragmentation) ? yield / 2 : yield
+
 # The laboratory spectrum of the whole system: every solved pair contributes its two chains,
-# weighted by the yield of the fragmentation and, within a pair, by how the neutrons divide
-# between the fragments. Normalised to unit area by construction, so the ratio to a Maxwellian
-# is an absolute statement.
+# weighted by the yield of the fragmentation — halved at mass symmetry, see `_pair_weight` —
+# and, within a pair, by how the neutrons divide between the fragments. Normalised to unit
+# area by construction, so the ratio to a Maxwellian is an absolute statement.
 function _run_spectrum(
     configuration::Configuration,
     chains,
@@ -251,7 +267,7 @@ function _run_spectrum(
     for (entry, TKE, light, heavy, split) in chains
         weight = get(weights.values, (entry.heavy.A, entry.heavy.Z, TKE), nothing)
         weight === nothing && continue
-        w = Float64(value(weight))
+        w = _pair_weight(entry, Float64(value(weight)))
         w > 0 || continue
         share = pair_weights(MultiplicityWeighting(), light, heavy, split)
         share === nothing && continue

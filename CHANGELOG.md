@@ -66,6 +66,15 @@ here. This changelog begins with the rewrite.
 
 ### Changed
 
+- The prompt neutron spectrum weights a mass-symmetric fragmentation by half its fragment yield,
+  through `_pair_weight`. The yield is normalised to 200 over both fragments of every split, so
+  a sum over heavy fragments counts an asymmetric split once at the yield of the split; at `A₀/2`
+  the two labellings of a split and the self-complementary nuclide are all heavy-side entries and
+  carried the yield of two fragments. Halving them makes the heavy-side sum exactly half the sum
+  over all fragments, the form of the total average. Every fragment-indexed table is unchanged;
+  the spectrum moves by at most 0.2 % (²⁵²Cf, in the tail above 14 MeV) and `⟨E⟩` by at most
+  0.0005 MeV.
+
 - Run output follows the DrWatson layout: `scripts/run.jl` writes the tables to
   `data/sims/<system>/<run>` and the figures land in `plots/`; `results/` and `figures/` are
   gone. `write_results(result, directory)` takes the directory and writes tables only, refusing
