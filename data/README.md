@@ -61,8 +61,8 @@ Nucleon-number columns are read through `integer_column`, which accepts an integ
 written in floating point — some of these tables were emitted by a generator and write `118.0`
 where they mean `118`.
 
-²³³U now carries an evaluated charge distribution of the same construction as the other three, so
-it no longer runs on the systematics. Its two marginals sit under their EXFOR accession numbers,
+²³³U carries an evaluated charge distribution of the same lineage as the other three, so it no
+longer runs on the systematics. Its two marginals sit under their EXFOR accession numbers,
 21981005 and 21981008, both Geltenbort 1985, and `Y(A)` is in percent as every other yield here
 is. Its `σ_TKE(A)` comes in two processed sets, Baba and Asghar; the configuration reads the first
 and the second is staged beside it for comparison.
@@ -189,11 +189,17 @@ Two different objects share that format and must not be confused, and the differ
 of quality alone.
 
 The four `<system>/charge_distribution_vs_A.dat` files — `Cf252_sf`, `U235_nth`, `Pu239_nth` and
-`U233_nth` — are **effective Gaussian parameters**: the `Zₚ` model is evaluated per reaction with
-its own least-squares parameters, *including* the even-odd factors `F_Z` and `F_N`, and a plain
-Gaussian is then fitted to the resulting `p(Z,A)` at each mass. `ΔZ(A)` is the centre of that
-fitted Gaussian less `Z_UCD(A)`, and `σ_Z(A)` is its width. Wahl's own least-squares `σ_Z` is a
-different quantity — a model parameter that carries no even-odd structure.
+`U233_nth` — are supplied evaluations, not outputs of this package. Their signatures identify them
+as **effective Gaussian parameters**: a `Zₚ` evaluation per reaction with its own least-squares
+parameters and the even-odd factors `F_Z` and `F_N` folded in, reduced to a plain Gaussian at each
+mass, whose centre less `Z_UCD(A)` is `ΔZ(A)` and whose width is `σ_Z(A)`. The construction in
+`src/wahl.jl` reproduces the period of their ripple but not their values: it deviates from the
+tables by 0.04–0.12 in `ΔZ` and 0.07–0.10 in `σ_Z`, as mean absolute deviations over each
+system's mass range. The tables are therefore not regenerated here from the published parameters;
+they remain staged inputs of documented lineage — the evaluation of A. Tudora, *Phys. Procedia*
+**64**, 62 (2015), doi:10.1016/j.phpro.2015.04.008, applying the 1988 model. Wahl's own
+least-squares `σ_Z` is a different quantity — a model parameter that carries no even-odd
+structure.
 
 That is why these tables oscillate with a period of about five mass units while the systematics
 cannot: the even-odd effect is *inside* them. The period follows from the mechanism — `Zₚ`
@@ -215,9 +221,10 @@ they return
 which is where the conventional fallbacks of `|0.5|` and `0.6` come from, and is the sense in
 which those fallbacks are not arbitrary.
 
-They are authoritative wherever they exist, and where they do not, the package builds the same
-model rather than reaching for the means. It does so in two layers, and the difference between
-them is which reaction the parameters were fitted to. Table A of the 1988 paper carries
+They are authoritative wherever they exist, and where they do not, the package builds the `Zₚ`
+model from the published parameters rather than reaching for the means. It does so in two layers,
+and the difference between them is which reaction the parameters were fitted to. Table A of the
+1988 paper carries
 least-squares parameters for exactly these four reactions; eq. (17) and Table 2 of LA-13928
 estimate the same parameters from `Z_F`, `A_F` and the excitation energy for any reaction in
 `90 ≤ Z_F ≤ 98`, `230 ≤ A_F ≤ 252`, `PE ≤ 8 MeV`. Fig. 18 of that report quotes a reduced `χ²` of
