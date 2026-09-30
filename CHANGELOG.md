@@ -58,7 +58,7 @@ here.
 ### Changed
 
 - FissionFragmentsDomain 0.1.4. Wahl's 1988 model now has `ΔZ = 0` at `A_F/2` for ²⁵²Cf, which
-  moves `ν(126)` by 0.025 and `⟨ν⟩` by 2 × 10⁻⁵; no other system changes.
+  moves `ν(126)` by 0.025 and `⟨ν⟩` by 7 × 10⁻⁵; no other system changes.
 
 - One name per quantity from configuration key to column header, set out in
   `docs/src/naming.md`; configuration schema, data layout and exported names change, with no
