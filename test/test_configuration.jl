@@ -334,6 +334,23 @@ end
             ),
         )
         @test basename(file) == declared * ".toml"
+
+        # Loading can stop at the staged temperature-ratio run before it reaches the yield, so each
+        # yield input the configuration names is read here by its own reader, where present.
+        data = joinpath(dirname(@__DIR__), "data")
+        section = get(document, "yield", Dict{String, Any}())
+        for (key, reader) in (
+            "mass_energy_yield_file" => read_mass_energy_yield,
+            "mass_yield_file" => read_mass_yield,
+            "mean_kinetic_energy_file" =>
+                path -> read_delimited_table(path, MEAN_KINETIC_ENERGY_SPEC),
+            "kinetic_energy_dispersion_file" => read_kinetic_energy_dispersion,
+        )
+            haskey(section, key) || continue
+            path = joinpath(data, section[key])
+            isfile(path) || continue
+            @test reader(path) !== nothing
+        end
     end
 end
 
