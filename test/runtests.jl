@@ -1,6 +1,7 @@
 using Test
 using TOML: TOML
 using Measurements: Measurement, measurement, value, uncertainty
+using FissionFragmentsDomain
 using DeterministicSequentialEmission
 
 const DATA = joinpath(@__DIR__, "..", "data")
@@ -9,19 +10,9 @@ const REFERENCE = joinpath(@__DIR__, "references", "Cf252_sf")
 include("physics.jl")
 
 @testset "DeterministicSequentialEmission" begin
-    include("test_nuclides.jl")
-    include("test_tables.jl")
-    include("test_masses.jl")
-    include("test_charge.jl")
-    include("test_wahl.jl")
-    include("test_wahl_reactions.jl")
-    include("test_domain.jl")
-    include("test_leveldensity.jl")
-    include("test_energetics.jl")
     include("test_partition.jl")
     include("test_manifest.jl")
     include("test_sequences.jl")
-    include("test_yields.jl")
     include("test_averaging.jl")
     include("test_spectrum.jl")
     include("test_configuration.jl")

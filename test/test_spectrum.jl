@@ -45,21 +45,6 @@ using QuadGK: quadgk
     @test centre_of_mass_spectrum(VariableCrossSection(), 0.5, 0.0, 1.0) == 0
 end
 
-@testset "kinetic energy per nucleon" begin
-    fragmentation = fragmentation_at(140, 54)
-    light, heavy = fragment_energy_per_nucleon(fragmentation, 180.0)
-
-    # The light fragment is the faster one; a transposition would swap the two spectra.
-    @test light > heavy
-
-    # Each is the fragment's own kinetic energy divided by its own mass.
-    @test light ≈ (180.0 * 140 / 252) / 112 rtol = RTOL
-    @test heavy ≈ (180.0 * 112 / 252) / 140 rtol = RTOL
-
-    # Momentum balance: the two kinetic energies sum to TKE.
-    @test light * 112 + heavy * 140 ≈ 180.0 atol = 1e-12
-end
-
 @testset "the laboratory transformation preserves normalization" begin
     # The kernel width identity makes N(E) inherit unit area from φ exactly, for any E_f. This
     # is the property the transformation rests on, so it is checked rather than assumed.

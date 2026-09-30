@@ -13,7 +13,7 @@ heavy_mass_max = 159                                       # below A0
 charge_distribution_file = "Pu239_nth/charge_distribution_vs_A.dat"      # under the data directory, or "wahl" | "mean"
 
 [energetics]
-mass_excess_file = "reference/mass_excess_ame2020.dat"  # under the data directory
+mass_excess_file = "ame2020"  # "ame2020", the table FissionFragmentsDomain ships, or a path under the data directory
 kinetic_energy_min = 130.0                              # MeV, above 0
 kinetic_energy_max = 210.0                              # MeV, above kinetic_energy_min
 kinetic_energy_step = 1.0                               # MeV, above 0 to 50

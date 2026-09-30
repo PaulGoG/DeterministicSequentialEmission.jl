@@ -28,30 +28,6 @@ function centre_of_mass_spectrum(::VariableCrossSection, α::Real, T::Real, ε::
 end
 
 """
-    fragment_energy_per_nucleon(fragmentation, TKE) -> (light, heavy)
-
-The kinetic energy per nucleon of each fully accelerated fragment, in MeV.
-
-Equal and opposite momenta give `KE_L = TKE·A_H/A₀` and `KE_H = TKE·A_L/A₀`; dividing each by
-its own mass,
-
-```
-E_f^L = (A_H/A_L) TKE/A₀,    E_f^H = (A_L/A_H) TKE/A₀
-```
-
-so `E_f^L > E_f^H` and the light-fragment spectrum is the broader. The neutron mass is taken as
-one atomic mass unit; `m_n/m_u = 1.00867` would raise both by 0.9 %. `E_f` is constant along an
-emission chain: under the recoil-free scaling `KE_k = KE (A−k)/A` the ratio `KE_k/(A−k)` is
-invariant.
-"""
-function fragment_energy_per_nucleon(fragmentation::Fragmentation, TKE::Real)
-    A₀ = fragmentation.light.A + fragmentation.heavy.A
-    light = (fragmentation.heavy.A / fragmentation.light.A) * TKE / A₀
-    heavy = (fragmentation.light.A / fragmentation.heavy.A) * TKE / A₀
-    return (light, heavy)
-end
-
-"""
     laboratory_spectrum(cross_section, α, T, E_f, E) -> Float64
 
 One emission sequence's spectrum transformed into the laboratory frame.

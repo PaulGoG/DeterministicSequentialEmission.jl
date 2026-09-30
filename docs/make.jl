@@ -1,15 +1,23 @@
 include(joinpath(@__DIR__, "activate.jl"))
 
 using DeterministicSequentialEmission
+using FissionFragmentsDomain
 using Documenter
 using DocumenterCitations
+using DocumenterInterLinks
 
 bib = CitationBibliography(joinpath(@__DIR__, "src", "refs.bib"); style = :numeric)
+
+# Symbols of the domain package resolve against its deployed documentation.
+links = InterLinks(
+    "FissionFragmentsDomain" => "https://PaulGoG.github.io/FissionFragmentsDomain.jl/stable/",
+)
+fallbacks = ExternalFallbacks(; automatic = true)
 
 DocMeta.setdocmeta!(
     DeterministicSequentialEmission,
     :DocTestSetup,
-    :(using DeterministicSequentialEmission);
+    :(using DeterministicSequentialEmission, FissionFragmentsDomain);
     recursive = true,
 )
 
@@ -27,14 +35,12 @@ makedocs(;
         "Home" => "index.md",
         "Running a case" => "running.md",
         "Naming" => "naming.md",
-        "System and inputs" => "system.md",
-        "Fragmentation and charge" => "fragmentation.md",
-        "Energetics and partition" => "energetics.md",
+        "The fragmentation domain" => "domain.md",
+        "Partition" => "energetics.md",
         "Emission and spectrum" => "emission.md",
-        "Yields and observables" => "observables.md",
         "References" => "references.md",
     ],
-    plugins = [bib],
+    plugins = [bib, links, fallbacks],
 )
 
 deploydocs(;

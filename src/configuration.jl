@@ -11,7 +11,7 @@ writes to the directory named by [`system_label`](@ref), under the identifier bu
 struct Configuration
     system::FissioningSystem
     mass_excess_table::MassExcessTable
-    charge_distribution::ChargeDistribution
+    charge_distribution::ChargeModel
     heavy_masses::UnitRange{Int}
     charges_per_mass::Int
     kinetic_energies::StepRangeLen{Float64}
@@ -202,17 +202,15 @@ function load_configuration(
 
     system = _load_system(document)
     energetics_section = _section(document, "energetics")
+    mass_excess_source = _value(
+        energetics_section,
+        "mass_excess_file",
+        String,
+        "energetics.mass_excess_file",
+    )
     mass_excess_table = read_mass_excess_table(
-        _input(
-            data_directory,
-            _value(
-                energetics_section,
-                "mass_excess_file",
-                String,
-                "energetics.mass_excess_file",
-            ),
-            "energetics.mass_excess_file",
-        ),
+        mass_excess_source == "ame2020" ? String(AME2020_MASS_EXCESS_FILE) :
+        _input(data_directory, mass_excess_source, "energetics.mass_excess_file"),
     )
     heavy_masses, charges_per_mass, charge_distribution =
         _load_fragmentation(document, system, mass_excess_table, data_directory)
@@ -340,9 +338,9 @@ function _load_fragmentation(
         "fragmentation.charge_distribution_file",
     )
     distribution = if source == "wahl"
-        # The Zₚ model, for a system without an evaluated ΔZ(A), σ_Z(A), tabulated over the
-        # domain's heavy masses; the resolved layer is recorded in the distribution's source.
-        build_charge_distribution(mass_excess_table, system, lower:upper)
+        # Wahl's Zₚ model: the reaction's own 1988 parameters, else the 2002 systematics, else
+        # the means. The model serves the domain directly; the layer is recorded in the metadata.
+        charge_model(mass_excess_table, system)
     elseif source == "mean"
         mean_charge_distribution()
     else
@@ -506,7 +504,7 @@ end
 function _load_yield(
     document::AbstractDict,
     system::FissioningSystem,
-    charge_distribution::ChargeDistribution,
+    charge_distribution::ChargeModel,
     heavy_masses::UnitRange{Int},
     charges_per_mass::Integer,
     kinetic_energies,

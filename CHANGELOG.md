@@ -17,15 +17,16 @@ here.
 - Three TXE partitions behind one `partition` interface: scission modelling, `E*_H/TXE (A_H)` and
   `R_T (A_H)`. The temperature-ratio curve is read through the producing run's manifest, which is
   refused unless it declares ordinate `R_T` over abscissa `A_H`.
-- Two level density models: Gilbert-Cameron, deformed and undeformed, and the Egidy-Bucurescu
-  back-shifted Fermi gas.
-- The Wahl `Zₚ` charge distribution, selected by `charge_distribution_file = "wahl"`, in three
-  layers after an evaluated table: per-reaction Table A parameters, the eq. (17) systematics, then
-  the conventional means `ΔZ = −0.5`, `σ_Z = 0.6`. Even-odd factors are optional and off by
-  default; the layer used is recorded in the run metadata.
-- Fragment yields `Y(A,Z,TKE)`, their projections, and `factorized_yield`, which reconstructs the
-  joint distribution from `Y(A)` and `⟨TKE⟩(A)` with a measured `σ_TKE(A)`.
-- The averaging layer, with uncertainties propagated through `Measurements.jl`.
+- The fragmentation domain from
+  [FissionFragmentsDomain.jl](https://github.com/PaulGoG/FissionFragmentsDomain.jl), resolved from
+  its repository and pinned to a release. It provides nuclides and systems, the shipped AME2020
+  table (`mass_excess_file = "ame2020"`), the charge distribution, level density parameters, the
+  energy balance, fragment yields and averages, and the temperature-ratio run record.
+- `charge_distribution_file = "wahl"` takes Wahl's `Zₚ` model directly: the 1988 model of the
+  reaction where it exists, which reproduces that evaluation's own tables, else the 2002
+  systematics, else the conventional means. An evaluated table named in the configuration
+  outranks all three, and the layer used is recorded in the run metadata. The per-run
+  charge-distribution diagnostics reduce each model to effective Gaussians.
 - The prompt fission neutron spectrum, centre-of-mass and laboratory, in closed form.
 - `[spectrum] pair_weighting = "multiplicity" | "excitation"` selects the light and heavy
   weights within a pair, and `[spectrum] average = "per_fission" | "per_neutron"` the weight of

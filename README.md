@@ -12,7 +12,7 @@ DeterministicSequentialEmission.jl/
 ├── plotting/             CairoMakie environment; redraws figures from those tables
 ├── test/                 test suite, own environment (Aqua, JET, ExplicitImports)
 ├── docs/                 Documenter site, own environment
-├── data/                 input data — see data/README.md; only the mass evaluation ships
+├── data/                 input data — see data/README.md; none of it ships
 │   └── sims/             written by a run, data/sims/<system>/<run> — not tracked
 ├── plots/                the two figures under The model; the diagnostic panels are not tracked
 ├── formatter/            pinned JuliaFormatter, so the gate cannot drift
@@ -28,21 +28,9 @@ DeterministicSequentialEmission.jl/
 DeterministicSequentialEmission.jl/
 ├── src/
 │   ├── DeterministicSequentialEmission.jl   the module and its exports
-│   ├── nuclides.jl           nuclides, fissioning systems, entrance channels
-│   ├── tables.jl             delimited tables, read by column position
-│   ├── masses.jl             mass excesses and separation energies
-│   ├── charge.jl             isobaric charge distribution p(Z,A)
-│   ├── wahl.jl               Zₚ systematics, LA-13928
-│   ├── wahl_reactions.jl     per-reaction Zₚ parameters, Table A of the 1988 evaluation
-│   ├── domain.jl             fragmentation domain
-│   ├── leveldensity.jl       level density parameter: Gilbert-Cameron, BSFG
-│   ├── energetics.jl         Q, compound excitation, TXE
 │   ├── partition.jl          TXE partition: scission modelling, E*_H/TXE, R_T
-│   ├── manifest.jl           run record of a temperature-ratio extraction
 │   ├── evaporation.jl        evaporation cross sections and ⟨ε⟩
 │   ├── sequences.jl          the sequential equations and emission chains
-│   ├── yields.jl             Y(A,Z,TKE), its projections and its reconstruction
-│   ├── averaging.jl          contractions of q(A,Z,TKE) against a weight
 │   ├── spectrum.jl           centre-of-mass and laboratory spectra
 │   ├── configuration.jl      TOML schema and validation
 │   └── pipeline.jl           run_pipeline, write_results, run identifiers
@@ -60,7 +48,7 @@ DeterministicSequentialEmission.jl/
 │   └── src/                  index, running, naming, system, fragmentation, energetics, emission, observables
 ├── data/
 │   ├── README.md             what each file is and where to obtain it
-│   ├── reference/            mass_excess_ame2020.dat ships; the other evaluations do not
+│   ├── reference/            evaluations that belong to no one system; not tracked
 │   ├── <system>/             input data per fissioning system — not tracked
 │   └── sims/<system>/<run>/  tables and provenance of a run — not tracked
 ├── plots/                    multiplicity_vs_experiment and prompt_neutron_spectrum tracked; diagnostics not
@@ -148,16 +136,10 @@ julia check.jl --check    # report differences without rewriting
 |---|---|
 | Package environment, test and docs environments | done |
 | Continuous integration, dependency updates, docs deployment | dormant until the public release, under `.github/dormant/` |
-| Tabular input contract, `ExforFissionData.jl`-compatible | done |
-| Mass data, `Q`, `S_n`, `TXE` with uncertainties | done |
-| Fragmentation domain, `Z_p(A)`, `p(Z,A)` | done |
-| Charge distribution — evaluated tables, then `Zₚ` per-reaction, systematics, means | done |
+| Fragmentation domain, masses, charge distribution, level density, yields | from `FissionFragmentsDomain.jl` 0.1.1 |
 | One name per quantity, from configuration key to column header (`docs/src/naming.md`) | done |
-| Level density parameter — Gilbert-Cameron, Egidy-Bucurescu BSFG | done |
 | TXE partition — scission modelling, `E*_H/TXE (A_H)`, `R_T (A_H)` | done |
 | Sequential equations — constant and variable evaporation cross section | done |
-| Fragment yields `Y(A,Z,TKE)`, its projections, and its reconstruction from marginals | done |
-| Yield averaging — contractions of `q(A,Z,TKE)`, with uncertainty | done |
 | Prompt fission neutron spectrum — centre-of-mass and laboratory, in closed form | done |
 | Configuration, provenance, entry point | done |
 | Figures (CairoMakie), redrawn from written tables | done |
@@ -232,8 +214,8 @@ threshold multiple-chance fission opens, which this model does not treat.
 Almost none of it is version-controlled: it is third-party scientific data that the licence on
 this code does not extend to. `data/README.md` records every file, its format and its source,
 and points at the two companion packages that write this layout directly. The 2020 atomic mass
-evaluation is the exception and ships with the package — it is openly published, it is small,
-and keeping it means the tests pinned against the archived reference run execute on a bare clone.
+evaluation ships with FissionFragmentsDomain.jl, the domain package this one is built on, so
+the tests pinned against the archived reference run execute on a bare clone.
 Tests needing anything else announce themselves as skipped rather than passing vacuously.
 
 **Retrieved data is preferred wherever it can be had.** A measurement comes from EXFOR through
@@ -242,31 +224,31 @@ joint distribution is reconstructed by `factorized_yield` from the two marginals
 `Y(A)` and `⟨TKE⟩(A)`, which is the route ²³³U takes; a staged table is the last resort.
 `data/README.md` says which systems sit where.
 
-The isobaric charge distribution is the one input that cannot be retrieved. EXFOR holds the
-independent yields it is fitted to — 608 points in 30 subentries for ²³³U — but only four of the
-43 heavy masses carry three or more distinct `Z`, which is too sparse to fit a Gaussian per mass
-and is precisely why the `Zₚ` model exists. So the model stands in for the measurement, with its
-parameters taken from the best-founded source the system reaches:
+The isobaric charge distribution comes from Wahl's `Zₚ` model where no evaluated table is named.
+The model, with its parameters, lives in the domain package, which resolves them from the
+best-founded source the system reaches:
 
-1. **this reaction's own least-squares parameters**, for the four reactions Table A of the 1988
-   evaluation covers — ²³⁵U(n_th,f), ²³³U(n_th,f), ²³⁹Pu(n_th,f), ²⁵²Cf(sf);
-2. **the systematics**, eq. (17) of LA-13928, which estimates the same parameters from `Z_F`,
-   `A_F` and the excitation energy, for any nucleus in its fitted range;
+1. **the reaction's own least-squares parameters**, Wahl (1988), for ²³⁵U(n_th,f), ²³³U(n_th,f),
+   ²³⁹Pu(n_th,f) and ²⁵²Cf(sf). The model reproduces that evaluation's own tables row by row.
+2. **the systematics**, eq. (17) of LA-13928, for any nucleus in its fitted range;
 3. **the conventional means**, `ΔZ = −0.5` and `σ_Z = 0.6` at every mass.
 
-`charge_distribution_file = "wahl"` takes the first of those three that answers, and the run
-metadata records which one did. An evaluated table named in the configuration outranks all three.
-Everything here is fitted to spontaneous, thermal and resonance fission; above roughly 8 MeV
-multiple-chance fission opens and the model's separate high-energy branches, which this package
-does not implement, would be needed.
+`charge_distribution_file = "wahl"` takes the first that answers, and the run metadata records
+which. An evaluated table named in the configuration outranks all three. EXFOR holds the
+independent yields the model is fitted to, but too sparsely per mass to fit a Gaussian at each,
+which is why the model exists. Everything here is fitted to spontaneous, thermal and resonance
+fission; above roughly 8 MeV multiple-chance fission opens, and the model's separate high-energy
+branches would be needed.
 
 ## Companion packages
 
-`R_T(A_H)` need not be supplied by hand. [`FissionTemperatureRatio.jl`][ftr] extracts it from
-experimental prompt neutron multiplicity data and tabulates it at every integer `A_H`;
-[`ExforFissionData.jl`][exfor] retrieves that data, and the yields and spectra, from the IAEA
-EXFOR archive. Clone either from the URL below and run it; neither is a dependency of this
-package, and this package reads only what they write.
+The fragmentation domain — nuclides, masses, charge distribution, level density, energetics,
+yields, the temperature-ratio relation and run record — is [`FissionFragmentsDomain.jl`][ffd], a
+dependency resolved from its repository. `R_T(A_H)` need not be supplied by hand:
+[`FissionTemperatureRatio.jl`][ftr] extracts it from experimental prompt neutron multiplicity data
+and tabulates it at every integer `A_H`, and [`ExforFissionData.jl`][exfor] retrieves that data,
+and the yields and spectra, from the IAEA EXFOR archive. Neither of those two is a dependency;
+this package reads only what they write.
 
 **A temperature-ratio curve is taken through the producing run's own record, never through a path
 typed into a configuration.** Copy that run's results directory — its `manifest_<run>.toml` and
@@ -297,6 +279,7 @@ rather than a thermal one, and a handful of subentries are miscoded and have to 
 as per fragment from the data itself. The comparisons above use only sets that survive those
 checks.
 
+[ffd]: https://github.com/PaulGoG/FissionFragmentsDomain.jl
 [ftr]: https://github.com/PaulGoG/FissionTemperatureRatio.jl
 [exfor]: https://github.com/PaulGoG/ExforFissionData.jl
 

@@ -112,10 +112,10 @@
             @test first(readlines(path)) == "A dZ sigma_Z"
         end
 
-        # What was written is what the run was weighted by, to the eight significant digits of
-        # the output.
+        # What was written is what the run was weighted by, reduced to effective Gaussians, to
+        # the eight significant digits of the output.
         written = read_charge_distribution(used)
-        weighted = configuration.charge_distribution
+        weighted = effective_charge_distribution(configuration.charge_distribution, 126:140)
         @test maximum(
             abs(charge_polarization(written, A) - charge_polarization(weighted, A)) for
             A in 126:140
@@ -131,10 +131,13 @@
         @test all(charge_polarization(fallback, A) == -0.5 for A in 126:140)
         @test all(charge_dispersion(fallback, A) == 0.6 for A in 126:140)
 
-        # And the systematics is the Wahl model, not a copy of either.
+        # And the systematics is the 2002 Wahl model, not a copy of either.
         model = read_charge_distribution(systematics)
-        reference = WahlSystematics(configuration.mass_excess_table, configuration.system)
-        @test charge_polarization(model, 130) ≈ wahl_polarization(reference, 130) atol =
+        reference = effective_charge_distribution(
+            WahlSystematics(configuration.mass_excess_table, configuration.system),
+            126:140,
+        )
+        @test charge_polarization(model, 130) ≈ charge_polarization(reference, 130) atol =
             1e-7
 
         # And the per-reaction layer is neither of the other two: Table A's parameters are

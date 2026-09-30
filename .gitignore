@@ -4,13 +4,10 @@
 # to it, so it is held locally and documented rather than redistributed. data/README.md records
 # what each file is and where to obtain it, and is tracked.
 #
-# The one exception is the atomic mass evaluation, published openly and small enough to ship.
-# Keeping it means the reference tests run on a bare clone.
+# The atomic mass evaluation ships with FissionFragmentsDomain, so nothing here is tracked but
+# the README.
 /data/*
 !/data/README.md
-!/data/reference/
-/data/reference/*
-!/data/reference/mass_excess_ame2020.dat
 
 # Pipeline output. Each run writes its tables and provenance under data/sims/<system>/<run>,
 # which the data/ rule above already ignores. The two figures the README shows are tracked, and

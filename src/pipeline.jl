@@ -223,18 +223,12 @@ end
 """
     _pair_weight(fragmentation, yield) -> Float64
 
-The weight of one fragmentation in a sum over pairs, from the fragment yield of its heavy side.
-
-The yield is normalised to 200 over both fragments of every split, so a sum over the heavy
-fragments counts an asymmetric split once, at the yield of the split. At mass symmetry both
-labellings `(Z, Z₀−Z)` and `(Z₀−Z, Z)` of one split are heavy-side entries, and the
-self-complementary nuclide `(A₀/2, Z₀/2)` carries the yield of two fragments. Halving every
-mass-symmetric entry makes the heavy-side sum exactly half the sum over all fragments, the form
-of the total average in the text after eq. (16) of Tudora, Hambsch, Tobosaru, *EPJA* **54**, 87
-(2018), doi:10.1140/epja/i2018-12521-7.
+The weight of one fragmentation in a sum over pairs: the fragment yield of its heavy side times
+`split_weight` of the domain package, which halves every mass-symmetric entry so that the
+heavy-side sum is exactly half the sum over all fragments.
 """
 _pair_weight(fragmentation::Fragmentation, yield::Float64) =
-    is_symmetric(fragmentation) ? yield / 2 : yield
+    yield * split_weight(fragmentation)
 
 # Laboratory spectrum of the system: each solved pair contributes its two chains, weighted by
 # `_pair_weight` scaled by `total_weight`, and within the pair by `pair_weights`. Unit area by
@@ -518,19 +512,20 @@ end
 """
     _write_charge_distributions(destination, configuration, digits)
 
-Write the isobaric charge distribution `ΔZ(A)`, `σ_Z(A)` the run used, beside the alternatives,
-as up to four tables in the `A dZ sigma_Z` form of an evaluation:
+Write the isobaric charge distribution the run used, beside the alternatives, as up to four
+tables in the `A dZ sigma_Z` form of an evaluation. A `Zₚ` model is reduced at each heavy mass to
+the plain Gaussian of the same first two moments, the width being the rms on the charge lattice.
 
 - `charge_distribution_vs_A.dat` — the distribution `charge_distribution_file` selected.
-- `charge_distribution_vs_A_wahl_per_reaction.dat` — the `Zₚ` model with the parameters fitted to
-  this reaction in Wahl, At. Data Nucl. Data Tables 39, 1 (1988), doi:10.1016/0092-640X(88)90016-2,
-  where [`WAHL_PER_REACTION`](@ref) covers it.
-- `charge_distribution_vs_A_wahl_systematics.dat` — the same model with parameters estimated from
-  eq. (17), where [`is_wahl_applicable`](@ref) places the system inside the fitted range.
+- `charge_distribution_vs_A_wahl_per_reaction.dat` — the `Zₚ` model of Wahl, At. Data Nucl. Data
+  Tables 39, 1 (1988), doi:10.1016/0092-640X(88)90016-2, with this reaction's own parameters,
+  where that evaluation covers it.
+- `charge_distribution_vs_A_wahl_systematics.dat` — the same model with parameters from eq. (17)
+  of LA-13928 (2002), doi:10.2172/809574, where the system lies inside its fitted range.
 - `charge_distribution_vs_A_mean.dat` — the conventional means, without mass dependence.
 
-These are the layers of [`build_charge_distribution`](@ref). Where the run used one of the
-alternatives, the corresponding files coincide.
+These are the layers of `charge_model`. Where the run used one of the alternatives, the
+corresponding files coincide.
 """
 function _write_charge_distributions(
     destination::AbstractString,
@@ -544,26 +539,15 @@ function _write_charge_distributions(
         masses,
         digits,
     )
-    parameters = wahl_reaction_parameters(configuration.system)
-    excitation =
-        compound_nucleus_excitation(configuration.mass_excess_table, configuration.system)
-    if parameters !== nothing && excitation !== nothing
-        PE = value(excitation)
-        if 0 <= PE <= WAHL_VALIDITY.excitation
-            _write_charge_distribution(
-                joinpath(destination, "charge_distribution_vs_A_wahl_per_reaction.dat"),
-                wahl_charge_distribution(WahlSystematics(parameters, PE), collect(masses)),
-                masses,
-                digits,
-            )
-        end
-    end
+    reaction = wahl_1988(configuration.system)
+    reaction === nothing || _write_charge_distribution(
+        joinpath(destination, "charge_distribution_vs_A_wahl_per_reaction.dat"),
+        reaction,
+        masses,
+        digits,
+    )
     if is_wahl_applicable(configuration.mass_excess_table, configuration.system)
-        systematics = wahl_charge_distribution(
-            configuration.mass_excess_table,
-            configuration.system,
-            masses,
-        )
+        systematics = WahlSystematics(configuration.mass_excess_table, configuration.system)
         systematics === nothing || _write_charge_distribution(
             joinpath(destination, "charge_distribution_vs_A_wahl_systematics.dat"),
             systematics,
@@ -579,6 +563,14 @@ function _write_charge_distributions(
     )
     return nothing
 end
+
+_write_charge_distribution(path::AbstractString, model::ZpModel, masses, digits::Integer) =
+    _write_charge_distribution(
+        path,
+        effective_charge_distribution(model, collect(masses)),
+        masses,
+        digits,
+    )
 
 function _write_charge_distribution(
     path::AbstractString,
@@ -602,6 +594,9 @@ function _write_charge_distribution(
     return path
 end
 
+_charge_source(distribution::ChargeDistribution) = distribution.source
+_charge_source(model::ZpModel) = sprint(show, model)
+
 _significant(x::Real, digits::Integer) =
     isfinite(x) ? string(round(Float64(x); sigdigits = digits)) : string(Float64(x))
 
@@ -617,17 +612,7 @@ function run_metadata(result::RunResult)
     configuration = result.configuration
     grid = configuration.spectrum_grid
     fragment_yield = configuration.fragment_yield
-    system = Dict{String, Any}(
-        "label" => system_label(configuration.system),
-        "notation" => system_notation(configuration.system),
-        "target_A" => configuration.system.target.A,
-        "target_Z" => configuration.system.target.Z,
-        "channel" => configuration.system.channel,
-        "reaction" => reaction(configuration.system),
-        "incident_energy_MeV" => configuration.system.incident_energy,
-        "compound_A" => configuration.system.compound.A,
-        "compound_Z" => configuration.system.compound.Z,
-    )
+    system = system_record(configuration.system)
     model = Dict{String, Any}(
         "heavy_masses" =>
             [first(configuration.heavy_masses), last(configuration.heavy_masses)],
@@ -642,7 +627,7 @@ function run_metadata(result::RunResult)
         "maximum_temperature_MeV" => configuration.maximum_temperature,
         "partition" => sprint(show, configuration.method),
         "partition_curve" => _curve_source(configuration.method),
-        "charge_distribution" => configuration.charge_distribution.source,
+        "charge_distribution" => _charge_source(configuration.charge_distribution),
         "mass_excess" => configuration.mass_excess_table.source,
         "significant_digits" => configuration.significant_digits,
         "maxwellian_temperature_MeV" => configuration.maxwellian_temperature,

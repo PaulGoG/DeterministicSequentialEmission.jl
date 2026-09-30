@@ -6,11 +6,11 @@ parameter library, and experimental fragment mass yields. None of it originates 
 package, and the MIT licence covering the source code does not extend to it: each collection
 carries the terms and the attribution of its own source, recorded below.
 
-**The one exception is `reference/mass_excess_ame2020.dat`**, which is shipped. It is an openly
-published evaluation, it is small, and keeping it means the tests pinned against the archived
-reference run — `Q`, the level density parameter, both TXE partitions, the emission sequences —
-execute on a bare clone. The tests that need any of the rest are skipped when it is absent, with a
-warning naming the file.
+The atomic mass evaluation is not here: it ships with
+[FissionFragmentsDomain.jl](https://github.com/PaulGoG/FissionFragmentsDomain.jl), and a
+configuration takes it with `mass_excess_file = "ame2020"`. Its provenance is recorded in that
+package's `data/README.md`. The tests that need any of the tables below are skipped when a table
+is absent, with a warning naming the file.
 
 ## Layout
 
@@ -30,7 +30,6 @@ data/
 
 | Path | Content | Header |
 |---|---|---|
-| `reference/mass_excess_ame2020.dat` | mass excesses, 3558 nuclides — **shipped** | `Z A element mass_excess mass_excess_uncertainty`, keV |
 | `reference/shell_corrections_gilbert_cameron.dat` | `S(N)`, `S(Z)` against nucleon number, 11 … 150 | `n S_N S_Z`, MeV |
 | `reference/s_wave_resonances_ripl3.dat` | s-wave average resonance parameters, the source of `S₀(A)` | as distributed: commented header, `S₀` in units of 10⁻⁴ |
 | `reference/ground_state_deformation_moller.dat` | ground-state quadrupole deformations | `Z A beta2` |
@@ -147,25 +146,6 @@ Run the extraction with `ratio_averaging = "mean_of_ratios"` for this consumer; 
 
 The remaining tables are one-off downloads:
 
-**`reference/mass_excess_ame2020.dat`** — the 2020 atomic mass evaluation.
-W. J. Huang, M. Wang, F. G. Kondev, G. Audi, S. Naimi, *Chinese Physics C* **45**, 030002 (2021),
-[doi:10.1088/1674-1137/abddb0](https://doi.org/10.1088/1674-1137/abddb0);
-M. Wang, W. J. Huang, F. G. Kondev, G. Audi, S. Naimi, *Chinese Physics C* **45**, 030003 (2021),
-[doi:10.1088/1674-1137/abddaf](https://doi.org/10.1088/1674-1137/abddaf).
-The source is the unrounded mass table `mass.mas20` of the Atomic Mass Data Center, published at
-<https://www-nds.iaea.org/amdc/ame2020/mass_1.mas20.txt> (file dated 3 March 2021, MD5
-`6d28b75833cf53c7cc230223f63da6f6`). The shipped table carries that file's mass excess and
-uncertainty for all 3558 nuclides, including the 1008 values the evaluation marks with `#` as
-estimated — the mark itself is not carried, so the table does not tell an estimated mass from a
-measured one — after one pass through single precision: every entry is the source rounded to
-the nearest `Float32` and printed with eight decimals, verified row by row against the source on
-23 September 2026. The pass moves a mass excess by at most 0.006 keV, and by at most 0.004 keV
-over 70 ≤ A ≤ 180, where it exceeds the evaluation's own uncertainty for ⁸⁶Kr alone, by 0.04 eV;
-elsewhere only for ¹H, ²H, ³H and ³He. No quantity computed here is sensitive to it, and the
-table is kept as it is so that the reference values the tests pin keep their meaning.
-`HEADERLESS_MASS_EXCESS_SPEC` reads the same five columns without a header line, the form the
-table circulated in before the shipped copy was given one.
-
 **`reference/shell_corrections_gilbert_cameron.dat`** — shell corrections `S(N)` and `S(Z)`,
 Table III of A. Gilbert and A. G. W. Cameron, *Canadian Journal of Physics* **43**, 1446 (1965),
 pp. 1453–1455, as redistributed in the IAEA Reference Input Parameter Library. The paper
@@ -178,64 +158,15 @@ to <https://www-nds.iaea.org/RIPL-3/resonances/resonances0.dat>, header included
 publishes the library as JSON at <https://github.com/IAEA-NDS/ripl3_json>, and RIPL-4 is in
 preparation at <https://github.com/IAEA-NDS/RIPL-4>; neither changes the numbers this file holds.
 
-**`<system>/charge_distribution_vs_A.dat`** — charge polarization `ΔZ(A)` and the dispersion
-`σ_Z(A)` of the isobaric charge distribution. A. C. Wahl, *Atomic Data and Nuclear Data Tables*
-**39**, 1 (1988); the model is set out in full in Wahl, *Systematics of Fission-Product Yields*,
-LA-13928 (2002), which is openly published by the Los Alamos National Laboratory. That report's
-own bibliography gives the 1988 paper as volume **39**, as does the reference list of
-IAEA-TECDOC-1168, in which Wahl's later account of the same models appears.
-
-Two different objects share that format and must not be confused, and the difference is not one
-of quality alone.
-
-The four `<system>/charge_distribution_vs_A.dat` files — `Cf252_sf`, `U235_nth`, `Pu239_nth` and
-`U233_nth` — are supplied evaluations, not outputs of this package. Their signatures identify them
-as **effective Gaussian parameters**: a `Zₚ` evaluation per reaction with its own least-squares
-parameters and the even-odd factors `F_Z` and `F_N` folded in, reduced to a plain Gaussian at each
-mass, whose centre less `Z_UCD(A)` is `ΔZ(A)` and whose width is `σ_Z(A)`. The construction in
-`src/wahl.jl` reproduces the period of their ripple but not their values: it deviates from the
-tables by 0.04–0.12 in `ΔZ` and 0.07–0.10 in `σ_Z`, as mean absolute deviations over each
-system's mass range. The tables are therefore not regenerated here from the published parameters;
-they remain staged inputs of documented lineage — the evaluation of A. Tudora, *Phys. Procedia*
-**64**, 62 (2015), doi:10.1016/j.phpro.2015.04.008, applying the 1988 model. Wahl's own
-least-squares `σ_Z` is a different quantity — a model parameter that carries no even-odd
-structure.
-
-That is why these tables oscillate with a period of about five mass units while the systematics
-cannot: the even-odd effect is *inside* them. The period follows from the mechanism — `Zₚ`
-advances by `Z_F/A_F` per mass unit, so even-charge dominance recurs once it has advanced by two,
-every `2A_F/Z_F ≈ 5.1` masses.
-
-**So a plain Gaussian `p(Z,A)` is the right partner for these tables**, which is what this package
-uses: the even-odd modulation is already absorbed into the fitted width and centre, and nothing
-further has to be applied or renormalized away. Averaged over each system's own measured `Y(A)`
-they return
-
-| | `⟨ΔZ⟩` | `⟨σ_Z⟩` | masses |
-|---|---|---|---|
-| ²⁵²Cf(sf) | −0.492 | 0.649 | 126–169 |
-| ²³⁵U(n_th,f) | −0.503 | 0.618 | 118–160 |
-| ²³⁹Pu(n_th,f) | −0.515 | 0.614 | 120–160 |
-| ²³³U(n_th,f) | −0.499 | 0.615 | 117–160 |
-
-which is where the conventional fallbacks of `|0.5|` and `0.6` come from, and is the sense in
-which those fallbacks are not arbitrary.
-
-They are authoritative wherever they exist, and where they do not, the package builds the `Zₚ`
-model from the published parameters rather than reaching for the means. It does so in two layers,
-and the difference between them is which reaction the parameters were fitted to. Table A of the
-1988 paper carries
-least-squares parameters for exactly these four reactions; eq. (17) and Table 2 of LA-13928
-estimate the same parameters from `Z_F`, `A_F` and the excitation energy for any reaction in
-`90 ≤ Z_F ≤ 98`, `230 ≤ A_F ≤ 252`, `PE ≤ 8 MeV`. Fig. 18 of that report quotes a reduced `χ²` of
-2.9 for the first against 7.9 for the second, on ²³⁵U(n_th,f). Neither needs a file: both are in
-`src/wahl.jl` and `src/wahl_reactions.jl`, and `charge_distribution_file = "wahl"` selects
-whichever the system reaches.
-
-`U233_nth/charge_distribution_vs_A_wahl_systematics.dat` is **the systematics**, the second of
-those two layers, tabulated here as the comparison that shows what the first layer and the fitted
-table add. Its name and its header row both say so. It is generated, not measured, and it does not
-replace an evaluation.
+**`<system>/charge_distribution_vs_A.dat`** — charge polarization `ΔZ(A)` and dispersion
+`σ_Z(A)`, `A dZ sigma_Z`. The four tables of `Cf252_sf`, `U235_nth`, `Pu239_nth` and `U233_nth` are
+supplied evaluations of documented lineage: Tudora et al., *Phys. Procedia* **64**, 62 (2015),
+doi:10.1016/j.phpro.2015.04.008, applying the `Zₚ` model of Wahl, *At. Data Nucl. Data Tables*
+**39**, 1 (1988), doi:10.1016/0092-640X(88)90016-2. They are not regenerated here.
+`charge_distribution_file = "wahl"` takes Wahl's model directly instead. FissionFragmentsDomain
+reproduces the 1988 evaluation's own tables row by row, and records in its `data/README.md` how
+far these supplied tables lie from it. `U233_nth/charge_distribution_vs_A_wahl_systematics.dat`
+is an earlier tabulation of the systematics, kept for comparison.
 
 **`reference/ground_state_deformation_moller.dat`** — ground-state quadrupole deformations from
 the finite-range liquid-drop model. P. Möller, J. R. Nix, W. D. Myers, W. J. Swiatecki, *Atomic

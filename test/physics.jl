@@ -5,12 +5,12 @@ const CF252_HEAVY_MASSES = 126:174
 const CF252_TKE = 130.0:2.0:230.0
 const CF252_CHARGES_PER_MASS = 5
 
-# The atomic mass evaluation ships with the package, so everything pinned against the archived
+# The atomic mass evaluation ships with FissionFragmentsDomain, so everything pinned against the archived
 # run — Q, the level density parameter, both TXE partitions, the emission sequences — runs on a
 # bare clone. The charge distribution systematics does not ship, because it is a third-party
 # table this package has no licence to redistribute; the tests that need it are skipped when it
 # is absent, exactly as the companion packages do. `data/README.md` says where to obtain it.
-const MASS_EXCESS_FILE = joinpath(DATA, "reference", "mass_excess_ame2020.dat")
+const MASS_EXCESS_FILE = String(AME2020_MASS_EXCESS_FILE)
 const CF252_CHARGE_DISTRIBUTION_FILE =
     joinpath(DATA, "Cf252_sf", "charge_distribution_vs_A.dat")
 const U235_CHARGE_DISTRIBUTION_FILE =

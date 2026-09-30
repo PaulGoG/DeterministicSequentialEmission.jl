@@ -16,99 +16,73 @@ configuration, the post-neutron fragment mass `A_p = A − n` is an integer with
 module DeterministicSequentialEmission
 
 using DrWatson: savename
-using Measurements: Measurement, measurement, value
+using FissionFragmentsDomain:
+    AME2020_MASS_EXCESS_FILE,
+    BackShiftedFermiGas,
+    CHANNELS,
+    ChargeDistribution,
+    ChargeModel,
+    DEFAULT_KINETIC_ENERGY_DISPERSION,
+    DEFAULT_YIELD_TOTAL,
+    EXCITATION_RATIO_CURVE_SPEC,
+    FissioningSystem,
+    FragmentQuantity,
+    FragmentYield,
+    Fragmentation,
+    GilbertCameron,
+    LEVEL_DENSITY_MODELS,
+    LevelDensityModel,
+    MassExcessTable,
+    Nuclide,
+    SegmentedCurve,
+    TableSpec,
+    WahlSystematics,
+    ZpModel,
+    average,
+    build_fragment_yield,
+    charge_dispersion,
+    charge_model,
+    charge_polarization,
+    column,
+    coverage,
+    curve_labels,
+    effective_charge_distribution,
+    energetics,
+    factorized_yield,
+    fragment_energy_per_nucleon,
+    fragmentation_domain,
+    heavy_excitation_fraction,
+    integer_column,
+    is_self_complementary,
+    is_wahl_applicable,
+    level_density_parameter,
+    mean_charge_distribution,
+    neutron_induced_fission,
+    neutron_separation_energy,
+    read_charge_distribution,
+    read_delimited_table,
+    read_kinetic_energy_dispersion,
+    read_mass_energy_yield,
+    read_mass_excess_table,
+    read_segmented_curve,
+    read_shell_correction_table,
+    read_temperature_ratio_manifest,
+    split_weight,
+    spontaneous_fission,
+    staged_manifest,
+    system_label,
+    system_record,
+    temperature_ratio_path,
+    total_average,
+    uniform_kinetic_energy_dispersion,
+    wahl_1988,
+    weights_from,
+    yield_over
+using Measurements: value
 using SpecialFunctions: gamma_inc
 using TOML: TOML
 
-export Nuclide, NEUTRON, neutron_number, element_symbol
-export FissioningSystem,
-    CHANNELS,
-    CHANNEL_REACTION,
-    REACTIONS,
-    spontaneous_fission,
-    neutron_induced_fission,
-    is_spontaneous,
-    reaction,
-    symmetric_mass,
-    system_label,
-    system_notation
-export TableSpec,
-    DelimitedTable, read_delimited_table, column, column_or, integer_column, has_column
-export MassExcessTable,
-    MASS_EXCESS_SPEC,
-    HEADERLESS_MASS_EXCESS_SPEC,
-    read_mass_excess_table,
-    mass_excess,
-    separation_energy,
-    neutron_separation_energy,
-    q_value,
-    complementary_fragment
-export ChargeDistribution,
-    CHARGE_DISTRIBUTION_SPEC,
-    DEFAULT_CHARGE_POLARIZATION,
-    DEFAULT_CHARGE_DISPERSION,
-    read_charge_distribution,
-    mean_charge_distribution,
-    charge_polarization,
-    charge_dispersion,
-    unchanged_charge_distribution,
-    most_probable_charge,
-    charge_probability,
-    charge_numbers
-export WahlSystematics,
-    WAHL_LOW_ENERGY,
-    WAHL_VALIDITY,
-    is_wahl_applicable,
-    wahl_polarization,
-    wahl_dispersion,
-    wahl_even_odd_factors,
-    wahl_charge_yield,
-    wahl_charge_distribution,
-    WahlReactionParameters,
-    WAHL_PER_REACTION,
-    wahl_reaction_parameters,
-    build_charge_distribution
-export Fragmentation,
-    FragmentationDomain,
-    fragmentation_domain,
-    fragments,
-    distinct_splits,
-    mass_range,
-    is_symmetric
-export Energetics,
-    Exclusion,
-    energetics,
-    sweep_energetics,
-    exclusion_summary,
-    compound_nucleus_excitation,
-    total_excitation_energy,
-    kinetic_energy
-export LevelDensityModel,
-    LEVEL_DENSITY_MODELS,
-    ShellCorrectionTable,
-    read_shell_correction_table,
-    GilbertCameron,
-    is_deformed_gilbert_cameron,
-    BackShiftedFermiGas,
-    level_density_parameter,
-    shell_correction,
-    liquid_drop_energy
-export ManifestCurve,
-    ManifestSystem,
-    TemperatureRatioManifest,
-    MANIFEST_CURVE_KINDS,
-    MANIFEST_ORDINATE,
-    MANIFEST_ABSCISSA,
-    read_temperature_ratio_manifest,
-    staged_manifest,
-    curve_labels,
-    manifest_curve,
-    temperature_ratio_path
-export SegmentedCurve,
-    TEMPERATURE_RATIO_CURVE_SPEC,
-    EXCITATION_RATIO_CURVE_SPEC,
-    read_segmented_curve,
-    PartitionMethod,
+export PartitionMethod,
     ExcitationEnergyRatio,
     TemperatureRatio,
     ScissionModelling,
@@ -125,28 +99,7 @@ export EvaporationCrossSection,
     fermi_gas_energy,
     residual_temperature,
     MINIMUM_TEMPERATURE
-export FragmentQuantity, average, total_average, weights_from
-export KineticEnergyDispersion,
-    KINETIC_ENERGY_DISPERSION_SPEC,
-    DEFAULT_KINETIC_ENERGY_DISPERSION,
-    read_kinetic_energy_dispersion,
-    uniform_kinetic_energy_dispersion,
-    kinetic_energy_dispersion
-export MassEnergyYield,
-    MASS_ENERGY_YIELD_SPEC,
-    MASS_YIELD_SPEC,
-    MEAN_KINETIC_ENERGY_SPEC,
-    read_mass_energy_yield,
-    factorized_yield,
-    fragment_charge_probabilities,
-    FragmentYield,
-    DEFAULT_YIELD_TOTAL,
-    build_fragment_yield,
-    coverage,
-    yield_over,
-    mean_kinetic_energy_by_mass
 export centre_of_mass_spectrum,
-    fragment_energy_per_nucleon,
     laboratory_spectrum,
     chain_spectrum,
     chain_centre_of_mass_spectrum,
@@ -183,21 +136,9 @@ relative to it; the output location is chosen by the caller, `scripts/run.jl`.
 """
 const PACKAGE_ROOT = dirname(@__DIR__)
 
-include("nuclides.jl")
-include("tables.jl")
-include("masses.jl")
-include("charge.jl")
-include("domain.jl")
-include("leveldensity.jl")
-include("energetics.jl")
-include("wahl.jl")
-include("wahl_reactions.jl")
 include("partition.jl")
-include("manifest.jl")
 include("evaporation.jl")
 include("sequences.jl")
-include("yields.jl")
-include("averaging.jl")
 include("spectrum.jl")
 include("configuration.jl")
 include("pipeline.jl")

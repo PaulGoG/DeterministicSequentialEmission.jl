@@ -129,19 +129,15 @@ end
                 "[output]" => "[spectrum]\naverage = \"per_event\"\n\n[output]",
             )
 
-            # "wahl" builds the Zₚ model in place of a table, over exactly the domain's masses,
-            # taking the best layer the system reaches. ²⁵²Cf(sf) is one of the four reactions the
-            # 1988 evaluation fitted, so it reaches the first.
+            # "wahl" takes Wahl's Zₚ model in place of a table, at the best layer the system
+            # reaches. ²⁵²Cf(sf) is one of the four reactions of the 1988 evaluation, so it reaches
+            # the first, and the model serves the domain directly.
             systematic = _configuration(
                 directory,
                 "charge_distribution_file = \"mean\"" => "charge_distribution_file = \"wahl\"",
             )
-            @test occursin(
-                "per-reaction parameters for CF252S",
-                systematic.charge_distribution.source,
-            )
-            @test haskey(systematic.charge_distribution.ΔZ, 126)
-            @test haskey(systematic.charge_distribution.ΔZ, 174)
+            @test systematic.charge_distribution isa Wahl1988
+            @test systematic.charge_distribution.label == "CF252S"
         end
 
         # Every rejection names its key.
