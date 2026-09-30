@@ -537,6 +537,7 @@ function _check_manifest_domain(
     end
     here = (
         level_density_model = level_density_label(model),
+        deformed_branch = model isa GilbertCameron && model.deformed_branch,
         charges_per_mass = Int(charges_per_mass),
         charge_model = charge_model_label(charge_distribution),
         mass_table = basename(mass_excess_table.source),

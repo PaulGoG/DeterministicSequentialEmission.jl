@@ -216,14 +216,16 @@ end
         @test load_with().method isa TemperatureRatio
 
         # Each recorded property that differs from this configuration is refused by name.
-        for (key, value) in (
-            :level_density_model => "GC",
-            :charges_per_mass => 7,
-            :charge_model => "Wahl1988(U235T, Z_F = 92, A_F = 236)",
-            :mass_table => "mass_excess_ame2016.dat",
+        # A Gilbert–Cameron record must say which branch it took, so that case names both.
+        for (key, fields) in (
+            :level_density_model =>
+                (:level_density_model => "GC", :deformed_branch => true),
+            :charges_per_mass => (:charges_per_mass => 7,),
+            :charge_model => (:charge_model => "Wahl1988(U235T, Z_F = 92, A_F = 236)",),
+            :mass_table => (:mass_table => "mass_excess_ame2016.dat",),
         )
             thrown = try
-                load_with(key => value)
+                load_with(fields...)
                 nothing
             catch err
                 err
