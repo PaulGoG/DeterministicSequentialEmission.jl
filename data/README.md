@@ -56,6 +56,9 @@ comma-separated. **Readers take columns by position, not by header text**, and t
 column may be omitted rather than zero-filled. Renaming a header is therefore a no-op for code,
 which is what made this layout safe to adopt.
 
+Yields are taken in the normalisation the retrieval writes (per fission, percent or counts, as
+its `retrieval.toml` states) and renormalised to `[yield] total`, so only their shape enters.
+
 Nucleon-number columns are read through `integer_column`, which accepts an integral value
 written in floating point — some of these tables were emitted by a generator and write `118.0`
 where they mean `118`.
