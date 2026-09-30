@@ -188,7 +188,7 @@ that cannot be honoured fails on load, naming the key.
 | ²⁵²Cf(sf) | `Cf252_sf.toml` | the archived thesis run's system |
 | ²³⁵U(nth,f) | `U235_nth.toml` | |
 | ²³⁹Pu(nth,f) | `Pu239_nth.toml` | |
-| ²³³U(nth,f) | `U233_nth.toml` | no joint `Y(A,TKE)` exists, so it is reconstructed from two marginals |
+| ²³³U(nth,f) | `U233_nth.toml` | no joint `Y(A,TKE)` exists, so it is reconstructed from two marginals and a borrowed width |
 | ²³⁵U(nres,f) at 580 eV | `U235_nres.toml` | the resonance-region beam the GELINA measurements use |
 
 A system is named `<ElementSymbol><A>_<entrance channel>` — the channel as the field spells it, not
@@ -196,13 +196,19 @@ as EXFOR codes it — and that one token names the configuration, the input tree
 the output tree under `data/sims/`. It is also what separates the thermal run of ²³⁵U from the
 resonance one, which the reaction code `n,f` alone cannot.
 
-The last two are where the data runs out rather than where the model does. No joint `Y(A, TKE)`
-for ²³³U exists anywhere in EXFOR, so the yield is reconstructed from the two marginals that were
-measured, `Y(A)` and `⟨TKE⟩(A)`, both from Geltenbort (1985). That entry reports no width of the
-kinetic energy distribution. The width is borrowed from Baba (1997), EXFOR 23014002, the
-pre-neutron `σ_TKE(A)` of another experiment on the same system, and the run record flags it as
-borrowed. The five heaviest masses, which Baba does not reach, sit at their mean TKE. Without a
-width at all, `⟨ν⟩` moves by +1.2 % for ²⁵²Cf and +3.9 % for ²³⁵U. Measured by running one
+Every fragment yield comes from EXFOR through ExforFissionData.jl v0.2.0. ²⁵²Cf takes the measured
+`Y(A,TKE)` matrix of Göök et al. (2014). For the thermal systems the archive holds no matrix, so
+the yield is reconstructed from one experiment's `Y(A)` and `⟨TKE⟩(A)`:
+- Al-Adili et al. (2016) for ²³⁵U;
+- Wagemans et al. (1984) for ²³⁹Pu;
+- Geltenbort (1985) for ²³³U.
+None of them reports the width of the kinetic energy distribution, so it is borrowed and flagged:
+- Baba et al. (1997), EXFOR 23014003 and 23014002, for the two uranium isotopes;
+- for ²³⁹Pu, Schillebeeckx et al. (1992), EXFOR 22273023, measured in spontaneous fission of the
+  same compound nucleus, ²⁴⁰Pu. With Wagemans's marginals it reproduces the mass-integrated width
+  measured for ²³⁹Pu(nth,f) itself, 11.81 MeV, to 0.02 MeV.
+
+Without any width, `⟨ν⟩` moves by +1.2 % for ²⁵²Cf and +3.9 % for ²³⁵U, measured by running one
 experiment's matrix against its own marginals. The spread in TKE smooths the discrete emission
 thresholds, which matters most at the low excitation of thermal fission.
 
@@ -224,7 +230,8 @@ Tests needing anything else announce themselves as skipped rather than passing v
 **Retrieved data is preferred wherever it can be had.** A measurement comes from EXFOR through
 `ExforFissionData.jl` if the archive holds it; where the retrieval has no joint `Y(A, TKE)`, the
 joint distribution is reconstructed by `factorized_yield` from the two marginals it does hold,
-`Y(A)` and `⟨TKE⟩(A)`, which is the route ²³³U takes; a staged table is the last resort.
+`Y(A)` and `⟨TKE⟩(A)`, which is the route the thermal systems take; a staged table is the last
+resort, and no shipped configuration uses one.
 `data/README.md` says which systems sit where.
 
 Where several experiments measured the same system, one is taken whole. `Y(A)`, `⟨TKE⟩(A)` and

@@ -36,11 +36,11 @@ data/
 | `<system>/charge_distribution_vs_A.dat` | charge polarization and Gaussian dispersion, evaluated per reaction | `A dZ sigma_Z` |
 | `U233_nth/charge_distribution_vs_A_wahl_systematics.dat` | the same, from the `Zₚ` systematics rather than a fit — **generated, and superseded by the table beside it** | `A dZ sigma_Z` |
 | `<system>/R_T_vs_A_H_systematic_trend.csv` | temperature ratio `R_T(A_H)` for the TXE partition | `A_H,R_T,R_T_uncertainty` |
-| `<system>/Y_vs_A_TKE.dat` | pre-neutron fragment mass yield `Y(A,TKE)` | `A TKE Y Y_uncertainty` |
-| `U235_nth/Y_vs_A_H_TKE.dat` | the same indexed by the heavy fragment alone | `A_H TKE Y Y_uncertainty` |
-| `U233_nth/Y_vs_A/*.dat` | pre-neutron mass yield `Y(A)`, a marginal | `A Y` |
-| `U233_nth/TKE_vs_A/*.dat` | mean total kinetic energy `⟨TKE⟩(A)`, the other marginal | `A TKE` |
-| `<system>/sigma_TKE_vs_A/*.dat` | dispersion of `P(TKE|A)`, pre-neutron, from the experiment of `⟨TKE⟩(A)` or borrowed from another on the same system | `A sigma_TKE`, MeV |
+| `<system>/Y_vs_A_TKE/relative/*.dat` | measured pre-neutron `Y(A,TKE)`, in counts | `A TKE Y Y_uncertainty` |
+| `<system>/Y_vs_A/*.dat` | pre-neutron mass yield `Y(A)`, a marginal | `A Y [Y_uncertainty]` |
+| `<system>/TKE_vs_A/*.dat` | mean total kinetic energy `⟨TKE⟩(A)`, the other marginal | `A TKE [TKE_uncertainty]` |
+| `<system>/sigma_TKE_vs_A/*.dat` | dispersion of `P(TKE|A)`, pre-neutron | `A sigma_TKE [sigma_TKE_uncertainty]`, MeV |
+| `<system>/Y_vs_A_TKE.dat`, `U235_nth/Y_vs_A_H_TKE.dat`, `Pu239_nth/Y_vs_A_TKE_chiba.dat` | staged joint tables of earlier work; no longer read by a shipped configuration | `A TKE Y Y_uncertainty` |
 | `U235_nth/E_def_vs_A_Z.dat` | `ΔE_def` for the scission-modelling partition | `A Z E_def`, MeV |
 | `<system>/nu_vs_A/*.dat` | measured `ν(A)` per fragment | `A nu nu_uncertainty` |
 | `Cf252_sf/spectrum_maxwellian_ratio_vs_E/*.dat` | measured prompt neutron spectrum as a ratio to a Maxwellian | `E spectrum_maxwellian_ratio spectrum_maxwellian_ratio_uncertainty` |
@@ -60,15 +60,26 @@ Nucleon-number columns are read through `integer_column`, which accepts an integ
 written in floating point — some of these tables were emitted by a generator and write `118.0`
 where they mean `118`.
 
-²³³U carries an evaluated charge distribution of the same lineage as the other three, so it no
-longer runs on the systematics. Its two marginals sit under their EXFOR accession numbers,
-21981005 and 21981008, both Geltenbort 1985, and `Y(A)` is in percent as every other yield here
-is. Geltenbort's entry reports no `σ_TKE(A)`. The width is Baba's (1997), the `MISC1` column of
-EXFOR 23014002, staged as `sigma_TKE_vs_A/23014002_H.Baba_1997.dat`. The Asghar (1981) width,
-EXFOR 21771014, is against post-neutron mass (`SEC`) and is not used for pre-neutron data.
+The shipped configurations take their fragment yields from EXFOR through ExforFissionData.jl
+v0.2.0. For each system, `Y(A)` and `⟨TKE⟩(A)` come from one experiment, or its measured matrix
+does. A width that experiment did not report is borrowed from another on the same system, or on
+the same compound nucleus, and the run record flags it:
+
+| System | `Y(A)` and `⟨TKE⟩(A)` | `σ_TKE(A)` |
+|---|---|---|
+| ²⁵²Cf(sf) | Göök 2014, the matrix 23268002 (counts on 1-MeV bin centres) | in the matrix |
+| ²³⁵U(nth,f), (nres,f) | Al-Adili 2016, 23164005/007 (the thermal reference run) | Baba 1997, 23014003 |
+| ²³⁹Pu(nth,f) | Wagemans 1984, 21995028/038 | Schillebeeckx 1992, ²⁴⁰Pu(sf), 22273023 |
+| ²³³U(nth,f) | Geltenbort 1985, 21981005/008 | Baba 1997, 23014002 |
+
+The ²³⁹Pu width is that of spontaneous fission of the same compound nucleus. With Wagemans's
+`Y(A)` and `⟨TKE⟩(A)` it gives a mass-integrated width of 11.79 MeV, against the 11.81 MeV measured
+for ²³⁹Pu(nth,f) itself (EXFOR 22273003). The Asghar (1981) width, EXFOR 21771014, is against
+post-neutron mass (`SEC`) and is not used for pre-neutron data. The staged tables of earlier work
+remain beside them and can still be named by path.
 
 `U235_nres` is the same target as `U235_nth` on the resonance channel. Its evaluated charge
-distribution, its `R_T(A_H)` trend and its yield are the thermal ones and are read from the
+distribution, its `R_T(A_H)` trend and its yield inputs are the thermal ones and are read from the
 `U235_nth` tree rather than copied; only its measured `ν(A)` is its own.
 
 ## Where to obtain it
@@ -77,10 +88,9 @@ distribution, its `R_T(A_H)` trend and its yield are the thermal ones and are re
 
 1. A retrieval from the EXFOR archive through `ExforFissionData.jl`, which writes this layout
    directly and records what it kept and what it excluded.
-2. Where the retrieval's observable vocabulary has no joint `Y(A, TKE)` — it holds `Y_vs_A` and
-   `TKE_vs_A` but no product of the two — the joint distribution is reconstructed from those two
-   retrievable marginals by `factorized_yield`. Keeping the mass dependence of `⟨TKE⟩` is what
-   makes that worth doing; `U233_nth` takes this route already.
+2. Where the archive holds no joint `Y(A, TKE)` for the chosen experiment, the joint distribution
+   is reconstructed from its marginals `Y_vs_A` and `TKE_vs_A`, with a width from
+   `sigma_TKE_vs_A`, by `factorized_yield`. ²³⁵U, ²³⁹Pu and ²³³U take this route.
 3. A staged table, only where neither of the above is available for a system.
 
 Two of these collections come from companion packages, and that is the supported route: both
@@ -93,9 +103,13 @@ naming every dataset it kept or excluded, with the reason. A configuration and t
 reproduce a retrieval exactly, since EXFOR entries are immutable once published.
 
 ```bash
-git clone https://github.com/PaulGoG/ExforFissionData.jl
+git clone --branch v0.2.0 https://github.com/PaulGoG/ExforFissionData.jl
 cd ExforFissionData.jl
-julia scripts/retrieve.jl config/Cf252_sf_Y_vs_A.toml
+julia scripts/retrieve.jl config/Cf252_sf_Y_vs_A_TKE.toml
+julia scripts/retrieve.jl config/U235_nth_Y_vs_A.toml
+julia scripts/retrieve.jl config/U235_nth_TKE_vs_A.toml
+julia scripts/retrieve.jl config/U235_nth_sigma_TKE_vs_A.toml
+julia scripts/retrieve.jl config/Pu240_sf_sigma_TKE_vs_A.toml
 ```
 
 ```bash

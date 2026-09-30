@@ -619,6 +619,12 @@ function _load_yield(
                 "yield.mass_energy_yield_file",
             ),
         )
+        inputs["mass_energy_yield_file"] = _value(
+            section,
+            "mass_energy_yield_file",
+            String,
+            "yield.mass_energy_yield_file",
+        )
         symmetrize ? symmetrized_yield(table, system.compound.A) : table
     else
         # The width of P(TKE|A) is the one the experiment that measured ⟨TKE⟩(A) reported, in
@@ -674,14 +680,25 @@ function _load_yield(
             ),
             "yield.mean_kinetic_energy_file",
         )
-        inputs["mass_yield_file"] = basename(mass_path)
-        inputs["mean_kinetic_energy_file"] = basename(energy_path)
+        inputs["mass_yield_file"] =
+            _value(section, "mass_yield_file", String, "yield.mass_yield_file")
+        inputs["mean_kinetic_energy_file"] = _value(
+            section,
+            "mean_kinetic_energy_file",
+            String,
+            "yield.mean_kinetic_energy_file",
+        )
         width = if dispersion === nothing
             "none"
         elseif dispersion.source == "uniform"
             "stated"
         else
-            inputs["kinetic_energy_dispersion_file"] = basename(dispersion.source)
+            inputs["kinetic_energy_dispersion_file"] = _value(
+                section,
+                "kinetic_energy_dispersion_file",
+                String,
+                "yield.kinetic_energy_dispersion_file",
+            )
             inputs["masses_without_width"] = _masses_without_width(
                 mass_path,
                 dispersion,

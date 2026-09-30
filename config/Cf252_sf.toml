@@ -14,8 +14,8 @@ charge_distribution_file = "wahl"                          # one of: "wahl" | "m
 
 [energetics]
 mass_excess_file = "ame2020"                               # "ame2020", the table FissionFragmentsDomain ships, or a path under the data directory
-kinetic_energy_min = 130.0                              # MeV, above 0
-kinetic_energy_max = 230.0                              # MeV, above kinetic_energy_min
+kinetic_energy_min = 130.5                              # MeV, above 0
+kinetic_energy_max = 229.5                              # MeV, above kinetic_energy_min
 kinetic_energy_step = 1.0                               # MeV, above 0 to 50
 
 [level_density]
@@ -33,9 +33,9 @@ subdirectory = "Cf252_sf"                                   # required by "tempe
 curve_label = "systematic_trend"                            # required by "temperature_ratio": which [[segmented_curve]] of its manifest to take
 
 [yield]
-mass_energy_yield_file = "Cf252_sf/Y_vs_A_TKE.dat"   # optional; omit the section to weight by p(Z,A) alone
-total = 200.0                                        # percent the yield sums to, above 0
-symmetrize = true                                    # impose Y, ⟨TKE⟩, σ_TKE equal at A and A₀ − A (pre-neutron identity)
+mass_energy_yield_file = "Cf252_sf/Y_vs_A_TKE/relative/23268002_A.Goeoek_2014.dat"  # A TKE Y [uncertainty]; Göök (2014), counts on 1-MeV bin centres
+total = 200.0                                                                       # percent the yield sums to, above 0
+symmetrize = true                                                                   # impose Y, ⟨TKE⟩, σ_TKE equal at A and A₀ − A (pre-neutron identity)
 
 [spectrum]
 enabled = true                    # solve the laboratory prompt neutron spectrum

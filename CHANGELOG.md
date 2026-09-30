@@ -27,6 +27,15 @@ here.
   per mass, charge model or mass table is refused, naming the key. A curve inverted through an effective level density
   ratio loads with a warning, since the partition here applies `R_T` charge by charge. A
   manifest without the record loads with a warning.
+- The shipped configurations take their fragment yields from EXFOR, through ExforFissionData.jl
+  v0.2.0, in place of staged tables.
+  - ²⁵²Cf: the measured matrix of Göök et al. (2014), on its 1-MeV bin centres, so the TKE grid is
+    now 130.5–229.5 MeV.
+  - ²³⁵U: Al-Adili et al. (2016), with Baba's width.
+  - ²³⁹Pu: Wagemans et al. (1984), with the ²⁴⁰Pu(sf) width of Schillebeeckx et al. (1992). With
+    Wagemans's marginals it reproduces the measured ²³⁹Pu(nth,f) integral width to 0.02 MeV.
+  - ²³³U: Geltenbort (1985), with Baba's width.
+  - The run record keeps each input's path.
 - A reconstructed yield takes the width of `P(TKE|A)` from `kinetic_energy_dispersion_file`, or
   from a width the configuration states; none is assumed otherwise. The run record says whether
   the width is from the experiment that measured `⟨TKE⟩(A)` or borrowed from another,
