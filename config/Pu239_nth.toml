@@ -19,9 +19,9 @@ kinetic_energy_max = 210.0                              # MeV, above kinetic_ene
 kinetic_energy_step = 1.0                               # MeV, above 0 to 50
 
 [level_density]
-model = "BSFG"                                                            # one of: "BSFG" | "GC"
-shell_correction_file = "reference/shell_corrections_gilbert_cameron.dat"  # required by "GC"
-deformed_branch = true                                                    # "GC" only: c = 0.120 rather than 0.142
+model = "BSFG"                              # one of: "BSFG" | "GC"
+shell_correction_file = "gilbert_cameron"   # "GC" only: "gilbert_cameron" (shipped Table III) or a path under the data directory
+deformed_branch = true                      # "GC" only: eq. (21), c = 0.120, for deformed nuclei beside eq. (20)
 
 [evaporation]
 cross_section = "variable"        # one of: "variable" | "constant"

@@ -398,17 +398,19 @@ function _load_level_density(
     section = _section(document, "level_density")
     model = _choice(section, "model", LEVEL_DENSITY_MODELS, "level_density.model", "BSFG")
     model == "BSFG" && return BackShiftedFermiGas(mass_excess_table)
+    # "gilbert_cameron" is the table shipped with the domain package, Table III of the 1965 paper;
+    # any other value is a path under the data directory.
+    shell_source = _value(
+        section,
+        "shell_correction_file",
+        String,
+        "level_density.shell_correction_file",
+        "gilbert_cameron",
+    )
     corrections = read_shell_correction_table(
-        _input(
-            data_directory,
-            _value(
-                section,
-                "shell_correction_file",
-                String,
-                "level_density.shell_correction_file",
-            ),
-            "level_density.shell_correction_file",
-        ),
+        shell_source == "gilbert_cameron" ?
+        String(GILBERT_CAMERON_SHELL_CORRECTION_FILE) :
+        _input(data_directory, shell_source, "level_density.shell_correction_file"),
     )
     deformed =
         _value(section, "deformed_branch", Bool, "level_density.deformed_branch", true)

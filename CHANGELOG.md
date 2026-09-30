@@ -57,7 +57,10 @@ here.
 
 ### Changed
 
-- FissionFragmentsDomain 0.1.5. Wahl's 1988 model now has `ΔZ = 0` at `A_F/2` for ²⁵²Cf, which
+- `shell_correction_file = "gilbert_cameron"` takes the Gilbert–Cameron table the domain package
+  now ships, Table III of the 1965 paper verified against the print and against Geant4. The five
+  shipped configurations name it; a path under the data directory still works.
+- FissionFragmentsDomain 0.1.7. Wahl's 1988 model now has `ΔZ = 0` at `A_F/2` for ²⁵²Cf, which
   moves `ν(126)` by 0.025 and `⟨ν⟩` by 7 × 10⁻⁵; no other system changes.
 
 - One name per quantity from configuration key to column header, set out in

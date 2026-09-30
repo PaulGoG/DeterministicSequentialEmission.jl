@@ -266,9 +266,12 @@ multiplicity ratio `r_ν(A_H)` side by side, in the same column of two files, an
 model will run to completion and report a result nobody can tell is wrong. Reading the record
 makes the quantity a matter of record too.
 
-Produce that run with `ratio_averaging = "mean_of_ratios"`: this partition re-expands `R_T` with
-per-`(A_H, Z_H)` level density parameters and reduces over `Z` afterwards, so it inverts a
-`Z`-averaged multiplicity ratio with `⟨a_L/a_H⟩` rather than `⟨a_L⟩/⟨a_H⟩`.
+Produce that run with `ratio_averaging = "charge_resolved"`. This partition re-expands `R_T` with
+per-`(A_H, Z_H)` level density parameters and reduces over `Z` afterwards, and only the
+charge-resolved inversion undoes that exactly; either effective ratio, `⟨a_L⟩/⟨a_H⟩` or
+`⟨a_L/a_H⟩`, misses by up to 10⁻² in `R_T`. A run whose manifest records its `[domain]` is checked
+against the configuration: a different level density model or Gilbert–Cameron branch, number of
+charges per mass, charge model or mass table is refused.
 
 The retrieval records which datasets it kept and which it rejected, with the reason, and that
 record is worth reading before using what it wrote. The archive is not uniformly reliable: sets

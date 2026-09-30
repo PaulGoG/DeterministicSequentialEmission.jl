@@ -29,6 +29,7 @@ using FissionFragmentsDomain:
     FragmentQuantity,
     FragmentYield,
     Fragmentation,
+    GILBERT_CAMERON_SHELL_CORRECTION_FILE,
     GilbertCameron,
     LEVEL_DENSITY_MODELS,
     LevelDensityModel,

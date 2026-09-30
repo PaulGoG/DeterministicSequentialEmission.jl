@@ -140,6 +140,18 @@ end
             @test systematic.charge_distribution.label == "CF252S"
         end
 
+        # "gilbert_cameron" takes the table shipped with the domain package, Table III of the 1965
+        # paper, so a Gilbert–Cameron configuration needs no file under the data directory.
+        if isfile(MASS_EXCESS_FILE)
+            gilbert = _configuration(
+                directory,
+                "model = \"BSFG\"" => "model = \"GC\"\nshell_correction_file = \"gilbert_cameron\"",
+            )
+            @test gilbert.model isa GilbertCameron
+            @test gilbert.model.deformed_branch
+            @test level_density_parameter(gilbert.model, Nuclide(58, 148)) !== nothing
+        end
+
         # Every rejection names its key.
         @test _rejects(
             directory,

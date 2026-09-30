@@ -30,7 +30,7 @@ data/
 
 | Path | Content | Header |
 |---|---|---|
-| `reference/shell_corrections_gilbert_cameron.dat` | `S(N)`, `S(Z)` against nucleon number, 11 … 150 | `n S_N S_Z`, MeV |
+| `reference/shell_corrections_gilbert_cameron.dat` | optional: a Gilbert–Cameron table other than the shipped one | `n S_N S_Z`, MeV |
 | `reference/s_wave_resonances_ripl3.dat` | s-wave average resonance parameters, the source of `S₀(A)` | as distributed: commented header, `S₀` in units of 10⁻⁴ |
 | `reference/ground_state_deformation_moller.dat` | ground-state quadrupole deformations | `Z A beta2` |
 | `<system>/charge_distribution_vs_A.dat` | charge polarization and Gaussian dispersion, evaluated per reaction | `A dZ sigma_Z` |
@@ -141,16 +141,16 @@ this package refuses a manifest that does not declare `ordinate = "R_T"` and
 `abscissa = ["A_H"]`, and resolves every curve through `temperature_ratio_file` and through no
 other field. The `columns` the manifest states are documentation: tables are read by position.
 
-Run the extraction with `ratio_averaging = "mean_of_ratios"` for this consumer; the reason is in
-`read_segmented_curve`'s docstring.
+Run the extraction with `ratio_averaging = "charge_resolved"` for this consumer; the reason is in
+`read_segmented_curve`'s docstring, and the manifest's `[domain]` record is checked on load.
 
 The remaining tables are one-off downloads:
 
-**`reference/shell_corrections_gilbert_cameron.dat`** — shell corrections `S(N)` and `S(Z)`,
-Table III of A. Gilbert and A. G. W. Cameron, *Canadian Journal of Physics* **43**, 1446 (1965),
-pp. 1453–1455, as redistributed in the IAEA Reference Input Parameter Library. The paper
-tabulates `S(Z)` only to `Z = 98`; the file is rectangular and pads the column with zeros beyond
-that, which the reader discards rather than storing as a correction of zero.
+**Gilbert–Cameron shell corrections** — Table III of A. Gilbert and A. G. W. Cameron, *Canadian
+Journal of Physics* **43**, 1446 (1965), pp. 1453–1455, doi:10.1139/p65-139. It ships with
+FissionFragmentsDomain.jl, verified against the printed table and against Geant4's electronic copy,
+and `shell_correction_file = "gilbert_cameron"` selects it. A table of the same layout under this
+directory can still be named by path.
 
 **`reference/s_wave_resonances_ripl3.dat`** — s-wave average resonance parameters.
 RIPL-3: R. Capote *et al.*, *Nuclear Data Sheets* **110**, 3107 (2009). The file is byte-identical
