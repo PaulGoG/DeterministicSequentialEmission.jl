@@ -190,8 +190,10 @@ out within −7 % to +5 % of the evaluated values, with no parameter adjusted pe
 
 The spectrum is the same statement in energy. Model and measurement are both absolute here —
 the model spectrum integrates to one neutron by construction, and every retrieved set is
-reported against the same 1.42 MeV Maxwellian — so nothing is scaled to anything. The model is
-about 8 % soft in `⟨E⟩`, 1.96 MeV against 2.13, and the deficit is in the tail above 3 MeV.
+reported against the same 1.42 MeV Maxwellian — so nothing is scaled to anything. Each
+fragmentation enters the total by its yield times its multiplicity, so every emitted neutron
+counts once, as it does in a measurement. The model is about 6 % soft in `⟨E⟩`, 2.01 MeV
+against 2.13: it lies above the data below 1.5 MeV and below them above 2 MeV.
 
 ## Configuration
 
