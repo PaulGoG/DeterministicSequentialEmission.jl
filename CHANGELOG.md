@@ -27,6 +27,12 @@ here.
   per mass, charge model or mass table is refused, naming the key. A curve inverted through an effective level density
   ratio loads with a warning, since the partition here applies `R_T` charge by charge. A
   manifest without the record loads with a warning.
+- A reconstructed yield takes the width of `P(TKE|A)` only from `kinetic_energy_dispersion_file`,
+  the experiment that measured `⟨TKE⟩(A)`, or from a width the configuration states. Without
+  either, each mass sits at its mean TKE, the tables resolved in TKE are not written, and the run
+  record says `yield_kinetic_energy_width = "none"`. ²³³U(nth,f) runs this way: Geltenbort (1985)
+  reports no width, and the Baba (1997) width it borrowed is dropped. Measured on ²⁵²Cf, the
+  approximation moves `⟨ν⟩` by +1.2 % and `ν(A)` by at most 0.22.
 - `[yield] symmetrize`, true by default, imposes the pre-neutron identities `Y(A) = Y(A₀ − A)`,
   `⟨TKE⟩(A) = ⟨TKE⟩(A₀ − A)` and `σ_TKE(A) = σ_TKE(A₀ − A)` by averaging measured complements. It
   enters the run identifier as `Ysym`.
@@ -65,7 +71,7 @@ here.
 - `shell_correction_file = "gilbert_cameron"` takes the Gilbert–Cameron table the domain package
   now ships, Table III of the 1965 paper verified against the print and against Geant4. The five
   shipped configurations name it; a path under the data directory still works.
-- FissionFragmentsDomain 0.1.9. Wahl's 1988 model now has `ΔZ = 0` at `A_F/2` for ²⁵²Cf, which
+- FissionFragmentsDomain 0.2.0. Wahl's 1988 model now has `ΔZ = 0` at `A_F/2` for ²⁵²Cf, which
   moves `ν(126)` by 0.025 and `⟨ν⟩` by 7 × 10⁻⁵; no other system changes.
 
 - One name per quantity from configuration key to column header, set out in

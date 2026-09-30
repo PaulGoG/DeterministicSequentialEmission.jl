@@ -122,6 +122,18 @@ end
                 "[output]" => "[yield]\nmass_energy_yield_file = \"YATKE\"\nsymmetrize = \"yes\"\n[output]",
             )
 
+            # Marginals without a width from their experiment place each mass at its mean TKE;
+            # a width is used only when a file supplies it or the configuration states one.
+            write(joinpath(directory, "YA"), "A Y\n126 1.0\n140 3.0\n112 3.0\n")
+            write(joinpath(directory, "TKEA"), "A TKE\n126 180.0\n140 185.3\n")
+            marginal(extra) = _configuration(
+                directory,
+                "[output]" => "[yield]\nmass_yield_file = \"YA\"\nmean_kinetic_energy_file = \"TKEA\"\n$(extra)\n[output]",
+            )
+            @test marginal("").yield_width == "none"
+            @test marginal("kinetic_energy_dispersion = 9.0\n").yield_width == "stated"
+            @test symmetric.yield_width == "joint"
+
             # A spectrum grid is logarithmic and spans exactly what it was asked for.
             with_spectrum = _configuration(
                 directory,

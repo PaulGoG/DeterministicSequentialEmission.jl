@@ -461,8 +461,13 @@ function write_results(result::RunResult, directory::AbstractString)
         ("E_star_vs_TKE.dat", "TKE E_star", result.excitation_by_energy),
         ("spectrum_vs_E.dat", "E spectrum", result.spectrum),
     )
+    # A yield placed at the mean TKE of each mass has no TKE distribution, so the tables resolved
+    # in TKE would describe one it does not have; they are not written.
+    distributed = configuration.yield_width != "none"
+    resolved_in_energy = ("nu_vs_TKE.dat", "E_star_vs_TKE.dat", "Y_vs_TKE.dat")
     for (name, header, values) in curves
         isempty(values) && continue
+        distributed || !(name in resolved_in_energy) || continue
         open(joinpath(directory, name), "w") do io
             println(io, header)
             for (x, y) in values
@@ -478,6 +483,7 @@ function write_results(result::RunResult, directory::AbstractString)
             ("Y_vs_Z.dat", "Z Y", :charge),
             ("Y_vs_TKE.dat", "TKE Y", :kinetic_energy),
         )
+            distributed || !(name in resolved_in_energy) || continue
             projection = yield_over(fragment_yield, dimension)
             open(joinpath(directory, name), "w") do io
                 println(io, header)
@@ -651,6 +657,7 @@ function run_metadata(result::RunResult)
         "spectrum_points" => grid === nothing ? 0 : length(grid),
         "yield" => fragment_yield === nothing ? "none" : sprint(show, fragment_yield),
         "yield_symmetrized" => configuration.yield_symmetrized,
+        "yield_kinetic_energy_width" => configuration.yield_width,
     )
     # How far the input yield's mean TKE lies from the energy standard, where one exists: a
     # measured scale offset of 1 MeV moves ⟨ν⟩ by about 0.08.

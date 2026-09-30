@@ -28,6 +28,7 @@ struct Configuration
     source::String
     data_directory::String
     yield_symmetrized::Bool
+    yield_width::String
 end
 
 function Base.show(io::IO, configuration::Configuration)
@@ -227,7 +228,7 @@ function load_configuration(
         charge_distribution = charge_distribution,
         mass_excess_table = mass_excess_table,
     )
-    fragment_yield, yield_symmetrized = _load_yield(
+    fragment_yield, yield_symmetrized, yield_width = _load_yield(
         document,
         system,
         charge_distribution,
@@ -260,6 +261,7 @@ function load_configuration(
         abspath(path),
         abspath(data_directory),
         yield_symmetrized,
+        yield_width,
     )
 end
 
@@ -573,7 +575,7 @@ function _load_yield(
     kinetic_energies,
     data_directory::AbstractString,
 )
-    haskey(document, "yield") || return nothing, false
+    haskey(document, "yield") || return nothing, false, "none"
     section = _section(document, "yield")
     # The two fragments of a split are one event, so pre-neutron data obey
     # Y(A) = Y(A₀ − A), and likewise ⟨TKE⟩ and σ_TKE. Measured tables that break the identity are
@@ -589,7 +591,7 @@ function _load_yield(
     )
     joint = haskey(section, "mass_energy_yield_file")
     marginal = haskey(section, "mass_yield_file")
-    joint || marginal || return nothing, false
+    joint || marginal || return nothing, false, "none"
     joint &&
         marginal &&
         throw(
@@ -600,6 +602,7 @@ function _load_yield(
             ),
         )
 
+    width = "joint"
     measured = if joint
         table = read_mass_energy_yield(
             _input(
@@ -615,23 +618,25 @@ function _load_yield(
         )
         symmetrize ? symmetrized_yield(table, system.compound.A) : table
     else
-        # One width unless a measured table is given; the width is then the table's fallback
-        # outside its range.
-        default = Float64(
-            _bounded(
-                _value(
-                    section,
-                    "kinetic_energy_dispersion",
-                    Real,
-                    "yield.kinetic_energy_dispersion",
-                    DEFAULT_KINETIC_ENERGY_DISPERSION,
+        # The width of P(TKE|A) is the one the experiment that measured ⟨TKE⟩(A) reported, in
+        # the dispersion file. A stated single width is used only where the configuration names
+        # one. Otherwise no width is assumed, and each mass is placed at its mean TKE.
+        stated =
+            haskey(section, "kinetic_energy_dispersion") ?
+            Float64(
+                _bounded(
+                    _value(
+                        section,
+                        "kinetic_energy_dispersion",
+                        Real,
+                        "yield.kinetic_energy_dispersion",
+                    ),
+                    "yield.kinetic_energy_dispersion";
+                    min = 0,
+                    max = 100,
+                    exclusive_min = true,
                 ),
-                "yield.kinetic_energy_dispersion";
-                min = 0,
-                max = 100,
-                exclusive_min = true,
-            ),
-        )
+            ) : nothing
         dispersion = if haskey(section, "kinetic_energy_dispersion_file")
             read_kinetic_energy_dispersion(
                 _input(
@@ -644,11 +649,16 @@ function _load_yield(
                     ),
                     "yield.kinetic_energy_dispersion_file",
                 );
-                default = default,
+                default = stated,
             )
+        elseif stated !== nothing
+            uniform_kinetic_energy_dispersion(stated)
         else
-            uniform_kinetic_energy_dispersion(default)
+            nothing
         end
+        width =
+            dispersion === nothing ? "none" :
+            dispersion.source == "uniform" ? "stated" : "measured"
         factorized_yield(
             _input(
                 data_directory,
@@ -680,7 +690,8 @@ function _load_yield(
         charges_per_mass = charges_per_mass,
     )
     return build_fragment_yield(domain, charge_distribution, measured; total = total),
-    symmetrize
+    symmetrize,
+    width
 end
 
 function _load_spectrum(document::AbstractDict)

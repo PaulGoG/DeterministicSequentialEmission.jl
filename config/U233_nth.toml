@@ -35,8 +35,7 @@ curve_label = "systematic_trend"                            # required by "tempe
 [yield]
 mass_yield_file = "U233_nth/Y_vs_A/21981005_P.Geltenbort_1985.dat"         # A Y [uncertainty]; alternative to mass_energy_yield_file
 mean_kinetic_energy_file = "U233_nth/TKE_vs_A/21981008_P.Geltenbort_1985.dat"  # A TKE [uncertainty]; required with it
-kinetic_energy_dispersion_file = "U233_nth/sigma_TKE_vs_A_baba.dat"        # optional; A sigma_TKE, MeV
-kinetic_energy_dispersion = 10.0                                           # MeV, above 0 to 100; used where the file does not reach
+# kinetic_energy_dispersion_file = ""                                      # optional; A sigma_TKE, MeV, only from the experiment of mean_kinetic_energy_file; without it each mass sits at its mean TKE
 total = 200.0                                                              # percent the yield sums to, above 0
 symmetrize = true                                                          # impose Y, ⟨TKE⟩, σ_TKE equal at A and A₀ − A (pre-neutron identity)
 

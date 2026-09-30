@@ -22,7 +22,6 @@ using FissionFragmentsDomain:
     CHANNELS,
     ChargeDistribution,
     ChargeModel,
-    DEFAULT_KINETIC_ENERGY_DISPERSION,
     DEFAULT_YIELD_TOTAL,
     EXCITATION_RATIO_CURVE_SPEC,
     FissioningSystem,
