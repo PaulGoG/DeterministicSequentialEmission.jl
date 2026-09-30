@@ -29,6 +29,7 @@ struct Configuration
     data_directory::String
     yield_symmetrized::Bool
     yield_width::String
+    yield_inputs::Dict{String, Any}
 end
 
 function Base.show(io::IO, configuration::Configuration)
@@ -228,7 +229,7 @@ function load_configuration(
         charge_distribution = charge_distribution,
         mass_excess_table = mass_excess_table,
     )
-    fragment_yield, yield_symmetrized, yield_width = _load_yield(
+    fragment_yield, yield_symmetrized, yield_width, yield_inputs = _load_yield(
         document,
         system,
         charge_distribution,
@@ -262,6 +263,7 @@ function load_configuration(
         abspath(data_directory),
         yield_symmetrized,
         yield_width,
+        yield_inputs,
     )
 end
 
@@ -575,7 +577,7 @@ function _load_yield(
     kinetic_energies,
     data_directory::AbstractString,
 )
-    haskey(document, "yield") || return nothing, false, "none"
+    haskey(document, "yield") || return nothing, false, "none", Dict{String, Any}()
     section = _section(document, "yield")
     # The two fragments of a split are one event, so pre-neutron data obey
     # Y(A) = Y(A₀ − A), and likewise ⟨TKE⟩ and σ_TKE. Measured tables that break the identity are
@@ -591,7 +593,7 @@ function _load_yield(
     )
     joint = haskey(section, "mass_energy_yield_file")
     marginal = haskey(section, "mass_yield_file")
-    joint || marginal || return nothing, false, "none"
+    joint || marginal || return nothing, false, "none", Dict{String, Any}()
     joint &&
         marginal &&
         throw(
@@ -603,6 +605,7 @@ function _load_yield(
         )
 
     width = "joint"
+    inputs = Dict{String, Any}()
     measured = if joint
         table = read_mass_energy_yield(
             _input(
@@ -656,9 +659,37 @@ function _load_yield(
         else
             nothing
         end
-        width =
-            dispersion === nothing ? "none" :
-            dispersion.source == "uniform" ? "stated" : "measured"
+        mass_path = _input(
+            data_directory,
+            _value(section, "mass_yield_file", String, "yield.mass_yield_file"),
+            "yield.mass_yield_file",
+        )
+        energy_path = _input(
+            data_directory,
+            _value(
+                section,
+                "mean_kinetic_energy_file",
+                String,
+                "yield.mean_kinetic_energy_file",
+            ),
+            "yield.mean_kinetic_energy_file",
+        )
+        inputs["mass_yield_file"] = basename(mass_path)
+        inputs["mean_kinetic_energy_file"] = basename(energy_path)
+        width = if dispersion === nothing
+            "none"
+        elseif dispersion.source == "uniform"
+            "stated"
+        else
+            inputs["kinetic_energy_dispersion_file"] = basename(dispersion.source)
+            inputs["masses_without_width"] = _masses_without_width(
+                mass_path,
+                dispersion,
+                system.compound.A,
+                symmetrize,
+            )
+            _width_provenance(basename(dispersion.source), basename(energy_path))
+        end
         factorized_yield(
             _input(
                 data_directory,
@@ -691,7 +722,36 @@ function _load_yield(
     )
     return build_fragment_yield(domain, charge_distribution, measured; total = total),
     symmetrize,
-    width
+    width,
+    inputs
+end
+
+# Whether a width file and a mean-TKE file come from one experiment, judged by the EXFOR entry
+# that begins a retrieved file's name, `<accession>_<Author>_<year>.dat`. A width may be borrowed
+# from another experiment on the same system; the run record says which it was.
+function _width_provenance(width_file::AbstractString, energy_file::AbstractString)
+    entry(name) = (m = match(r"^(\d{5})\d{3,}_", name); m === nothing ? nothing : m[1])
+    width_entry, energy_entry = entry(width_file), entry(energy_file)
+    (width_entry === nothing || energy_entry === nothing) && return "unverified"
+    return width_entry == energy_entry ? "same experiment" : "borrowed"
+end
+
+# The heavy masses of the mass yield that the width table reaches neither directly nor, when the
+# identities are imposed, through the complement; those sit at their mean TKE.
+function _masses_without_width(
+    mass_path::AbstractString,
+    dispersion::KineticEnergyDispersion,
+    compound_mass::Integer,
+    symmetrize::Bool,
+)
+    dispersion.default === nothing || return Int[]
+    table = read_mass_yield(mass_path)
+    widths = dispersion.σ_TKE
+    return sort([
+        A for A in table.A if 2A >= compound_mass &&
+            !haskey(widths, A) &&
+            !(symmetrize && haskey(widths, compound_mass - A))
+    ])
 end
 
 function _load_spectrum(document::AbstractDict)

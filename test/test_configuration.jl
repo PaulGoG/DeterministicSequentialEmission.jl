@@ -131,6 +131,31 @@ end
                 "[output]" => "[yield]\nmass_yield_file = \"YA\"\nmean_kinetic_energy_file = \"TKEA\"\n$(extra)\n[output]",
             )
             @test marginal("").yield_width == "none"
+            # A width is flagged as borrowed when its EXFOR entry is not that of the mean.
+            write(
+                joinpath(directory, "23014002_H.Baba_1997.dat"),
+                "A sigma_TKE\n126 9.0\n140 10.0\n",
+            )
+            write(
+                joinpath(directory, "21981008_P.Geltenbort_1985.dat"),
+                "A TKE\n126 180.0\n140 185.3\n",
+            )
+            write(
+                joinpath(directory, "21981099_P.Geltenbort_1985.dat"),
+                "A sigma_TKE\n126 9.0\n",
+            )
+            geltenbort(width_file) = _configuration(
+                directory,
+                "[output]" => "[yield]\nmass_yield_file = \"YA\"\nmean_kinetic_energy_file = \"21981008_P.Geltenbort_1985.dat\"\nkinetic_energy_dispersion_file = \"$(width_file)\"\n[output]",
+            )
+            borrowed = geltenbort("23014002_H.Baba_1997.dat")
+            @test borrowed.yield_width == "borrowed"
+            @test borrowed.yield_inputs["kinetic_energy_dispersion_file"] ==
+                  "23014002_H.Baba_1997.dat"
+            @test geltenbort("21981099_P.Geltenbort_1985.dat").yield_width ==
+                  "same experiment"
+            # The mass yield reaches 112 and 140; 140 has its width, 126 is A₀/2 with one too.
+            @test borrowed.yield_inputs["masses_without_width"] == Int[]
             @test marginal("kinetic_energy_dispersion = 9.0\n").yield_width == "stated"
             @test symmetric.yield_width == "joint"
 

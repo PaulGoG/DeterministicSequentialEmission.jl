@@ -40,7 +40,7 @@ data/
 | `U235_nth/Y_vs_A_H_TKE.dat` | the same indexed by the heavy fragment alone | `A_H TKE Y Y_uncertainty` |
 | `U233_nth/Y_vs_A/*.dat` | pre-neutron mass yield `Y(A)`, a marginal | `A Y` |
 | `U233_nth/TKE_vs_A/*.dat` | mean total kinetic energy `⟨TKE⟩(A)`, the other marginal | `A TKE` |
-| `<system>/sigma_TKE_vs_A/*.dat` | dispersion of `P(TKE|A)`, only from the experiment that measured `⟨TKE⟩(A)` | `A sigma_TKE`, MeV |
+| `<system>/sigma_TKE_vs_A/*.dat` | dispersion of `P(TKE|A)`, pre-neutron, from the experiment of `⟨TKE⟩(A)` or borrowed from another on the same system | `A sigma_TKE`, MeV |
 | `U235_nth/E_def_vs_A_Z.dat` | `ΔE_def` for the scission-modelling partition | `A Z E_def`, MeV |
 | `<system>/nu_vs_A/*.dat` | measured `ν(A)` per fragment | `A nu nu_uncertainty` |
 | `Cf252_sf/spectrum_maxwellian_ratio_vs_E/*.dat` | measured prompt neutron spectrum as a ratio to a Maxwellian | `E spectrum_maxwellian_ratio spectrum_maxwellian_ratio_uncertainty` |
@@ -63,9 +63,9 @@ where they mean `118`.
 ²³³U carries an evaluated charge distribution of the same lineage as the other three, so it no
 longer runs on the systematics. Its two marginals sit under their EXFOR accession numbers,
 21981005 and 21981008, both Geltenbort 1985, and `Y(A)` is in percent as every other yield here
-is. Geltenbort's entry reports no `σ_TKE(A)`, so the reconstruction places each mass at its mean
-TKE. The processed Baba and Asghar widths staged beside it belong to other experiments and are no
-longer read.
+is. Geltenbort's entry reports no `σ_TKE(A)`. The width is Baba's (1997), the `MISC1` column of
+EXFOR 23014002, staged as `sigma_TKE_vs_A/23014002_H.Baba_1997.dat`. The Asghar (1981) width,
+EXFOR 21771014, is against post-neutron mass (`SEC`) and is not used for pre-neutron data.
 
 `U235_nres` is the same target as `U235_nth` on the resonance channel. Its evaluated charge
 distribution, its `R_T(A_H)` trend and its yield are the thermal ones and are read from the

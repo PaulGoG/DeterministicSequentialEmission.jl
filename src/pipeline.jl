@@ -658,6 +658,7 @@ function run_metadata(result::RunResult)
         "yield" => fragment_yield === nothing ? "none" : sprint(show, fragment_yield),
         "yield_symmetrized" => configuration.yield_symmetrized,
         "yield_kinetic_energy_width" => configuration.yield_width,
+        "yield_inputs" => configuration.yield_inputs,
     )
     # How far the input yield's mean TKE lies from the energy standard, where one exists: a
     # measured scale offset of 1 MeV moves ⟨ν⟩ by about 0.08.

@@ -27,12 +27,14 @@ here.
   per mass, charge model or mass table is refused, naming the key. A curve inverted through an effective level density
   ratio loads with a warning, since the partition here applies `R_T` charge by charge. A
   manifest without the record loads with a warning.
-- A reconstructed yield takes the width of `P(TKE|A)` only from `kinetic_energy_dispersion_file`,
-  the experiment that measured `⟨TKE⟩(A)`, or from a width the configuration states. Without
-  either, each mass sits at its mean TKE, the tables resolved in TKE are not written, and the run
-  record says `yield_kinetic_energy_width = "none"`. ²³³U(nth,f) runs this way: Geltenbort (1985)
-  reports no width, and the Baba (1997) width it borrowed is dropped. Measured on ²⁵²Cf, the
-  approximation moves `⟨ν⟩` by +1.2 % and `ν(A)` by at most 0.22.
+- A reconstructed yield takes the width of `P(TKE|A)` from `kinetic_energy_dispersion_file`, or
+  from a width the configuration states; none is assumed otherwise. The run record says whether
+  the width is from the experiment that measured `⟨TKE⟩(A)` or borrowed from another,
+  `yield_kinetic_energy_width`, judged by EXFOR entry. It also lists the masses without a width,
+  which sit at their mean TKE; a width-free run writes no tables resolved in TKE.
+  - ²³³U(nth,f) borrows Baba's (1997) pre-neutron width, EXFOR 23014002, since Geltenbort (1985)
+    reports none.
+  - Without any width, `⟨ν⟩` moves by +1.2 % (²⁵²Cf) and +3.9 % (²³⁵U).
 - `[yield] symmetrize`, true by default, imposes the pre-neutron identities `Y(A) = Y(A₀ − A)`,
   `⟨TKE⟩(A) = ⟨TKE⟩(A₀ − A)` and `σ_TKE(A) = σ_TKE(A₀ − A)` by averaging measured complements. It
   enters the run identifier as `Ysym`.

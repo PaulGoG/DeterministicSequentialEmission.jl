@@ -199,10 +199,12 @@ resonance one, which the reaction code `n,f` alone cannot.
 The last two are where the data runs out rather than where the model does. No joint `Y(A, TKE)`
 for ²³³U exists anywhere in EXFOR, so the yield is reconstructed from the two marginals that were
 measured, `Y(A)` and `⟨TKE⟩(A)`, both from Geltenbort (1985). That entry reports no width of the
-kinetic energy distribution, and none is taken from another experiment. Each mass is placed at its
-mean TKE, and the tables resolved in TKE are not written. Measured on ²⁵²Cf, where one
-experiment's matrix and its own marginals can both be run, dropping the width moves `⟨ν⟩` by
-+1.2 %, `⟨E⟩` by −0.5 %, and `ν(A)` by 0.08 on average, 0.22 at most.
+kinetic energy distribution. The width is borrowed from Baba (1997), EXFOR 23014002, the
+pre-neutron `σ_TKE(A)` of another experiment on the same system, and the run record flags it as
+borrowed. The five heaviest masses, which Baba does not reach, sit at their mean TKE. Without a
+width at all, `⟨ν⟩` moves by +1.2 % for ²⁵²Cf and +3.9 % for ²³⁵U. Measured by running one
+experiment's matrix against its own marginals. The spread in TKE smooths the discrete emission
+thresholds, which matters most at the low excitation of thermal fission.
 
 The resonance case exists to establish a null result. At 580 eV the compound excitation is
 5.8 × 10⁻⁴ MeV above thermal out of 6.5 MeV, and `ν(A)` moves by at most 5 × 10⁻⁴ neutrons, the
@@ -229,8 +231,9 @@ Where several experiments measured the same system, one is taken whole. `Y(A)`, 
 `σ_TKE(A)` come from that experiment, or its joint matrix does, because they share one energy
 calibration, one mass scale, one prompt-neutron correction and one resolution. Marginals are not
 spliced across experiments, and curves are not averaged mass by mass. The other experiments serve
-as alternative runs. The width `σ_TKE(A)` is taken only from the experiment that measured
-`⟨TKE⟩(A)`. Without it, no width is assumed. The pre-neutron identities `Y(A) = Y(A₀ − A)`, and
+as alternative runs. The width `σ_TKE(A)` comes from the same experiment where it reported one;
+otherwise it is borrowed from another experiment on the same system, preferring a pre-neutron
+width, and flagged. No width is invented. The pre-neutron identities `Y(A) = Y(A₀ − A)`, and
 the same for `⟨TKE⟩` and `σ_TKE`, are imposed by averaging the complements
 (`[yield] symmetrize = true`, the default). The
 run record compares the input yield's mean TKE with the energy standard of Gönnenwein (1991), as
