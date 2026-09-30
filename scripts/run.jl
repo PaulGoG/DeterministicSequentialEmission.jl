@@ -12,6 +12,7 @@
 include(joinpath(@__DIR__, "..", "activate.jl"))
 
 using DeterministicSequentialEmission
+using FissionFragmentsDomain: system_label
 using DrWatson: datadir, projectdir, tag!
 using Dates: Dates
 using InteractiveUtils: versioninfo
