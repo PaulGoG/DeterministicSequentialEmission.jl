@@ -26,7 +26,10 @@ here.
   reaction where it exists, which reproduces that evaluation's own tables, else the 2002
   systematics, else the conventional means. An evaluated table named in the configuration
   outranks all three, and the layer used is recorded in the run metadata. The per-run
-  charge-distribution diagnostics reduce each model to effective Gaussians.
+  charge-distribution diagnostics reduce each model to effective Gaussians. The shipped
+  configurations take `"wahl"`, so every input they need traces to a public source: for the
+  five systems ⟨ν⟩ moves by +0.03 % to +0.76 % and ν(A) by at most 0.035 over the yield peaks,
+  against the supplied tables used before.
 - The prompt fission neutron spectrum, centre-of-mass and laboratory, in closed form.
 - `[spectrum] pair_weighting = "multiplicity" | "excitation"` selects the light and heavy
   weights within a pair, and `[spectrum] average = "per_fission" | "per_neutron"` the weight of

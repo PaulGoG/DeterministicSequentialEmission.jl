@@ -234,7 +234,7 @@ best-founded source the system reaches:
 3. **the conventional means**, `ΔZ = −0.5` and `σ_Z = 0.6` at every mass.
 
 `charge_distribution_file = "wahl"` takes the first that answers, and the run metadata records
-which. An evaluated table named in the configuration outranks all three. EXFOR holds the
+which; the shipped configurations use it. An evaluated table named in the configuration outranks all three. EXFOR holds the
 independent yields the model is fitted to, but too sparsely per mass to fit a Gaussian at each,
 which is why the model exists. Everything here is fitted to spontaneous, thermal and resonance
 fission; above roughly 8 MeV multiple-chance fission opens, and the model's separate high-energy
