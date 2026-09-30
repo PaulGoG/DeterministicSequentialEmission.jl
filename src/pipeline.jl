@@ -334,6 +334,7 @@ const RUN_IDENTIFIER_ABBREVIATIONS = Dict(
     "pair_weighting" => "pw",
     "average" => "avg",
     "total" => "Ytot",
+    "symmetrize" => "Ysym",
 )
 
 """
@@ -344,7 +345,7 @@ run identifier.
 
 Every key is abbreviated through [`RUN_IDENTIFIER_ABBREVIATIONS`](@ref); a key with no entry
 throws. The scalar and enumerated keys are covered, including `incident_energy`;
-`deformed_branch` appears only under Gilbert-Cameron and `total` only where a yield was loaded.
+`deformed_branch` appears only under Gilbert-Cameron and `total` and `symmetrize` only where a yield was loaded.
 Not tokens, and recorded in the run metadata instead: the input files, the spectrum grid and
 `maxwellian_temperature` (which affect the tabulation, and through the grid the first moment in
 `totals.dat`, but not the solution), and `significant_digits`. The system names the directory
@@ -370,7 +371,10 @@ function run_parameters(configuration::Configuration)
         push!(entries, "deformed_branch" => configuration.model.deformed_branch)
     end
     fragment_yield = configuration.fragment_yield
-    fragment_yield === nothing || push!(entries, "total" => fragment_yield.total)
+    if fragment_yield !== nothing
+        push!(entries, "total" => fragment_yield.total)
+        push!(entries, "symmetrize" => configuration.yield_symmetrized)
+    end
 
     parameters = Dict{String, Any}()
     for (key, value) in entries
@@ -598,6 +602,18 @@ _significant(x::Real, digits::Integer) =
     isfinite(x) ? string(round(Float64(x); sigdigits = digits)) : string(Float64(x))
 
 """
+    input_mean_kinetic_energy(fragment_yield) -> Float64
+
+The mean total kinetic energy of the input yield, `Σ Y TKE / Σ Y` over every fragment it holds,
+in MeV. It is a property of the measurement the yield came from, compared in the run record with
+[`recommended_mean_total_kinetic_energy`](@ref) where a standard exists.
+"""
+function input_mean_kinetic_energy(fragment_yield::FragmentYield)
+    weighted = sum(Y * key[3] for (key, Y) in fragment_yield.values)
+    return weighted / sum(values(fragment_yield.values))
+end
+
+"""
     run_metadata(result) -> Dict{String, Any}
 
 What the library knows about a run, as nested tables ready for `TOML.print`: `"system"`, the
@@ -634,7 +650,19 @@ function run_metadata(result::RunResult)
         "spectrum_grid_MeV" => grid === nothing ? "none" : [first(grid), last(grid)],
         "spectrum_points" => grid === nothing ? 0 : length(grid),
         "yield" => fragment_yield === nothing ? "none" : sprint(show, fragment_yield),
+        "yield_symmetrized" => configuration.yield_symmetrized,
     )
+    # How far the input yield's mean TKE lies from the energy standard, where one exists: a
+    # measured scale offset of 1 MeV moves ⟨ν⟩ by about 0.08.
+    if fragment_yield !== nothing
+        input = input_mean_kinetic_energy(fragment_yield)
+        model["input_mean_TKE_MeV"] = input
+        standard = recommended_mean_total_kinetic_energy(configuration.system)
+        if standard !== nothing
+            model["recommended_mean_TKE_MeV"] = [value(standard), uncertainty(standard)]
+            model["input_mean_TKE_deviation_MeV"] = input - value(standard)
+        end
+    end
     totals = Dict{String, Any}(
         "nu_per_fission" => 2 * result.total_multiplicity,
         "mean_TKE_MeV" => result.mean_kinetic_energy,

@@ -134,7 +134,7 @@ julia check.jl --check    # report differences without rewriting
 |---|---|
 | Package environment, test and docs environments | done |
 | Continuous integration, dependency updates, docs deployment | dormant until the public release, under `.github/dormant/` |
-| Fragmentation domain, masses, charge distribution, level density, yields | from `FissionFragmentsDomain.jl` 0.1.2 |
+| Fragmentation domain, masses, charge distribution, level density, yields | from `FissionFragmentsDomain.jl` 0.1.9 |
 | One name per quantity, from configuration key to column header (`docs/src/naming.md`) | done |
 | TXE partition — scission modelling, `E*_H/TXE (A_H)`, `R_T (A_H)` | done |
 | Sequential equations — constant and variable evaporation cross section | done |
@@ -198,8 +198,9 @@ resonance one, which the reaction code `n,f` alone cannot.
 
 The last two are where the data runs out rather than where the model does. No joint `Y(A, TKE)`
 for ²³³U exists anywhere in EXFOR, so the yield is reconstructed from the two marginals that were
-measured, `Y(A)` and `⟨TKE⟩(A)`, from the same experiment, with a measured `σ_TKE(A)`. The
-substitution is named in the configuration rather than assumed.
+measured, `Y(A)` and `⟨TKE⟩(A)`, both from Geltenbort (1985). Its `σ_TKE(A)` is for now Baba's
+(1997), a different experiment, until the retrieval establishes whether Geltenbort's entry carries
+a width. The substitution is named in the configuration rather than assumed.
 
 The resonance case exists to establish a null result. At 580 eV the compound excitation is
 5.8 × 10⁻⁴ MeV above thermal out of 6.5 MeV, and `ν(A)` moves by at most 5 × 10⁻⁴ neutrons, the
@@ -221,6 +222,17 @@ Tests needing anything else announce themselves as skipped rather than passing v
 joint distribution is reconstructed by `factorized_yield` from the two marginals it does hold,
 `Y(A)` and `⟨TKE⟩(A)`, which is the route ²³³U takes; a staged table is the last resort.
 `data/README.md` says which systems sit where.
+
+Where several experiments measured the same system, one is taken whole. `Y(A)`, `⟨TKE⟩(A)` and
+`σ_TKE(A)` come from that experiment, or its joint matrix does, because they share one energy
+calibration, one mass scale, one prompt-neutron correction and one resolution. Marginals are not
+spliced across experiments, and curves are not averaged mass by mass. The other experiments serve
+as alternative runs. The pre-neutron identities `Y(A) = Y(A₀ − A)`, and the same for `⟨TKE⟩` and
+`σ_TKE`, are imposed by averaging the complements (`[yield] symmetrize = true`, the default). The
+run record compares the input yield's mean TKE with the energy standard of Gönnenwein (1991), as
+tabulated by Bertsch et al. (2015), doi:10.1088/0954-3899/42/7/077001: 184.1 MeV for ²⁵²Cf(sf);
+170.1, 170.5 and 177.9 MeV for thermal ²³³U, ²³⁵U and ²³⁹Pu. A 1 MeV offset moves `⟨ν⟩` by
+about 0.08.
 
 The isobaric charge distribution comes from Wahl's `Zₚ` model where no evaluated table is named.
 The model, with its parameters, lives in the domain package, which resolves them from the

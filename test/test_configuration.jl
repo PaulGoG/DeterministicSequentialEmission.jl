@@ -100,6 +100,28 @@ end
             @test system_label(configuration.system) == "Cf252_sf"
             @test occursin("probe.toml", configuration.source)
 
+            # A yield imposes the pre-neutron identity Y(A) = Y(A₀ − A) unless told otherwise, and
+            # the choice enters the run identifier, since it changes the result.
+            write(
+                joinpath(directory, "YATKE"),
+                "A TKE Y\n126 180.0 1.0\n140 180.0 3.0\n112 180.0 1.0\n",
+            )
+            with_yield(extra) = _configuration(
+                directory,
+                "[output]" => "[yield]\nmass_energy_yield_file = \"YATKE\"\n$(extra)\n[output]",
+            )
+            symmetric = with_yield("")
+            @test symmetric.yield_symmetrized
+            @test run_parameters(symmetric)["Ysym"] == true
+            as_measured = with_yield("symmetrize = false\n")
+            @test !as_measured.yield_symmetrized
+            @test run_identifier(as_measured) != run_identifier(symmetric)
+            @test _rejects(
+                directory,
+                "yield.symmetrize",
+                "[output]" => "[yield]\nmass_energy_yield_file = \"YATKE\"\nsymmetrize = \"yes\"\n[output]",
+            )
+
             # A spectrum grid is logarithmic and spans exactly what it was asked for.
             with_spectrum = _configuration(
                 directory,

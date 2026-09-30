@@ -35,6 +35,7 @@ curve_label = "systematic_trend"                            # required by "tempe
 [yield]
 mass_energy_yield_file = "Pu239_nth/Y_vs_A_TKE.dat"  # optional; omit the section to weight by p(Z,A) alone
 total = 200.0                                        # percent the yield sums to, above 0
+symmetrize = true                                    # impose Y, ⟨TKE⟩, σ_TKE equal at A and A₀ − A (pre-neutron identity)
 
 [spectrum]
 enabled = true                    # solve the laboratory prompt neutron spectrum

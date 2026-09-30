@@ -71,9 +71,11 @@ using FissionFragmentsDomain:
     read_segmented_curve,
     read_shell_correction_table,
     read_temperature_ratio_manifest,
+    recommended_mean_total_kinetic_energy,
     split_weight,
     spontaneous_fission,
     staged_manifest,
+    symmetrized_yield,
     system_label,
     system_record,
     temperature_ratio_path,
@@ -82,7 +84,7 @@ using FissionFragmentsDomain:
     wahl_1988,
     weights_from,
     yield_over
-using Measurements: value
+using Measurements: uncertainty, value
 using SpecialFunctions: gamma_inc
 using TOML: TOML
 
@@ -124,6 +126,7 @@ export EmissionSequence,
     sequence_average
 export Configuration, load_configuration
 export RunResult,
+    input_mean_kinetic_energy,
     run_pipeline,
     write_results,
     run_parameters,

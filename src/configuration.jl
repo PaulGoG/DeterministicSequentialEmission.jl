@@ -27,6 +27,7 @@ struct Configuration
     significant_digits::Int
     source::String
     data_directory::String
+    yield_symmetrized::Bool
 end
 
 function Base.show(io::IO, configuration::Configuration)
@@ -78,6 +79,7 @@ const CONFIGURATION_KEYS = Dict(
     ),
     "yield" => (
         "total",
+        "symmetrize",
         "mass_energy_yield_file",
         "mass_yield_file",
         "mean_kinetic_energy_file",
@@ -225,7 +227,7 @@ function load_configuration(
         charge_distribution = charge_distribution,
         mass_excess_table = mass_excess_table,
     )
-    fragment_yield = _load_yield(
+    fragment_yield, yield_symmetrized = _load_yield(
         document,
         system,
         charge_distribution,
@@ -257,6 +259,7 @@ function load_configuration(
         significant_digits,
         abspath(path),
         abspath(data_directory),
+        yield_symmetrized,
     )
 end
 
@@ -570,8 +573,12 @@ function _load_yield(
     kinetic_energies,
     data_directory::AbstractString,
 )
-    haskey(document, "yield") || return nothing
+    haskey(document, "yield") || return nothing, false
     section = _section(document, "yield")
+    # The two fragments of a split are one event, so pre-neutron data obey
+    # Y(A) = Y(A₀ − A), and likewise ⟨TKE⟩ and σ_TKE. Measured tables that break the identity are
+    # made to satisfy it by averaging the complements.
+    symmetrize = _value(section, "symmetrize", Bool, "yield.symmetrize", true)
     total = Float64(
         _bounded(
             _value(section, "total", Real, "yield.total", DEFAULT_YIELD_TOTAL),
@@ -582,7 +589,7 @@ function _load_yield(
     )
     joint = haskey(section, "mass_energy_yield_file")
     marginal = haskey(section, "mass_yield_file")
-    joint || marginal || return nothing
+    joint || marginal || return nothing, false
     joint &&
         marginal &&
         throw(
@@ -594,7 +601,7 @@ function _load_yield(
         )
 
     measured = if joint
-        read_mass_energy_yield(
+        table = read_mass_energy_yield(
             _input(
                 data_directory,
                 _value(
@@ -606,6 +613,7 @@ function _load_yield(
                 "yield.mass_energy_yield_file",
             ),
         )
+        symmetrize ? symmetrized_yield(table, system.compound.A) : table
     else
         # One width unless a measured table is given; the width is then the table's fallback
         # outside its range.
@@ -661,6 +669,7 @@ function _load_yield(
             system.compound.A;
             dispersion = dispersion,
             total = total,
+            symmetrize = symmetrize,
         )
     end
 
@@ -670,7 +679,8 @@ function _load_yield(
         heavy_masses;
         charges_per_mass = charges_per_mass,
     )
-    return build_fragment_yield(domain, charge_distribution, measured; total = total)
+    return build_fragment_yield(domain, charge_distribution, measured; total = total),
+    symmetrize
 end
 
 function _load_spectrum(document::AbstractDict)

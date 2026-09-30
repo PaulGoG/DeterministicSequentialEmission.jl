@@ -54,6 +54,15 @@ function main(arguments::Vector{String})
     )
     @printf("  ⟨ν⟩ = %.4f per fission\n", 2 * result.total_multiplicity)
     @printf("  ⟨TKE⟩ = %.3f MeV\n", result.mean_kinetic_energy)
+    metadata = run_metadata(result)["model"]
+    if haskey(metadata, "input_mean_TKE_deviation_MeV")
+        @printf(
+            "  input yield ⟨TKE⟩ = %.2f MeV, standard %.1f ± %.1f MeV (%+.2f)\n",
+            metadata["input_mean_TKE_MeV"],
+            metadata["recommended_mean_TKE_MeV"]...,
+            metadata["input_mean_TKE_deviation_MeV"]
+        )
+    end
     isnan(result.mean_neutron_lab_energy) ||
         @printf("  ⟨E⟩ = %.4f MeV in the laboratory\n", result.mean_neutron_lab_energy)
     println("  written to ", destination)

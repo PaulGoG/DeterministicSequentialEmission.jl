@@ -38,6 +38,7 @@ mean_kinetic_energy_file = "U233_nth/TKE_vs_A/21981008_P.Geltenbort_1985.dat"  #
 kinetic_energy_dispersion_file = "U233_nth/sigma_TKE_vs_A_baba.dat"        # optional; A sigma_TKE, MeV
 kinetic_energy_dispersion = 10.0                                           # MeV, above 0 to 100; used where the file does not reach
 total = 200.0                                                              # percent the yield sums to, above 0
+symmetrize = true                                                          # impose Y, ⟨TKE⟩, σ_TKE equal at A and A₀ − A (pre-neutron identity)
 
 [spectrum]
 enabled = true                    # solve the laboratory prompt neutron spectrum

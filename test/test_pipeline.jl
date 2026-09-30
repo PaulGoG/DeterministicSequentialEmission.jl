@@ -177,3 +177,8 @@
         @test parsed["model"]["heavy_masses"] == [126, 140]
     end
 end
+
+@testset "the input yield's mean kinetic energy" begin
+    yields = FragmentYield(Dict((140, 54, 170.0) => 1.0, (96, 38, 180.0) => 3.0), 4.0)
+    @test input_mean_kinetic_energy(yields) ≈ 177.5 rtol = RTOL
+end

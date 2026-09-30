@@ -27,6 +27,11 @@ here.
   per mass, charge model or mass table is refused, naming the key. A curve inverted through an effective level density
   ratio loads with a warning, since the partition here applies `R_T` charge by charge. A
   manifest without the record loads with a warning.
+- `[yield] symmetrize`, true by default, imposes the pre-neutron identities `Y(A) = Y(A₀ − A)`,
+  `⟨TKE⟩(A) = ⟨TKE⟩(A₀ − A)` and `σ_TKE(A) = σ_TKE(A₀ − A)` by averaging measured complements. It
+  enters the run identifier as `Ysym`.
+- The run record compares the input yield's mean TKE with the energy standard of the system,
+  `recommended_mean_total_kinetic_energy`, and `scripts/run.jl` prints the offset.
 - `charge_distribution_file = "wahl"` takes Wahl's `Zₚ` model directly: the 1988 model of the
   reaction where it exists, which reproduces that evaluation's own tables, else the 2002
   systematics, else the conventional means. An evaluated table named in the configuration
@@ -60,7 +65,7 @@ here.
 - `shell_correction_file = "gilbert_cameron"` takes the Gilbert–Cameron table the domain package
   now ships, Table III of the 1965 paper verified against the print and against Geant4. The five
   shipped configurations name it; a path under the data directory still works.
-- FissionFragmentsDomain 0.1.7. Wahl's 1988 model now has `ΔZ = 0` at `A_F/2` for ²⁵²Cf, which
+- FissionFragmentsDomain 0.1.9. Wahl's 1988 model now has `ΔZ = 0` at `A_F/2` for ²⁵²Cf, which
   moves `ν(126)` by 0.025 and `⟨ν⟩` by 7 × 10⁻⁵; no other system changes.
 
 - One name per quantity from configuration key to column header, set out in
