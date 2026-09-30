@@ -113,15 +113,16 @@ end
             @test issorted(grid)
             @test grid[2] / grid[1] ≈ grid[end] / grid[end - 1] rtol = RTOL
 
-            # The two spectrum choices default to the thesis formulation and are validated.
+            # The two spectrum choices default to multiplicity pair weights and the per-neutron
+            # average, and the alternatives are selectable.
             @test with_spectrum.spectrum_pair_weighting isa MultiplicityWeighting
-            @test with_spectrum.spectrum_average isa PerFissionAverage
+            @test with_spectrum.spectrum_average isa PerNeutronAverage
             chosen = _configuration(
                 directory,
-                "[output]" => "[spectrum]\nenabled = true\npair_weighting = \"excitation\"\naverage = \"per_neutron\"\n\n[output]",
+                "[output]" => "[spectrum]\nenabled = true\npair_weighting = \"excitation\"\naverage = \"per_fission\"\n\n[output]",
             )
             @test chosen.spectrum_pair_weighting isa ExcitationWeighting
-            @test chosen.spectrum_average isa PerNeutronAverage
+            @test chosen.spectrum_average isa PerFissionAverage
             @test _rejects(
                 directory,
                 "spectrum.average",

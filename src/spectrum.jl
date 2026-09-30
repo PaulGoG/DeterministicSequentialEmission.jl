@@ -192,7 +192,9 @@ doi:10.1140/epja/i2018-12521-7, and eq. (33) of Capote *et al.*, *Nucl. Data She
 (2016), doi:10.1016/j.nds.2015.12.002; it is the convention of the thesis and the one the
 pipeline applies. `ExcitationWeighting` uses `E*_{L,H}/TXE`, eq. (31) of Tudora, EPJ Web Conf.
 256, 00017 (2021), doi:10.1051/epjconf/202125600017. The two are close by construction, since
-`E*_H/TXE` behaves like `ν_H/(ν_L + ν_H)`, but not identical.
+`E*_H/TXE` behaves like `ν_H/(ν_L + ν_H)`, but not identical. Only `MultiplicityWeighting`
+combined with [`PerNeutronAverage`](@ref) makes the weight of a fragment spectrum in the total
+its neutron count, `Y ν_{L,H}`; `ExcitationWeighting` with the same average is a hybrid.
 """
 abstract type SpectrumWeighting end
 
@@ -245,13 +247,18 @@ end
 
 How the pair spectra of the fragmentations combine into the total laboratory spectrum.
 
-[`PerFissionAverage`](@ref) weights each unit-normalised pair spectrum by the yield of its
-fragmentation, `N = Σ Y N_pair / Σ Y`: the form of the thesis and of Tudora, Hambsch, Tobosaru,
-*EPJA* **54**, 87 (2018), doi:10.1140/epja/i2018-12521-7, text after eq. (16).
-[`PerNeutronAverage`](@ref) weights it by the yield times the pair multiplicity,
-`N = Σ Y ν_pair N_pair / Σ Y ν_pair`, which counts every emitted neutron once and is the
-quantity a neutron-counting measurement histograms. The two differ where `ν_pair` correlates
-with the hardness of `N_pair`.
+[`PerNeutronAverage`](@ref), the default, weights each unit-normalised pair spectrum by the
+yield times the pair multiplicity, `N = Σ Y ν_pair N_pair / Σ Y ν_pair`. Every emitted neutron
+counts once, so this is the unit-area shape `χ/ν̄` of the neutron yield per fission that
+evaluated spectra represent: eq. (99) of Capote *et al.*, *Nucl. Data Sheets* **131**, 1 (2016),
+doi:10.1016/j.nds.2015.12.002. It is also the weight of eq. (53) of Madland and Nix, *Nucl. Sci.
+Eng.* **81**, 213 (1982), doi:10.13182/NSE82-5, across fission chances, and of eqs. (8)–(9) of
+Kawano *et al.*, *Phys. Rev. C* **104**, 014611 (2021), doi:10.1103/PhysRevC.104.014611, across
+fragment pairs. [`PerFissionAverage`](@ref) weights it by the yield alone, `N = Σ Y N_pair / Σ Y`,
+the form of the thesis and of Tudora, Hambsch, Tobosaru, *EPJA* **54**, 87 (2018),
+doi:10.1140/epja/i2018-12521-7, text after eq. (16). The two differ where `ν_pair` correlates
+with the hardness of `N_pair`, and the per-fission form under-weights the hot, high-multiplicity
+fragmentations.
 """
 abstract type SpectrumAverage end
 

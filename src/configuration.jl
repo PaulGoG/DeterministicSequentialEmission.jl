@@ -617,7 +617,7 @@ end
 
 function _load_spectrum(document::AbstractDict)
     haskey(document, "spectrum") ||
-        return nothing, 1.42, MultiplicityWeighting(), PerFissionAverage()
+        return nothing, 1.42, MultiplicityWeighting(), PerNeutronAverage()
     section = _section(document, "spectrum")
     maxwellian = Float64(
         _bounded(
@@ -649,7 +649,7 @@ function _load_spectrum(document::AbstractDict)
             "average",
             ("per_fission", "per_neutron"),
             "spectrum.average",
-            "per_fission",
+            "per_neutron",
         ),
     )
     _value(section, "enabled", Bool, "spectrum.enabled", true) ||
