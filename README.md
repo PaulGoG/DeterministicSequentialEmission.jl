@@ -98,19 +98,17 @@ julia plotting/figures.jl
 
 That draws the two figures under *The model* from every system a run has written, a panel of
 the quantities internal to the emission chain — `E*(A)`, `Ē_r(A)`, `⟨T⟩(A)`, `⟨ε⟩(A)` — and a
-diagnostic of the charge distribution each run was weighted by, against the two it could have
-taken instead: the `Zₚ` model built without a table, and the conventional means. Those have no
-experimental counterpart, so they are diagnostics and are not tracked. Every figure is exported
+diagnostic of the charge distribution each run was weighted by — Wahl's model with the reaction's
+own 1988 parameters, for every shipped system — against the alternatives: the 2002 systematics
+and the conventional means. Those have no experimental counterpart, so they are diagnostics and are not tracked. Every figure is exported
 as PDF and PNG beside a `.toml` sidecar naming, per system, the run drawn, the commit its
 metadata records and the measured files, so a panel traces to a configuration and a commit; the
 two tracked figures carry their sidecars in the repository.
 
-The charge-distribution diagnostic is worth reading whenever a system is investigated. It is what
-shows where an evaluated table and the systematics part company — which is the uncertainty a
-system without an evaluation inherits — and where a run has silently fallen off the end of its
-table onto the flat fallback. For ²⁵²Cf it does: the evaluation stops at `A_H = 169` while the
-sweep runs to 174, so five masses carry `ΔZ = −0.5`, `σ_Z = 0.6`. They hold 0.09 % of the yield,
-so nothing moves, but it was not visible before.
+The charge-distribution diagnostic is worth reading whenever a system is investigated. It shows
+where a reaction's own parameters and the systematics part company, which is the uncertainty a
+system without a fit of its own inherits. It also shows where a run given a table has fallen off
+the end of that table onto the flat fallback.
 
 Run the test suite, and build the documentation:
 
