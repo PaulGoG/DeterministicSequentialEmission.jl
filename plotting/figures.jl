@@ -196,12 +196,28 @@ function author_year(name::AbstractString)
     return strip(last(split(author, ". "))) * " " * parts[3]
 end
 
-"The measured datasets of one observable of one system, restricted to `window`."
+# The measured datasets each figure shows, by EXFOR accession: a fixed selection per system, for
+# legibility. The data directory holds the whole retrieval. A system or observable not listed
+# shows every dataset retrieved.
+const SHOWN = Dict(
+    ("Cf252_sf", "nu_vs_A") =>
+        ["23118006", "23175008", "23268005", "23764010", "41425014"],
+    ("U235_nth", "nu_vs_A") =>
+        ["21095002", "22464004", "23764004", "30909004", "41516012"],
+    ("Pu239_nth", "nu_vs_A") => ["14369002", "23012008", "41397002"],
+    ("U233_nth", "nu_vs_A") => ["14369004", "22660005", "23595005", "41397004"],
+    ("Cf252_sf", "spectrum_maxwellian_ratio_vs_E") =>
+        ["14278002", "30775002", "40418008", "41158003"],
+)
+
+"The measured datasets of one observable of one system, restricted to `window` and to `SHOWN`."
 function load_measured(system::AbstractString, observable::AbstractString, window)
     directory = joinpath(MEASURED, system, observable)
     sets = MeasuredSet[]
     isdir(directory) || return sets
+    shown = get(SHOWN, (system, observable), nothing)
     for name in sort(filter(endswith(".dat"), readdir(directory)))
+        shown === nothing || first(split(name, "_")) in shown || continue
         path = joinpath(directory, name)
         x, y, σ = read_columns(path)
         keep = first(window) .<= x .<= last(window)
