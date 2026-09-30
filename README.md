@@ -134,7 +134,7 @@ julia check.jl --check    # report differences without rewriting
 |---|---|
 | Package environment, test and docs environments | done |
 | Continuous integration, dependency updates, docs deployment | dormant until the public release, under `.github/dormant/` |
-| Fragmentation domain, masses, charge distribution, level density, yields | from `FissionFragmentsDomain.jl` 0.1.1 |
+| Fragmentation domain, masses, charge distribution, level density, yields | from `FissionFragmentsDomain.jl` 0.1.2 |
 | One name per quantity, from configuration key to column header (`docs/src/naming.md`) | done |
 | TXE partition — scission modelling, `E*_H/TXE (A_H)`, `R_T (A_H)` | done |
 | Sequential equations — constant and variable evaporation cross section | done |
