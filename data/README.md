@@ -94,12 +94,12 @@ reproduce a retrieval exactly, since EXFOR entries are immutable once published.
 ```bash
 git clone https://github.com/PaulGoG/ExforFissionData.jl
 cd ExforFissionData.jl
-julia --project scripts/retrieve.jl config/Cf252_sf_Y_vs_A.toml
+julia scripts/retrieve.jl config/Cf252_sf_Y_vs_A.toml
 ```
 
 ```bash
-julia --project scripts/retrieve.jl config/Cf252_sf_nu_vs_A.toml
-julia --project scripts/retrieve.jl config/Cf252_sf_spectrum_maxwellian_ratio_vs_E.toml
+julia scripts/retrieve.jl config/Cf252_sf_nu_vs_A.toml
+julia scripts/retrieve.jl config/Cf252_sf_spectrum_maxwellian_ratio_vs_E.toml
 ```
 
 Read the `retrieval.toml` it writes before using what it retrieved. It records, per dataset, the

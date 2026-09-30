@@ -145,3 +145,97 @@ end
         @test occursin("U235_nth", crossed.method.curve.source)
     end
 end
+
+@testset "a curve extracted on another domain is refused" begin
+    isfile(MASS_EXCESS_FILE) || return nothing
+    mktempdir() do root
+        cp(MASS_EXCESS_FILE, joinpath(root, "MASSES"))
+        system = joinpath(root, "U235_nth")
+        mkpath(system)
+        # The fixture's domain as this configuration builds it: BSFG, five charges, the mean
+        # charge distribution, the mass table staged as MASSES.
+        record(; kwargs...) = begin
+            fields = merge(
+                (
+                    level_density_model = "BSFG",
+                    ratio_averaging = "charge_resolved",
+                    charges_per_mass = 5,
+                    charge_model = charge_model_label(mean_charge_distribution()),
+                    mass_table = "MASSES",
+                ),
+                values(kwargs),
+            )
+            "[domain]\n" *
+            join(("$k = $(repr(v))" for (k, v) in pairs(fields)), "\n") *
+            "\npackage_version = \"0.1.4\"\n\n[run]"
+        end
+        text = """
+        [system]
+        target_A = 235
+        target_Z = 92
+        channel = "nth"
+        incident_energy = 2.53e-8
+
+        [fragmentation]
+        charges_per_mass = 5
+        heavy_mass_min = 118
+        heavy_mass_max = 160
+        charge_distribution_file = "mean"
+
+        [energetics]
+        mass_excess_file = "MASSES"
+        kinetic_energy_min = 150.0
+        kinetic_energy_max = 190.0
+        kinetic_energy_step = 20.0
+
+        [level_density]
+        model = "BSFG"
+
+        [evaporation]
+        cross_section = "variable"
+        maximum_temperature = 2.0
+
+        [partition]
+        method = "temperature_ratio"
+        subdirectory = "U235_nth"
+        curve_label = "systematic_trend"
+
+        [output]
+        significant_digits = 8
+        """
+        path = joinpath(root, "U235_nth.toml")
+        write(path, text)
+        load_with(fields...) = begin
+            rm(joinpath(system, "manifest_run.toml"); force = true)
+            _manifest(system, "[run]" => record(; fields...))
+            load_configuration(path; data_directory = root)
+        end
+
+        # The same domain loads without a word.
+        @test_logs load_with() isa Any
+        @test load_with().method isa TemperatureRatio
+
+        # Each recorded property that differs from this configuration is refused by name.
+        for (key, value) in (
+            :level_density_model => "GC",
+            :charges_per_mass => 7,
+            :charge_model => "Wahl1988(U235T, Z_F = 92, A_F = 236)",
+            :mass_table => "mass_excess_ame2016.dat",
+        )
+            thrown = try
+                load_with(key => value)
+                nothing
+            catch err
+                err
+            end
+            @test thrown isa ArgumentError
+            @test occursin("[domain] $key", thrown.msg)
+        end
+
+        # An effective-ratio inversion loads, with a warning that it does not invert this
+        # partition exactly.
+        @test_logs (:warn, r"effective level density ratio") match_mode = :any load_with(
+            :ratio_averaging => "ratio_of_means",
+        )
+    end
+end

@@ -217,7 +217,14 @@ function load_configuration(
     kinetic_energies = _load_kinetic_energies(energetics_section)
     model = _load_level_density(document, mass_excess_table, data_directory)
     cross_section, maximum_temperature = _load_evaporation(document)
-    method = _load_partition(document, model, data_directory)
+    method = _load_partition(
+        document,
+        model,
+        data_directory;
+        charges_per_mass = charges_per_mass,
+        charge_distribution = charge_distribution,
+        mass_excess_table = mass_excess_table,
+    )
     fragment_yield = _load_yield(
         document,
         system,
@@ -439,7 +446,10 @@ end
 function _load_partition(
     document::AbstractDict,
     model::LevelDensityModel,
-    data_directory::AbstractString,
+    data_directory::AbstractString;
+    charges_per_mass::Integer,
+    charge_distribution::ChargeModel,
+    mass_excess_table::MassExcessTable,
 )
     section = _section(document, "partition")
     method = _choice(
@@ -497,8 +507,55 @@ function _load_partition(
  lists $(join(map(repr, labels), ", "))",
         ),
     )
+    _check_manifest_domain(
+        manifest,
+        model,
+        charges_per_mass,
+        charge_distribution,
+        mass_excess_table,
+    )
     curve = read_segmented_curve(temperature_ratio_path(manifest, label))
     return TemperatureRatio(curve, model)
+end
+
+# An R_T(A_H) curve inverts the partition on the domain it was extracted on. Where the run
+# record says which domain that was, a different one here is refused: the curve would be applied
+# to fragmentations, level densities or masses it was not derived from. A record written before
+# the [domain] table existed can only be taken on trust.
+function _check_manifest_domain(
+    manifest::TemperatureRatioManifest,
+    model::LevelDensityModel,
+    charges_per_mass::Integer,
+    charge_distribution::ChargeModel,
+    mass_excess_table::MassExcessTable,
+)
+    domain = manifest.domain
+    if domain === nothing
+        @warn "$(manifest.source) carries no [domain] record, so the domain its R_T(A_H) was \
+               extracted on cannot be checked against this configuration's" maxlog = 1
+        return nothing
+    end
+    here = (
+        level_density_model = level_density_label(model),
+        charges_per_mass = Int(charges_per_mass),
+        charge_model = charge_model_label(charge_distribution),
+        mass_table = basename(mass_excess_table.source),
+    )
+    for key in keys(here)
+        recorded = getfield(domain, key)
+        recorded == here[key] || throw(
+            ArgumentError(
+                "partition.subdirectory: $(manifest.source) was extracted with [domain] \
+                 $key = $(repr(recorded)), and this configuration has $(repr(here[key])); \
+                 the curve does not invert this partition",
+            ),
+        )
+    end
+    domain.ratio_averaging == "charge_resolved" || @warn "$(manifest.source) inverted \
+        R_T(A_H) through an effective level density ratio, ratio_averaging = \
+        $(repr(domain.ratio_averaging)); this partition applies it charge by charge, and the \
+        round trip misses by up to 1e-2 in R_T" maxlog = 1
+    return nothing
 end
 
 function _load_yield(

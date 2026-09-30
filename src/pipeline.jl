@@ -594,9 +594,6 @@ function _write_charge_distribution(
     return path
 end
 
-_charge_source(distribution::ChargeDistribution) = distribution.source
-_charge_source(model::ZpModel) = sprint(show, model)
-
 _significant(x::Real, digits::Integer) =
     isfinite(x) ? string(round(Float64(x); sigdigits = digits)) : string(Float64(x))
 
@@ -627,7 +624,7 @@ function run_metadata(result::RunResult)
         "maximum_temperature_MeV" => configuration.maximum_temperature,
         "partition" => sprint(show, configuration.method),
         "partition_curve" => _curve_source(configuration.method),
-        "charge_distribution" => _charge_source(configuration.charge_distribution),
+        "charge_distribution" => charge_model_label(configuration.charge_distribution),
         "mass_excess" => configuration.mass_excess_table.source,
         "significant_digits" => configuration.significant_digits,
         "maxwellian_temperature_MeV" => configuration.maxwellian_temperature,

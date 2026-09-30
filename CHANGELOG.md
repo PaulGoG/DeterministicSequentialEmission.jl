@@ -22,6 +22,11 @@ here.
   its repository and pinned to a release. It provides nuclides and systems, the shipped AME2020
   table (`mass_excess_file = "ame2020"`), the charge distribution, level density parameters, the
   energy balance, fragment yields and averages, and the temperature-ratio run record.
+- A staged `R_T(A_H)` run whose manifest records its `[domain]` is checked against the
+  configuration: a different level density model, number of charges per mass, charge model or
+  mass table is refused, naming the key. A curve inverted through an effective level density
+  ratio loads with a warning, since the partition here applies `R_T` charge by charge. A
+  manifest without the record loads with a warning.
 - `charge_distribution_file = "wahl"` takes Wahl's `Zₚ` model directly: the 1988 model of the
   reaction where it exists, which reproduces that evaluation's own tables, else the 2002
   systematics, else the conventional means. An evaluated table named in the configuration
@@ -51,6 +56,9 @@ here.
   `DocumenterCitations.jl`; docstrings cite by DOI as well.
 
 ### Changed
+
+- FissionFragmentsDomain 0.1.4. Wahl's 1988 model now has `ΔZ = 0` at `A_F/2` for ²⁵²Cf, which
+  moves `ν(126)` by 0.025 and `⟨ν⟩` by 2 × 10⁻⁵; no other system changes.
 
 - One name per quantity from configuration key to column header, set out in
   `docs/src/naming.md`; configuration schema, data layout and exported names change, with no
