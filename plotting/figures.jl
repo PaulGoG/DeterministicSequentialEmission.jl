@@ -73,10 +73,12 @@ const MEASURED_MEAN_ENERGY = 2.13
 # Maxwellian temperature taken when a run's configuration records none [MeV].
 const FALLBACK_MAXWELLIAN_TEMPERATURE = 1.42
 
-# Margin on either side of the data range, as a fraction of that range, and the band reserved
-# above the data for two lines of in-axis annotation.
+# Margin on either side of the data range, as a fraction of that range; the band reserved above
+# the data for two lines of in-axis annotation; and the fraction of the axis width, from the
+# left, that those lines cover.
 const MARGIN = 0.05
 const ANNOTATION_BAND = 0.30
+const ANNOTATION_EXTENT = 0.4
 
 const SPECTRUM_TICKS =
     ([0.1, 0.2, 0.5, 1.0, 2.0, 5.0, 10.0], ["0.1", "0.2", "0.5", "1", "2", "5", "10"])
@@ -257,12 +259,22 @@ function padded_log_limits(values)
     return (exp10(low), exp10(high))
 end
 
-"Ordinate limits spanning a model curve and every measured value; error bars may reach into the
-margins and the annotation band above."
-function ordinate_limits(model::AbstractVector{<:Real}, sets::Vector{MeasuredSet})
+"""
+Ordinate limits spanning a model curve and every measured value, and also the upper error bars
+of the points whose abscissa lies in `cleared`, the horizontal extent of an annotation set above
+the data. Elsewhere error bars may reach into the margins and the annotation band.
+"""
+function ordinate_limits(
+    model::AbstractVector{<:Real},
+    sets::Vector{MeasuredSet};
+    cleared::Union{Nothing, Tuple{Real, Real}} = nothing,
+)
     values = collect(Float64, model)
     for set in sets
         append!(values, set.y)
+        cleared === nothing && continue
+        under = first(cleared) .<= set.x .<= last(cleared)
+        append!(values, set.y[under] .+ set.σ[under])
     end
     return padded_limits(values)
 end
@@ -413,7 +425,11 @@ function figure_multiplicity(drawable::Vector{Case})
         push!(handles, lines!(axis, p.A, p.ν; color = :black, linewidth = 3))
         push!(labels, "This model")
 
-        low, high = ordinate_limits(p.ν, p.sets)
+        annotated = (
+            first(xlimits),
+            first(xlimits) + ANNOTATION_EXTENT * (last(xlimits) - first(xlimits)),
+        )
+        low, high = ordinate_limits(p.ν, p.sets; cleared = annotated)
         ylimits = (low, high + ANNOTATION_BAND * (high - low))
         xlims!(axis, xlimits...)
         ylims!(axis, ylimits...)
@@ -429,20 +445,20 @@ function figure_multiplicity(drawable::Vector{Case})
             evaluated,
             deviation
         )
-        takeaway = MathText(
-            @sprintf(
-                "\$\\langle \\nu \\rangle = %.2f\$, evaluated %.2f (\$%+.1f\$ %%)",
-                modelled,
-                evaluated,
-                deviation
-            )
+        # Two short lines rather than one long one keep the text left of the A₀/2 guide, which
+        # for ²³³U lies at about 0.42 of the axis width.
+        headline = MathText(
+            string(p.case.notation) *
+            @sprintf(", \$\\langle \\nu \\rangle = %.2f\$", modelled),
         )
+        comparison =
+            MathText(@sprintf("Evaluated %.2f (\$%+.1f\$ %%)", evaluated, deviation))
         # The upper left is clear of the sawtooth: light fragments far from symmetry emit least.
         text!(
             axis,
             0.03,
             0.96;
-            text = p.case.notation,
+            text = headline,
             space = :relative,
             align = (:left, :top),
             fontsize = ANNOTATION_SIZE,
@@ -451,7 +467,7 @@ function figure_multiplicity(drawable::Vector{Case})
             axis,
             0.03,
             0.96;
-            text = takeaway,
+            text = comparison,
             space = :relative,
             align = (:left, :top),
             offset = (0, -ANNOTATION_LINE),

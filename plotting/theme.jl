@@ -112,7 +112,8 @@ darker(colour::RGBf) = RGBf(0.7 * colour.r, 0.7 * colour.g, 0.7 * colour.b)
     read_columns(path) -> (x, y, σ)
 
 Read a two- or three-column table with a one-line header: abscissa, value, and an optional
-uncertainty, zero where the file carries none. Columns are taken by position.
+uncertainty, zero where the file carries none or writes `NaN` (not quoted). Columns are taken
+by position.
 """
 function read_columns(path)
     x = Float64[]
@@ -124,7 +125,8 @@ function read_columns(path)
         length(fields) >= 2 || continue
         push!(x, parse(Float64, fields[1]))
         push!(y, parse(Float64, fields[2]))
-        push!(σ, length(fields) >= 3 ? something(tryparse(Float64, fields[3]), 0.0) : 0.0)
+        u = length(fields) >= 3 ? something(tryparse(Float64, fields[3]), NaN) : NaN
+        push!(σ, isfinite(u) ? u : 0.0)
     end
     return x, y, σ
 end
