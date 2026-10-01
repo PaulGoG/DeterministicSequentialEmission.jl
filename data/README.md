@@ -64,7 +64,7 @@ written in floating point — some of these tables were emitted by a generator a
 where they mean `118`.
 
 The shipped configurations take their fragment yields from EXFOR through ExforFissionData.jl
-v0.2.1. For each system, `Y(A)` and `⟨TKE⟩(A)` come from one experiment, or its measured matrix
+v0.2.2. For each system, `Y(A)` and `⟨TKE⟩(A)` come from one experiment, or its measured matrix
 does. A width that experiment did not report is borrowed from another on the same system, or on
 the same compound nucleus, and the run record flags it:
 
@@ -108,7 +108,7 @@ reproduce a retrieval exactly, since EXFOR entries are immutable once published.
 The yield inputs of the shipped configurations:
 
 ```bash
-git clone --branch v0.2.1 https://github.com/PaulGoG/ExforFissionData.jl
+git clone --branch v0.2.2 https://github.com/PaulGoG/ExforFissionData.jl
 cd ExforFissionData.jl
 julia scripts/retrieve.jl config/Cf252_sf_Y_vs_A_TKE.toml
 julia scripts/retrieve.jl config/U235_nth_Y_vs_A.toml
@@ -132,7 +132,7 @@ julia scripts/retrieve.jl config/U233_nth_nu_vs_A.toml
 julia scripts/retrieve.jl config/Cf252_sf_spectrum_maxwellian_ratio_vs_E.toml
 ```
 
-The tree held here is the retrieval of every configuration that package ships, at v0.2.1. Three of
+The tree held here is the retrieval of every configuration that package ships, at v0.2.2. Three of
 them, the joint `Y(A,TKE)` of ²³⁵U, ²³⁹Pu and ²³³U, find no dataset in the archive.
 
 Read the `retrieval.toml` it writes before using what it retrieved. It records, per dataset, the
@@ -142,12 +142,16 @@ fission spectrum rather than the thermal one it is filed under. No yield input c
 the figures draw no such set. An uncertainty the archive does not state is written `NaN`, never 0;
 a 0 appears only where EXFOR states it, and `uncertainty_zero_rows` counts those rows.
 
-Three ²⁵²Cf multiplicity subentries are coded `MASS,PR,NU`, without the `/FRG` that marks them per
-fragment: Budtz-Jørgensen (1988), Zeynalov (2011) and Göök (2014). The retrieval reads them by a
-complement test on the data. For a per-fragment `ν(A)` the pair sum `ν(A) + ν(A₀−A)` varies along
-the sawtooth, and only its yield-weighted mean equals `ν̄`; a multiplicity per fission is the same
-for both complements. The `curation` entry of each dataset gives the numbers and the paper that
-corroborates the reading.
+Eight ν(A) subentries are coded without the `/FRG` that marks a multiplicity per fragment: for
+²⁵²Cf Britt (1964), Piksaykin (1977), Budtz-Jørgensen (1988), Zeynalov (2011) and Göök (2014); for
+²³⁹Pu Tsuchiya (2000) and Batenkov (2004); for ²³⁵U Batenkov (2004). So is the ν(A,TKE) of
+Budtz-Jørgensen. The retrieval reads them by a complement test on the data. For a per-fragment `ν(A)` the pair sum
+`ν(A) + ν(A₀−A)` varies along the sawtooth, and only its yield-weighted mean equals `ν̄`; a
+multiplicity per fission is the same for both complements. The record of each dataset gives the
+basis of the reading, the deviation of the weighted pair sum from `ν̄`, and the paper that
+corroborates it where one was consulted. Two of them are off the scale of `ν̄`: the ²³⁹Pu sets of
+Tsuchiya, +3.9 ± 0.6 %, and Batenkov, −10.7 ± 1.3 %. They are written uncorrected, flagged
+`scale_consistent = false`, and not drawn in the figures.
 
 **The temperature ratio `R_T(A_H)`** for the temperature-ratio TXE partition —
 [`FissionTemperatureRatio.jl`](https://github.com/PaulGoG/FissionTemperatureRatio.jl) extracts it
