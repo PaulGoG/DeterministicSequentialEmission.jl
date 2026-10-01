@@ -64,7 +64,7 @@ written in floating point — some of these tables were emitted by a generator a
 where they mean `118`.
 
 The shipped configurations take their fragment yields from EXFOR through ExforFissionData.jl
-v0.2.0. For each system, `Y(A)` and `⟨TKE⟩(A)` come from one experiment, or its measured matrix
+v0.2.1. For each system, `Y(A)` and `⟨TKE⟩(A)` come from one experiment, or its measured matrix
 does. A width that experiment did not report is borrowed from another on the same system, or on
 the same compound nucleus, and the run record flags it:
 
@@ -105,30 +105,49 @@ IAEA EXFOR archive into `data/<system>/<observable>/` and writes them beside a `
 naming every dataset it kept or excluded, with the reason. A configuration and that package
 reproduce a retrieval exactly, since EXFOR entries are immutable once published.
 
+The yield inputs of the shipped configurations:
+
 ```bash
-git clone --branch v0.2.0 https://github.com/PaulGoG/ExforFissionData.jl
+git clone --branch v0.2.1 https://github.com/PaulGoG/ExforFissionData.jl
 cd ExforFissionData.jl
 julia scripts/retrieve.jl config/Cf252_sf_Y_vs_A_TKE.toml
 julia scripts/retrieve.jl config/U235_nth_Y_vs_A.toml
 julia scripts/retrieve.jl config/U235_nth_TKE_vs_A.toml
 julia scripts/retrieve.jl config/U235_nth_sigma_TKE_vs_A.toml
+julia scripts/retrieve.jl config/Pu239_nth_Y_vs_A.toml
+julia scripts/retrieve.jl config/Pu239_nth_TKE_vs_A.toml
 julia scripts/retrieve.jl config/Pu240_sf_sigma_TKE_vs_A.toml
+julia scripts/retrieve.jl config/U233_nth_Y_vs_A.toml
+julia scripts/retrieve.jl config/U233_nth_TKE_vs_A.toml
+julia scripts/retrieve.jl config/U233_nth_sigma_TKE_vs_A.toml
 ```
+
+The measurements the figures compare against:
 
 ```bash
 julia scripts/retrieve.jl config/Cf252_sf_nu_vs_A.toml
+julia scripts/retrieve.jl config/U235_nth_nu_vs_A.toml
+julia scripts/retrieve.jl config/Pu239_nth_nu_vs_A.toml
+julia scripts/retrieve.jl config/U233_nth_nu_vs_A.toml
 julia scripts/retrieve.jl config/Cf252_sf_spectrum_maxwellian_ratio_vs_E.toml
 ```
+
+The tree held here is the retrieval of every configuration that package ships, at v0.2.1. Three of
+them, the joint `Y(A,TKE)` of ²³⁵U, ²³⁹Pu and ²³³U, find no dataset in the archive.
 
 Read the `retrieval.toml` it writes before using what it retrieved. It records, per dataset, the
 reaction code, the units and the qualifiers the archive attached, and those qualifiers matter:
 `DERIV` marks a dataset derived from other data rather than measured, `SPA` one averaged over a
-fission spectrum rather than the thermal one it is filed under. The sets staged here exclude both.
-A handful of `252-Cf` multiplicity subentries are miscoded in the archive — `MASS,PR,NU` without
-the `/FRG` that would mark them per fragment — and are included deliberately, having been
-established as per fragment from the complement invariance `ν(A) + ν(A₀−A) ≈ ν̄` in the data
-itself. Those files hold `ν(A)` like every other file in `nu_vs_A/`, and their header now says so
-rather than naming the query they came from.
+fission spectrum rather than the thermal one it is filed under. No yield input carries either, and
+the figures draw no such set. An uncertainty the archive does not state is written `NaN`, never 0;
+a 0 appears only where EXFOR states it, and `uncertainty_zero_rows` counts those rows.
+
+Three ²⁵²Cf multiplicity subentries are coded `MASS,PR,NU`, without the `/FRG` that marks them per
+fragment: Budtz-Jørgensen (1988), Zeynalov (2011) and Göök (2014). The retrieval reads them by a
+complement test on the data. For a per-fragment `ν(A)` the pair sum `ν(A) + ν(A₀−A)` varies along
+the sawtooth, and only its yield-weighted mean equals `ν̄`; a multiplicity per fission is the same
+for both complements. The `curation` entry of each dataset gives the numbers and the paper that
+corroborates the reading.
 
 **The temperature ratio `R_T(A_H)`** for the temperature-ratio TXE partition —
 [`FissionTemperatureRatio.jl`](https://github.com/PaulGoG/FissionTemperatureRatio.jl) extracts it
@@ -198,14 +217,12 @@ partition needs.
 C. Straede *et al.* and `Pu239_nth/Y_vs_A_TKE_chiba.dat` the ²³⁹Pu(nth,f) Chiba set, as each
 file's own header records. `Cf252_sf/Y_vs_A_TKE.dat`, `U235_nth/Y_vs_A_TKE.dat` and
 `Pu239_nth/Y_vs_A_TKE.dat` are the joint distributions on the whole `A` domain with an uncertainty
-column, and are what those three configurations read. `Cf252_sf/Y_vs_A_TKE.dat` is the ²⁵²Cf(SF)
-distribution behind every chapter 4 result of the thesis.
+column. `Cf252_sf/Y_vs_A_TKE.dat` is the ²⁵²Cf(SF) distribution behind every chapter 4 result of
+the thesis.
 
-These three are staged tables under step 3 above. Moving them onto the retrieval route needs
-`Y_vs_A` and `TKE_vs_A` retrieved for each system, after which the configuration takes
-`mass_yield_file` and `mean_kinetic_energy_file` in place of `mass_energy_yield_file`, exactly as
-`U233_nth.toml` does. That changes the yield weights and so every averaged observable, so it is a
-run to compare rather than a substitution to make silently.
+None of these staged tables is read by a shipped configuration any longer; every system takes its
+yield from EXFOR, as tabulated above. They remain so that a configuration can still name one by
+path, for comparison with earlier results.
 
 ## Citing
 

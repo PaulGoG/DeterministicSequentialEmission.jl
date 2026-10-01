@@ -196,7 +196,7 @@ as EXFOR codes it — and that one token names the configuration, the input tree
 the output tree under `data/sims/`. It is also what separates the thermal run of ²³⁵U from the
 resonance one, which the reaction code `n,f` alone cannot.
 
-Every fragment yield comes from EXFOR through ExforFissionData.jl v0.2.0. ²⁵²Cf takes the measured
+Every fragment yield comes from EXFOR through ExforFissionData.jl v0.2.1. ²⁵²Cf takes the measured
 `Y(A,TKE)` matrix of Göök et al. (2014). For the thermal systems the archive holds no matrix, so
 the yield is reconstructed from one experiment's `Y(A)` and `⟨TKE⟩(A)`:
 - Al-Adili et al. (2016) for ²³⁵U;
