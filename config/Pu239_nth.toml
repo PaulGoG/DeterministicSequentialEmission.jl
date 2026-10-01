@@ -29,7 +29,7 @@ maximum_temperature = 2.0         # MeV, above 0 to 10; the bracket the temperat
 
 [partition]
 method = "temperature_ratio"                                          # one of: "temperature_ratio" | "excitation_ratio" | "scission"
-subdirectory = "Pu239_nth"                                  # required by "temperature_ratio": the staged temperature-ratio run, under the data directory
+subdirectory = "Pu239_nth/temperature_ratio"                                 # required by "temperature_ratio": the staged temperature-ratio run, under the data directory
 curve_label = "systematic_trend"                            # required by "temperature_ratio": which [[segmented_curve]] of its manifest to take
 
 [yield]

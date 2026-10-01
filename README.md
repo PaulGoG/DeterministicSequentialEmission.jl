@@ -276,14 +276,17 @@ this package reads only what they write.
 
 **A temperature-ratio curve is taken through the producing run's own record, never through a path
 typed into a configuration.** Copy that run's results directory — its `manifest_<run>.toml` and
-the tables beside it — under `data/<system>/`, and name it:
+the tables beside it — to `data/<system>/temperature_ratio/`, and name it:
 
 ```toml
 [partition]
 method = "temperature_ratio"
-subdirectory = "U235_nth"
+subdirectory = "U235_nth/temperature_ratio"
 curve_label = "systematic_trend"
 ```
+
+The shipped configurations read the FissionTemperatureRatio.jl v0.2.0 runs on the
+ExforFissionData v0.2.3 multiplicities, staged that way for each system.
 
 The manifest declares what its curves tabulate, and this package refuses one declaring anything
 but `R_T` against `A_H`. That is worth the indirection: the run writes `R_T(A_H)` and the

@@ -188,7 +188,7 @@ data/
 └── <system>/                       Cf252_sf, U235_nth, U235_nres, U233_nth, Pu239_nth
     ├── charge_distribution_vs_A.dat
     ├── E_def_vs_A_Z.dat
-    ├── R_T_vs_A_H_systematic_trend.csv
+    ├── temperature_ratio/          one staged FissionTemperatureRatio.jl run
     ├── Y_vs_A_TKE.dat
     └── nu_vs_A/
         └── <accession>_<Author>_<year>.dat

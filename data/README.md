@@ -23,7 +23,7 @@ data/
 ├── reference/                      evaluations that belong to no one system
 └── <system>/                       Cf252_sf, U235_nth, U235_nres, U233_nth, Pu239_nth
     ├── charge_distribution_vs_A.dat
-    ├── R_T_vs_A_H_systematic_trend.csv
+    ├── temperature_ratio/          one staged FissionTemperatureRatio.jl run: its manifest and tables
     ├── Y_vs_A_TKE.dat
     └── nu_vs_A/                    one file per measurement
 ```
@@ -35,7 +35,7 @@ data/
 | `reference/ground_state_deformation_moller.dat` | ground-state quadrupole deformations | `Z A beta2` |
 | `<system>/charge_distribution_vs_A.dat` | charge polarization and Gaussian dispersion, evaluated per reaction | `A dZ sigma_Z` |
 | `U233_nth/charge_distribution_vs_A_wahl_systematics.dat` | the same, from the `Zₚ` systematics rather than a fit — **generated, and superseded by the table beside it** | `A dZ sigma_Z` |
-| `<system>/R_T_vs_A_H_systematic_trend.csv` | temperature ratio `R_T(A_H)` for the TXE partition | `A_H,R_T,R_T_uncertainty` |
+| `<system>/temperature_ratio/` | the staged FissionTemperatureRatio.jl run: `manifest_<run>.toml`, the `R_T(A_H)` curves it names, its diagnostics and metadata | curves: `A_H,R_T,R_T_uncertainty` |
 | `<system>/Y_vs_A_TKE/relative/*.dat` | measured pre-neutron `Y(A,TKE)`, in counts | `A TKE Y Y_uncertainty` |
 | `<system>/Y_vs_A/*.dat` | pre-neutron mass yield `Y(A)`, a marginal | `A Y [Y_uncertainty]` |
 | `<system>/TKE_vs_A/*.dat` | mean total kinetic energy `⟨TKE⟩(A)`, the other marginal | `A TKE [TKE_uncertainty]` |
@@ -157,22 +157,30 @@ Tsuchiya, +3.9 ± 0.6 %, and Batenkov, −10.7 ± 1.3 %. They are written uncorr
 [`FissionTemperatureRatio.jl`](https://github.com/PaulGoG/FissionTemperatureRatio.jl) extracts it
 from experimental `ν(A)` and tabulates it at every integer `A_H`.
 
-**Stage the whole results directory of one run, not one table out of it.** A run writes
+**Stage the whole results directory of one run, not one table out of it.** `scripts/run.jl`
+of that package writes `data/sims/<system>/<run>/`, some seventy files for ²⁵²Cf; the ones this
+package reads are
 
 ```
-results/<system>/
-├── manifest_<run>.toml                          the run record; this package reads it first
-├── R_T_vs_A_H_segmented_<label>_<run>.csv       header: A_H,R_T,R_T_uncertainty
-├── r_nu_vs_A_H_pivots_<label>_<run>.csv         header: A_H,r_nu,r_nu_uncertainty
-├── total_average_R_T_<run>.csv
-├── dataset_diagnostics_<run>.csv
-└── metadata_<run>.toml
+data/sims/<system>/<run>/
+├── manifest_<run>.toml                      the run record; this package reads it first
+├── R_T_vs_A_H_segmented_<label>.csv         one per [[segmented_curve]]; A_H,R_T,R_T_uncertainty
+├── r_nu_vs_A_H_pivots_<label>.csv           its pivots; A_H,r_nu,r_nu_uncertainty; not read here
+├── total_average_R_T_<run>.csv              ⟨R_T⟩ per curve and yield distribution
+├── dataset_diagnostics.csv
+├── metadata.toml                            commit, platform, every accession used
+└── configuration.toml, Manifest.toml        the run's own configuration and environment
 ```
 
-Copy that directory into `data/<system>/` and point `[partition] subdirectory` at it;
+beside the point-by-point and consensus tables of every dataset. Copy the whole directory to
+`data/<system>/temperature_ratio/` and leave `[partition] subdirectory` pointing there;
 `[partition] curve_label` then picks one of the manifest's `[[segmented_curve]]` entries by its
-`label`. Keep one staged run per system — two manifests in one directory is refused, because
-nothing would say which run to take.
+`label`, `"systematic_trend"` for the shipped configurations. Keep one staged run per system —
+two manifests in one directory is refused, because nothing would say which run to take.
+
+The staged runs are those of FissionTemperatureRatio.jl v0.2.0 on the ExforFissionData v0.2.3
+retrieval, with each system's primary `Y(A)` and `⟨TKE⟩(A)` as above. `U235_nres` reads the
+thermal run.
 
 Copying one table by hand is what this replaces, and the reason is physical rather than tidy: the
 two CSVs above hold different quantities in the same column position, `R_T ≈ 1.2` against
