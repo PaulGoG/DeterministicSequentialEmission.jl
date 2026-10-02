@@ -22,10 +22,9 @@ its yields, its charge distribution and its measured multiplicities sit together
 data/
 ├── reference/                      evaluations that belong to no one system
 └── <system>/                       Cf252_sf, U235_nth, U235_nres, U233_nth, Pu239_nth
-    ├── charge_distribution_vs_A.dat
+    ├── <observable>/               one retrieved observable: a file per measurement, retrieval.toml
     ├── temperature_ratio/          one staged FissionTemperatureRatio.jl run: its manifest and tables
-    ├── Y_vs_A_TKE.dat
-    └── nu_vs_A/                    one file per measurement
+    └── charge_distribution_vs_A.dat, Y_vs_A_TKE.dat    supplied tables of earlier work, optional
 ```
 
 | Path | Content | Header |
@@ -34,7 +33,6 @@ data/
 | `reference/s_wave_resonances_ripl3.dat` | s-wave average resonance parameters, the source of `S₀(A)` | as distributed: commented header, `S₀` in units of 10⁻⁴ |
 | `reference/ground_state_deformation_moller.dat` | ground-state quadrupole deformations | `Z A beta2` |
 | `<system>/charge_distribution_vs_A.dat` | charge polarization and Gaussian dispersion, evaluated per reaction | `A dZ sigma_Z` |
-| `U233_nth/charge_distribution_vs_A_wahl_systematics.dat` | the same, from the `Zₚ` systematics rather than a fit — **generated, and superseded by the table beside it** | `A dZ sigma_Z` |
 | `<system>/temperature_ratio/` | the staged FissionTemperatureRatio.jl run: `manifest_<run>.toml`, the `R_T(A_H)` curves it names, its diagnostics and metadata | curves: `A_H,R_T,R_T_uncertainty` |
 | `<system>/Y_vs_A_TKE/relative/*.dat` | measured pre-neutron `Y(A,TKE)`, in counts | `A TKE Y Y_uncertainty` |
 | `<system>/Y_vs_A/*.dat` | pre-neutron mass yield `Y(A)`, a marginal | `A Y [Y_uncertainty]` |
@@ -228,12 +226,11 @@ preparation at <https://github.com/IAEA-NDS/RIPL-4>; neither changes the numbers
 **`<system>/charge_distribution_vs_A.dat`** — charge polarization `ΔZ(A)` and dispersion
 `σ_Z(A)`, `A dZ sigma_Z`. The four tables of `Cf252_sf`, `U235_nth`, `Pu239_nth` and `U233_nth` are
 supplied evaluations of documented lineage: Tudora et al., *Phys. Procedia* **64**, 62 (2015),
-doi:10.1016/j.phpro.2015.04.008, applying the `Zₚ` model of Wahl, *At. Data Nucl. Data Tables*
+doi:10.1016/j.phpro.2015.04.009, applying the `Zₚ` model of Wahl, *At. Data Nucl. Data Tables*
 **39**, 1 (1988), doi:10.1016/0092-640X(88)90016-2. They are not regenerated here.
 `charge_distribution_file = "wahl"` takes Wahl's model directly instead. FissionFragmentsDomain
 reproduces the 1988 evaluation's own tables row by row, and records in its `data/README.md` how
-far these supplied tables lie from it. `U233_nth/charge_distribution_vs_A_wahl_systematics.dat`
-is an earlier tabulation of the systematics, kept for comparison.
+far these supplied tables lie from it.
 
 **`reference/ground_state_deformation_moller.dat`** — ground-state quadrupole deformations from
 the finite-range liquid-drop model. P. Möller, J. R. Nix, W. D. Myers, W. J. Swiatecki, *Atomic

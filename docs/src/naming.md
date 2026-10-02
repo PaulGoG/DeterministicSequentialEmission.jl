@@ -181,7 +181,6 @@ mean both.
 ```
 data/
 ├── reference/                      evaluations that belong to no one system
-│   ├── mass_excess_ame2020.dat
 │   ├── shell_corrections_gilbert_cameron.dat
 │   ├── s_wave_resonances_ripl3.dat
 │   └── ground_state_deformation_moller.dat
