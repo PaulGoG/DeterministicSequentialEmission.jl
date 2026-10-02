@@ -688,6 +688,15 @@ function _load_yield(
             String,
             "yield.mean_kinetic_energy_file",
         )
+        reconstructed = factorized_yield(
+            mass_path,
+            energy_path,
+            kinetic_energies,
+            system.compound.A;
+            dispersion = dispersion,
+            total = total,
+            symmetrize = symmetrize,
+        )
         width = if dispersion === nothing
             "none"
         elseif dispersion.source == "uniform"
@@ -700,35 +709,14 @@ function _load_yield(
                 "yield.kinetic_energy_dispersion_file",
             )
             inputs["masses_without_width"] = _masses_without_width(
-                mass_path,
+                reconstructed,
                 dispersion,
                 system.compound.A,
                 symmetrize,
             )
             _width_provenance(basename(dispersion.source), basename(energy_path))
         end
-        factorized_yield(
-            _input(
-                data_directory,
-                _value(section, "mass_yield_file", String, "yield.mass_yield_file"),
-                "yield.mass_yield_file",
-            ),
-            _input(
-                data_directory,
-                _value(
-                    section,
-                    "mean_kinetic_energy_file",
-                    String,
-                    "yield.mean_kinetic_energy_file",
-                ),
-                "yield.mean_kinetic_energy_file",
-            ),
-            kinetic_energies,
-            system.compound.A;
-            dispersion = dispersion,
-            total = total,
-            symmetrize = symmetrize,
-        )
+        reconstructed
     end
 
     domain = fragmentation_domain(
@@ -753,22 +741,23 @@ function _width_provenance(width_file::AbstractString, energy_file::AbstractStri
     return width_entry == energy_entry ? "same experiment" : "borrowed"
 end
 
-# The heavy masses of the mass yield that the width table reaches neither directly nor, when the
-# identities are imposed, through the complement; those sit at their mean TKE.
+# The heavy masses of the reconstructed yield that the width table reaches neither directly nor,
+# when the identities are imposed, through the complement; those sit at their mean TKE. Taken
+# from the masses the reconstruction placed, so a mass standing for an unmeasured complement
+# counts and one without a mean TKE does not.
 function _masses_without_width(
-    mass_path::AbstractString,
+    reconstructed::MassEnergyYield,
     dispersion::KineticEnergyDispersion,
     compound_mass::Integer,
     symmetrize::Bool,
 )
     dispersion.default === nothing || return Int[]
-    table = read_mass_yield(mass_path)
     widths = dispersion.σ_TKE
-    return sort([
-        A for A in table.A if 2A >= compound_mass &&
+    return [
+        A for A in reconstructed.masses if 2A >= compound_mass &&
             !haskey(widths, A) &&
             !(symmetrize && haskey(widths, compound_mass - A))
-    ])
+    ]
 end
 
 function _load_spectrum(document::AbstractDict)

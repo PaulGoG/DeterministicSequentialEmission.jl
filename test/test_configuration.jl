@@ -156,6 +156,25 @@ end
                   "same experiment"
             # The mass yield reaches 112 and 140; 140 has its width, 126 is A₀/2 with one too.
             @test borrowed.yield_inputs["masses_without_width"] == Int[]
+            # A yield measured on the light wing alone stands for its complement: 152 takes the
+            # yield of 100, has a mean of its own, and no width reaches it. Without a mean it is
+            # not placed, and so not listed.
+            write(
+                joinpath(directory, "YA_wing"),
+                "A Y\n126 1.0\n140 3.0\n112 3.0\n100 2.0\n",
+            )
+            write(
+                joinpath(directory, "21981007_P.Geltenbort_1985.dat"),
+                "A TKE\n126 180.0\n140 185.3\n152 175.0\n",
+            )
+            wing(energy_file) = _configuration(
+                directory,
+                "[output]" => "[yield]\nmass_yield_file = \"YA_wing\"\nmean_kinetic_energy_file = \"$(energy_file)\"\nkinetic_energy_dispersion_file = \"23014002_H.Baba_1997.dat\"\n[output]",
+            )
+            @test wing("21981007_P.Geltenbort_1985.dat").yield_inputs["masses_without_width"] ==
+                  [152]
+            @test wing("21981008_P.Geltenbort_1985.dat").yield_inputs["masses_without_width"] ==
+                  Int[]
             @test marginal("kinetic_energy_dispersion = 9.0\n").yield_width == "stated"
             @test symmetric.yield_width == "joint"
 
