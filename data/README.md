@@ -149,8 +149,9 @@ a 0 appears only where EXFOR states it, and `uncertainty_zero_rows` counts those
 The neutron-energy and spectrum-ratio tables need their record more than the others do:
 - `eps_vs_A`: each dataset states `ordinate_frame`. Where the subentry does not say that the
   energy is in the centre-of-mass frame, the value is `"unstated"` and the dataset is flagged;
-  Budtz-Jørgensen (1988), Piksaykin (1977) and Fraser (1966) are. `MXW` marks a mean energy taken
-  from a Maxwellian fit, as in Nishio (1998) and Tsuchiya (2000).
+  Budtz-Jørgensen (1988), Piksaykin (1977) and Fraser (1966) are. `MXW`, on the sets of Nishio
+  (1998) and Tsuchiya (2000), is the average over the incident thermal spectrum, as on their
+  ν(A) sets.
 - `spectrum_cf252_ratio_vs_E`: both orientations occur in one directory and none is inverted;
   `ratio_orientation` says which a dataset is. The ²³⁵U sets 41516017 and 41597002 are one
   measurement published twice and name each other in `correlated_with`.
