@@ -90,7 +90,7 @@ The prompt neutron multiplicity `ν`, zero for a chain that emits nothing.
 
 `ν` is the sequence average of the emission index. Every per-sequence quantity `q_k` is reduced
 by the same operator, eq. (12) of Tudora, *EPJA* 54, 87 (2018), doi:10.1140/epja/i2018-12521-7;
-eq. (4) of Tudora, *EPJA* 56, 84 (2020), doi:10.1140/epja/s10050-020-00123-x; eq. (20) of Tudora, EPJ Web Conf. 256, 00017 (2021),
+eq. (4) of Tudora, *EPJA* 56, 84 (2020), doi:10.1140/epja/s10050-020-00059-2; eq. (20) of Tudora, EPJ Web Conf. 256, 00017 (2021),
 doi:10.1051/epjconf/202125600017,
 
 ```
