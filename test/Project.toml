@@ -12,7 +12,7 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [sources]
 DeterministicSequentialEmission = {path = ".."}
-FissionFragmentsDomain = {url = "https://github.com/PaulGoG/FissionFragmentsDomain.jl", rev = "v0.2.1"}
+FissionFragmentsDomain = {url = "https://github.com/PaulGoG/FissionFragmentsDomain.jl", rev = "v0.2.3"}
 
 [compat]
 Aqua = "0.8"
