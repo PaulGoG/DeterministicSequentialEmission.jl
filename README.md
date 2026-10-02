@@ -164,7 +164,7 @@ The sawtooth is the signature observable, and it is not fitted: the total excita
 shared between the fragments by a temperature ratio `R_T(A_H)` extracted from measured `ν(A)` by
 a companion package, the emission chain is then solved configuration by configuration, and the
 result is contracted against the measured fragment yield `Y(A, TKE)`. Total multiplicities come
-out within −7 % to +5 % of the evaluated values, with no parameter adjusted per system.
+out within −5 % to +5 % of the evaluated values, with no parameter adjusted per system.
 
 ![Prompt fission neutron spectrum of 252-Cf as a ratio to a Maxwellian](plots/prompt_neutron_spectrum.png)
 
@@ -172,7 +172,7 @@ The spectrum is the same statement in energy. Model and measurement are both abs
 the model spectrum integrates to one neutron by construction, and every retrieved set is
 reported against the same 1.42 MeV Maxwellian — so nothing is scaled to anything. Each
 fragmentation enters the total by its yield times its multiplicity, so every emitted neutron
-counts once, as it does in a measurement. The model is about 6 % soft in `⟨E⟩`, 2.01 MeV
+counts once, as it does in a measurement. The model is about 4 % soft in `⟨E⟩`, 2.04 MeV
 against 2.13: it lies above the data below 1.5 MeV and below them above 2 MeV.
 
 ## Configuration
