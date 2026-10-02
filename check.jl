@@ -28,6 +28,8 @@ let overwrite = !("--check" in ARGS)
     end
 
     using Pkg
+    # As in activate.jl: the URL dependency is fetched through the git command line.
+    haskey(ENV, "JULIA_PKG_USE_CLI_GIT") || (ENV["JULIA_PKG_USE_CLI_GIT"] = "true")
     Pkg.activate(@__DIR__; io = devnull)
     Pkg.test()
 end
