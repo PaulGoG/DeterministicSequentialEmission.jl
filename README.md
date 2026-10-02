@@ -134,7 +134,7 @@ julia check.jl --check    # report differences without rewriting
 |---|---|
 | Package environment, test and docs environments | done |
 | Continuous integration, dependency updates, docs deployment | dormant until the public release, under `.github/dormant/` |
-| Fragmentation domain, masses, charge distribution, level density, yields | from `FissionFragmentsDomain.jl` 0.2.0 |
+| Fragmentation domain, masses, charge distribution, level density, yields | from `FissionFragmentsDomain.jl` 0.2.3 |
 | One name per quantity, from configuration key to column header (`docs/src/naming.md`) | done |
 | TXE partition — scission modelling, `E*_H/TXE (A_H)`, `R_T (A_H)` | done |
 | Sequential equations — constant and variable evaporation cross section | done |
@@ -196,7 +196,7 @@ as EXFOR codes it — and that one token names the configuration, the input tree
 the output tree under `data/sims/`. It is also what separates the thermal run of ²³⁵U from the
 resonance one, which the reaction code `n,f` alone cannot.
 
-Every fragment yield comes from EXFOR through ExforFissionData.jl v0.2.3. ²⁵²Cf takes the measured
+Every fragment yield comes from EXFOR through ExforFissionData.jl v0.2.4. ²⁵²Cf takes the measured
 `Y(A,TKE)` matrix of Göök et al. (2014). For the thermal systems the archive holds no matrix, so
 the yield is reconstructed from one experiment's `Y(A)` and `⟨TKE⟩(A)`:
 - Al-Adili et al. (2016) for ²³⁵U;
@@ -285,8 +285,8 @@ subdirectory = "U235_nth/temperature_ratio"
 curve_label = "systematic_trend"
 ```
 
-The shipped configurations read the FissionTemperatureRatio.jl v0.2.0 runs on the
-ExforFissionData v0.2.3 multiplicities, staged that way for each system.
+The shipped configurations read the FissionTemperatureRatio.jl v0.2.1 runs on the
+ExforFissionData v0.2.4 multiplicities, staged that way for each system.
 
 The manifest declares what its curves tabulate, and this package refuses one declaring anything
 but `R_T` against `A_H`. That is worth the indirection: the run writes `R_T(A_H)` and the

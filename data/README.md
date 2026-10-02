@@ -43,7 +43,11 @@ data/
 | `<system>/Y_vs_A_TKE.dat`, `U235_nth/Y_vs_A_H_TKE.dat`, `Pu239_nth/Y_vs_A_TKE_chiba.dat` | staged joint tables of earlier work; no longer read by a shipped configuration | `A TKE Y Y_uncertainty` |
 | `U235_nth/E_def_vs_A_Z.dat` | `ΔE_def` for the scission-modelling partition | `A Z E_def`, MeV |
 | `<system>/nu_vs_A/*.dat` | measured `ν(A)` per fragment | `A nu nu_uncertainty` |
-| `Cf252_sf/spectrum_maxwellian_ratio_vs_E/*.dat` | measured prompt neutron spectrum as a ratio to a Maxwellian | `E spectrum_maxwellian_ratio spectrum_maxwellian_ratio_uncertainty` |
+| `<system>/eps_vs_A/*.dat` | mean centre-of-mass energy of the prompt neutrons against pre-neutron fragment mass | `A eps eps_uncertainty`, MeV |
+| `<system>/eps_vs_A_TKE/*.dat` | the same against mass and total kinetic energy; ²⁵²Cf and ²³³U only | `A TKE eps eps_uncertainty` |
+| `<system>/spectrum_vs_E/*.dat` | measured prompt neutron spectrum in the laboratory frame | `E spectrum spectrum_uncertainty` |
+| `<system>/spectrum_maxwellian_ratio_vs_E/*.dat` | the spectrum as a ratio to a Maxwellian, whose temperature the record states | `E spectrum_maxwellian_ratio spectrum_maxwellian_ratio_uncertainty` |
+| `<system>/spectrum_cf252_ratio_vs_E/*.dat` | the ratio of the system's spectrum and that of ²⁵²Cf(sf) at the same outgoing energy, in the orientation the record states | `E spectrum_cf252_ratio spectrum_cf252_ratio_uncertainty` |
 
 A file name is `<quantity>_vs_<abscissa>`, which is a statement rather than a list of symbols.
 Where a quantity was measured more than once, the directory carries the quantity and the file
@@ -64,7 +68,7 @@ written in floating point — some of these tables were emitted by a generator a
 where they mean `118`.
 
 The shipped configurations take their fragment yields from EXFOR through ExforFissionData.jl
-v0.2.3. For each system, `Y(A)` and `⟨TKE⟩(A)` come from one experiment, or its measured matrix
+v0.2.4. For each system, `Y(A)` and `⟨TKE⟩(A)` come from one experiment, or its measured matrix
 does. A width that experiment did not report is borrowed from another on the same system, or on
 the same compound nucleus, and the run record flags it:
 
@@ -108,7 +112,7 @@ reproduce a retrieval exactly, since EXFOR entries are immutable once published.
 The yield inputs of the shipped configurations:
 
 ```bash
-git clone --branch v0.2.3 https://github.com/PaulGoG/ExforFissionData.jl
+git clone --branch v0.2.4 https://github.com/PaulGoG/ExforFissionData.jl
 cd ExforFissionData.jl
 julia scripts/retrieve.jl config/Cf252_sf_Y_vs_A_TKE.toml
 julia scripts/retrieve.jl config/U235_nth_Y_vs_A.toml
@@ -132,7 +136,7 @@ julia scripts/retrieve.jl config/U233_nth_nu_vs_A.toml
 julia scripts/retrieve.jl config/Cf252_sf_spectrum_maxwellian_ratio_vs_E.toml
 ```
 
-The tree held here is the retrieval of every configuration that package ships, at v0.2.3. Three of
+The tree held here is the retrieval of every configuration that package ships, at v0.2.4. Three of
 them, the joint `Y(A,TKE)` of ²³⁵U, ²³⁹Pu and ²³³U, find no dataset in the archive.
 
 Read the `retrieval.toml` it writes before using what it retrieved. It records, per dataset, the
@@ -141,6 +145,17 @@ reaction code, the units and the qualifiers the archive attached, and those qual
 fission spectrum rather than the thermal one it is filed under. No yield input carries either, and
 the figures draw no such set. An uncertainty the archive does not state is written `NaN`, never 0;
 a 0 appears only where EXFOR states it, and `uncertainty_zero_rows` counts those rows.
+
+The neutron-energy and spectrum-ratio tables need their record more than the others do:
+- `eps_vs_A`: each dataset states `ordinate_frame`. Where the subentry does not say that the
+  energy is in the centre-of-mass frame, the value is `"unstated"` and the dataset is flagged;
+  Budtz-Jørgensen (1988), Piksaykin (1977) and Fraser (1966) are. `MXW` marks a mean energy taken
+  from a Maxwellian fit, as in Nishio (1998) and Tsuchiya (2000).
+- `spectrum_cf252_ratio_vs_E`: both orientations occur in one directory and none is inverted;
+  `ratio_orientation` says which a dataset is. The ²³⁵U sets 41516017 and 41597002 are one
+  measurement published twice and name each other in `correlated_with`.
+- `spectrum_maxwellian_ratio_vs_E`: `maxwellian_temperature_mev` is the temperature of the
+  reference Maxwellian, read by the retrieval from the subentry.
 
 Eight ν(A) subentries are coded without the `/FRG` that marks a multiplicity per fragment: for
 ²⁵²Cf Britt (1964), Piksaykin (1977), Budtz-Jørgensen (1988), Zeynalov (2011) and Göök (2014); for
@@ -164,22 +179,24 @@ package reads are
 ```
 data/sims/<system>/<run>/
 ├── manifest_<run>.toml                      the run record; this package reads it first
-├── R_T_vs_A_H_segmented_<label>.csv         one per [[segmented_curve]]; A_H,R_T,R_T_uncertainty
-├── r_nu_vs_A_H_pivots_<label>.csv           its pivots; A_H,r_nu,r_nu_uncertainty; not read here
+├── R_T_vs_A_H_segmented_<curve>.csv         one per [[segmented_curve]]; A_H,R_T,R_T_uncertainty
+├── r_nu_vs_A_H_pivots_<curve>.csv           its pivots; A_H,r_nu,r_nu_uncertainty; not read here
 ├── total_average_R_T_<run>.csv              ⟨R_T⟩ per curve and yield distribution
 ├── dataset_diagnostics.csv
 ├── metadata.toml                            commit, platform, every accession used
 └── configuration.toml, Manifest.toml        the run's own configuration and environment
 ```
 
-beside the point-by-point and consensus tables of every dataset. Copy the whole directory to
+beside the point-by-point and consensus tables of every dataset. `<curve>` is
+`<accession>_<Author>_<year>` for a dataset and `systematic_trend` for the trend; the manifest
+also records the accession of each dataset curve. Copy the whole directory to
 `data/<system>/temperature_ratio/` and leave `[partition] subdirectory` pointing there;
 `[partition] curve_label` then picks one of the manifest's `[[segmented_curve]]` entries by its
 `label`, `"systematic_trend"` for the shipped configurations. Keep one staged run per system —
 two manifests in one directory is refused, because nothing would say which run to take.
 
-The staged runs are those of FissionTemperatureRatio.jl v0.2.0 on the ExforFissionData v0.2.3
-retrieval, with each system's primary `Y(A)` and `⟨TKE⟩(A)` as above. `U235_nres` reads the
+The staged runs are those of the configurations FissionTemperatureRatio.jl v0.2.1 ships, on the
+ExforFissionData v0.2.4 retrieval, with each system's primary `Y(A)` and `⟨TKE⟩(A)` as above. `U235_nres` reads the
 thermal run.
 
 Copying one table by hand is what this replaces, and the reason is physical rather than tidy: the
