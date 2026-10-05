@@ -196,7 +196,7 @@ as EXFOR codes it — and that one token names the configuration, the input tree
 the output tree under `data/sims/`. It is also what separates the thermal run of ²³⁵U from the
 resonance one, which the reaction code `n,f` alone cannot.
 
-Every fragment yield comes from EXFOR through ExforFissionData.jl v0.2.4. ²⁵²Cf takes the measured
+Every fragment yield comes from EXFOR through ExforFissionData.jl v0.2.6. ²⁵²Cf takes the measured
 `Y(A,TKE)` matrix of Göök et al. (2014). For the thermal systems the archive holds no matrix, so
 the yield is reconstructed from one experiment's `Y(A)` and `⟨TKE⟩(A)`:
 - Al-Adili et al. (2016) for ²³⁵U;
@@ -286,7 +286,8 @@ curve_label = "systematic_trend"
 ```
 
 The shipped configurations read the FissionTemperatureRatio.jl v0.2.3 runs on the
-ExforFissionData v0.2.4 multiplicities, staged that way for each system.
+ExforFissionData v0.2.4 multiplicities, which v0.2.6 writes unchanged, staged that way for each
+system.
 
 The manifest declares what its curves tabulate, and this package refuses one declaring anything
 but `R_T` against `A_H`. That is worth the indirection: the run writes `R_T(A_H)` and the
