@@ -285,7 +285,7 @@ subdirectory = "U235_nth/temperature_ratio"
 curve_label = "systematic_trend"
 ```
 
-The shipped configurations read the FissionTemperatureRatio.jl v0.2.1 runs on the
+The shipped configurations read the FissionTemperatureRatio.jl v0.2.3 runs on the
 ExforFissionData v0.2.4 multiplicities, staged that way for each system.
 
 The manifest declares what its curves tabulate, and this package refuses one declaring anything

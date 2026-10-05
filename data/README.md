@@ -194,7 +194,7 @@ also records the accession of each dataset curve. Copy the whole directory to
 `label`, `"systematic_trend"` for the shipped configurations. Keep one staged run per system —
 two manifests in one directory is refused, because nothing would say which run to take.
 
-The staged runs are those of the configurations FissionTemperatureRatio.jl v0.2.1 ships, on the
+The staged runs are those of the configurations FissionTemperatureRatio.jl v0.2.3 ships, on the
 ExforFissionData v0.2.4 retrieval, with each system's primary `Y(A)` and `⟨TKE⟩(A)` as above. `U235_nres` reads the
 thermal run.
 
