@@ -175,7 +175,8 @@ fragmentation enters the total by its yield times its multiplicity, so every emi
 counts once, as it does in a measurement. Within a fragment the `k`-th neutron of a chain of `n`
 counts with `(n+1−k)/n`, its probability of emission under `ν = (n+1)/2`. The mean laboratory
 energy of ²⁵²Cf(sf) is 2.17 MeV against 2.13 measured, and those of the three thermal systems
-lie 1 to 2 % below the measured values. The uniform average over the sequences of the earlier
+lie 1 to 2 % below the measured values. The ²⁵²Cf spectrum follows the measured shape between
+0.3 and 5 MeV, lies below the data under 0.3 MeV and above them beyond 6 MeV. The uniform average over the sequences of the earlier
 work, `[spectrum] sequence_weighting = "uniform"`, is 4 to 7 % soft.
 
 Three departures from measurement are known and are not tuned away.

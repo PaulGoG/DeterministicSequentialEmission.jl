@@ -1,6 +1,6 @@
 figure = "prompt_neutron_spectrum"
 
 [systems.Cf252_sf]
-gitcommit = "45df96b1a4e8f21ea872a775a369344f14f7eca9"
+gitcommit = "c280dfed89508e56bf46f37c03a39a4e5f5d75aa"
 measured = ["Cf252_sf/spectrum_maxwellian_ratio_vs_E/14278002_V.P.Poenitz_1982.dat", "Cf252_sf/spectrum_maxwellian_ratio_vs_E/30775002_J.W.Boldeman_1986.dat", "Cf252_sf/spectrum_maxwellian_ratio_vs_E/40418008_M.V.Blinov_1973.dat", "Cf252_sf/spectrum_maxwellian_ratio_vs_E/41158003_A.Lajtai_1990.dat"]
-run = "AHmax=174_AHmin=126_En=0_TKEmax=229.5_TKEmin=130.5_TKEstep=1_Tmax=2_Ysym=true_Ytot=200_avg=per_neutron_ldm=BSFG_nZ=5_part=temperature_ratio_pw=multiplicity_sigma=variable"
+run = "AHmax=174_AHmin=126_En=0_TKEmax=229.5_TKEmin=130.5_TKEstep=1_Tmax=2_Ysym=true_Ytot=200_avg=per_neutron_ldm=BSFG_nZ=5_part=temperature_ratio_pw=multiplicity_sigma=variable_sw=emission_probability"

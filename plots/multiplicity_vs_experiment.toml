@@ -1,21 +1,21 @@
 figure = "multiplicity_vs_experiment"
 
 [systems.Cf252_sf]
-gitcommit = "45df96b1a4e8f21ea872a775a369344f14f7eca9"
+gitcommit = "c280dfed89508e56bf46f37c03a39a4e5f5d75aa"
 measured = ["Cf252_sf/nu_vs_A/23118006_Sh.Zeynalov_2011.dat", "Cf252_sf/nu_vs_A/23175008_C.Budtz-jorgensen_1988.dat", "Cf252_sf/nu_vs_A/23268005_A.Goeoek_2014.dat", "Cf252_sf/nu_vs_A/23764010_A.Al-adili_2020.dat", "Cf252_sf/nu_vs_A/41425014_A.S.Vorobiev_2001.dat"]
-run = "AHmax=174_AHmin=126_En=0_TKEmax=229.5_TKEmin=130.5_TKEstep=1_Tmax=2_Ysym=true_Ytot=200_avg=per_neutron_ldm=BSFG_nZ=5_part=temperature_ratio_pw=multiplicity_sigma=variable"
+run = "AHmax=174_AHmin=126_En=0_TKEmax=229.5_TKEmin=130.5_TKEstep=1_Tmax=2_Ysym=true_Ytot=200_avg=per_neutron_ldm=BSFG_nZ=5_part=temperature_ratio_pw=multiplicity_sigma=variable_sw=emission_probability"
 
 [systems.Pu239_nth]
-gitcommit = "45df96b1a4e8f21ea872a775a369344f14f7eca9"
+gitcommit = "c280dfed89508e56bf46f37c03a39a4e5f5d75aa"
 measured = ["Pu239_nth/nu_vs_A/14369002_J.S.Fraser_1966.dat", "Pu239_nth/nu_vs_A/23012008_K.Nishio_1995.dat", "Pu239_nth/nu_vs_A/41397002_V.F.Apalin_1965.dat"]
-run = "AHmax=159_AHmin=120_En=2.53e-8_TKEmax=210_TKEmin=130_TKEstep=1_Tmax=2_Ysym=true_Ytot=200_avg=per_neutron_ldm=BSFG_nZ=5_part=temperature_ratio_pw=multiplicity_sigma=variable"
+run = "AHmax=159_AHmin=120_En=2.53e-8_TKEmax=210_TKEmin=130_TKEstep=1_Tmax=2_Ysym=true_Ytot=200_avg=per_neutron_ldm=BSFG_nZ=5_part=temperature_ratio_pw=multiplicity_sigma=variable_sw=emission_probability"
 
 [systems.U233_nth]
-gitcommit = "45df96b1a4e8f21ea872a775a369344f14f7eca9"
+gitcommit = "c280dfed89508e56bf46f37c03a39a4e5f5d75aa"
 measured = ["U233_nth/nu_vs_A/14369004_J.S.Fraser_1966.dat", "U233_nth/nu_vs_A/22660005_K.Nishio_1998.dat", "U233_nth/nu_vs_A/23595005_K.Takamiya_1999.dat", "U233_nth/nu_vs_A/41397004_V.F.Apalin_1965.dat"]
-run = "AHmax=159_AHmin=117_En=2.53e-8_TKEmax=200_TKEmin=100_TKEstep=1_Tmax=2_Ysym=true_Ytot=200_avg=per_neutron_ldm=BSFG_nZ=5_part=temperature_ratio_pw=multiplicity_sigma=variable"
+run = "AHmax=159_AHmin=117_En=2.53e-8_TKEmax=200_TKEmin=100_TKEstep=1_Tmax=2_Ysym=true_Ytot=200_avg=per_neutron_ldm=BSFG_nZ=5_part=temperature_ratio_pw=multiplicity_sigma=variable_sw=emission_probability"
 
 [systems.U235_nth]
-gitcommit = "45df96b1a4e8f21ea872a775a369344f14f7eca9"
+gitcommit = "c280dfed89508e56bf46f37c03a39a4e5f5d75aa"
 measured = ["U235_nth/nu_vs_A/21095002_E.E.Maslin_1967.dat", "U235_nth/nu_vs_A/22464004_K.Nishio_1998.dat", "U235_nth/nu_vs_A/23764004_A.Al-adili_2020.dat", "U235_nth/nu_vs_A/30909004_J.W.Boldeman_1971.dat", "U235_nth/nu_vs_A/41516012_A.S.Vorobyev_2010.dat"]
-run = "AHmax=160_AHmin=118_En=2.53e-8_TKEmax=200_TKEmin=100_TKEstep=1_Tmax=2_Ysym=true_Ytot=200_avg=per_neutron_ldm=BSFG_nZ=5_part=temperature_ratio_pw=multiplicity_sigma=variable"
+run = "AHmax=160_AHmin=118_En=2.53e-8_TKEmax=200_TKEmin=100_TKEstep=1_Tmax=2_Ysym=true_Ytot=200_avg=per_neutron_ldm=BSFG_nZ=5_part=temperature_ratio_pw=multiplicity_sigma=variable_sw=emission_probability"
