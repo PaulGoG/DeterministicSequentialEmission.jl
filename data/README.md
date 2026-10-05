@@ -68,7 +68,7 @@ written in floating point — some of these tables were emitted by a generator a
 where they mean `118`.
 
 The shipped configurations take their fragment yields from EXFOR through ExforFissionData.jl
-v0.2.6. For each system, `Y(A)` and `⟨TKE⟩(A)` come from one experiment, or its measured matrix
+v0.2.7. For each system, `Y(A)` and `⟨TKE⟩(A)` come from one experiment, or its measured matrix
 does. A width that experiment did not report is borrowed from another on the same system, or on
 the same compound nucleus, and the run record flags it:
 
@@ -112,7 +112,7 @@ reproduce a retrieval exactly, since EXFOR entries are immutable once published.
 The yield inputs of the shipped configurations:
 
 ```bash
-git clone --branch v0.2.6 https://github.com/PaulGoG/ExforFissionData.jl
+git clone --branch v0.2.7 https://github.com/PaulGoG/ExforFissionData.jl
 cd ExforFissionData.jl
 julia scripts/retrieve.jl config/Cf252_sf_Y_vs_A_TKE.toml
 julia scripts/retrieve.jl config/U235_nth_Y_vs_A.toml
@@ -136,7 +136,7 @@ julia scripts/retrieve.jl config/U233_nth_nu_vs_A.toml
 julia scripts/retrieve.jl config/Cf252_sf_spectrum_maxwellian_ratio_vs_E.toml
 ```
 
-The tree held here is the retrieval of every configuration that package ships, at v0.2.6. Three of
+The tree held here is the retrieval of every configuration that package ships, at v0.2.7. Three of
 them, the joint `Y(A,TKE)` of ²³⁵U, ²³⁹Pu and ²³³U, find no dataset in the archive.
 
 Read the `retrieval.toml` it writes before using what it retrieved. It records, per dataset, the
@@ -162,13 +162,29 @@ The neutron-energy and spectrum-ratio tables need their record more than the oth
 - `P_vs_nu`: a distribution is written as tabulated and never renormalised; `distribution_sum`,
   `mean_multiplicity` and its deviation from `ν̄`, `mean_deviation`, are recorded per dataset.
   The Boldeman (1967) sets of ²³³U, ²³⁵U and ²³⁹Pu are superseded by the 1985 reanalysis of the
-  same measurement, and the ²⁵²Cf sets 30046011 and 30772015, the latter at three discriminator
-  biases, are one measurement; each names the others in `correlated_with`.
+  same measurement, and the ²⁵²Cf sets 30046011 and 30772015 are four runs of one experiment at
+  different discriminator biases; each names the others in `correlated_with`.
 - `spectrum_cf252_ratio_vs_E`: both orientations occur in one directory and none is inverted;
   `ratio_orientation` says which a dataset is. The ²³⁵U sets 41516017 and 41597002 are one
-  measurement published twice and name each other in `correlated_with`.
+  measurement published twice and name each other in `correlated_with`; the first is superseded
+  by the second.
 - `spectrum_maxwellian_ratio_vs_E`: `maxwellian_temperature_mev` is the temperature of the
-  reference Maxwellian, read by the retrieval from the subentry.
+  reference Maxwellian, read by the retrieval from the subentry. The Starostov (1985) sets of
+  ²³³U, ²³⁵U and ²³⁹Pu are four parts of one spectrum each; for ²⁵²Cf, 40418006 and 40875003
+  are superseded by 40418008 and 41158003.
+
+Three statements of the archive about the standing of a dataset are carried into its record,
+and none removes it:
+- `preliminary:` among the `qualifiers` marks a set whose subentry, or the common subentry of
+  its entry, carries the status `PRELM`. Of the sets the figures draw, the ²³⁵U `ν(A)` of
+  Vorobyev (2010), 41516012, is one.
+- `superseded:` names the later subentry that replaces a set (status `SPSDD`). Both are
+  written, and the later one is not always the fuller table: Lajtai (1990), 41158003, quotes no
+  uncertainties where the superseded 40875003 does.
+- `correlated_with` lists the sets that share an experiment with a set, and
+  `correlation_relation` says how: `republication`, `alternative_analysis`, `repeated_run` or
+  `complementary_range`. Any combination of them is one measurement. The `ν(A)` of Basova
+  (1979) and Zamyatnin (1979), for ²⁵²Cf and for ²³⁹Pu, are two reductions of one experiment.
 
 Eight ν(A) subentries are coded without the `/FRG` that marks a multiplicity per fragment: for
 ²⁵²Cf Britt (1964), Piksaykin (1977), Budtz-Jørgensen (1988), Zeynalov (2011) and Göök (2014); for
@@ -211,7 +227,7 @@ two manifests in one directory is refused, because nothing would say which run t
 
 The staged runs are those of the configurations FissionTemperatureRatio.jl v0.2.3 ships, on the
 ExforFissionData v0.2.4 retrieval, with each system's primary `Y(A)` and `⟨TKE⟩(A)` as above;
-v0.2.6 writes the tables of that retrieval byte for byte. `U235_nres` reads the thermal run.
+v0.2.7 writes the tables of that retrieval byte for byte. `U235_nres` reads the thermal run.
 
 Copying one table by hand is what this replaces, and the reason is physical rather than tidy: the
 two CSVs above hold different quantities in the same column position, `R_T ≈ 1.2` against
