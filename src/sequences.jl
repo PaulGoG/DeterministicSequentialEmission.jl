@@ -117,25 +117,94 @@ rather than a sequence average. A global treatment yields only an averaged `ν(A
 post_neutron_mass(chain::EmissionChain) = chain.fragment.A - chain.possible
 
 """
-    sequence_average(chain, quantity) -> Union{Float64,Nothing}
+    SequenceWeighting
 
-Average a per-sequence quantity over the sequences where it is defined, `k_max` of them.
+How the emission sequences of one fragment are weighted in a quantity carried by its neutrons:
+the centre-of-mass and laboratory spectra and the mean neutron energy.
+
+[`neutron_multiplicity`](@ref) is `ν = (n+1)/2`, the mean of a number of emitted neutrons that
+is equiprobable on `1 … n`. The `k`-th neutron of the chain is then emitted with probability
+`P(N ≥ k) = (n+1−k)/n`, and a quantity averaged over the emitted neutrons carries that weight:
+
+```
+⟨q⟩ = Σ_k (n+1−k) q_k / Σ_k (n+1−k)
+```
+
+[`EmissionProbabilityWeighting`](@ref), the default, applies it. The weights fall linearly along
+the chain, as the probability of reaching a step does in every treatment that carries a
+distribution of excitation energy whose width is comparable with one neutron step: Terrell,
+*Phys. Rev.* **113**, 527 (1959), doi:10.1103/PhysRev.113.527; Märten and Seeliger, *J. Phys. G*
+**10**, 349 (1984), doi:10.1088/0305-4616/10/3/010; Kawano *et al.*, *Phys. Rev. C* **104**,
+014611 (2021), doi:10.1103/PhysRevC.104.014611. [`UniformSequenceWeighting`](@ref) counts every
+sequence once, `⟨q⟩ = (1/k_max) Σ_k q_k`, the operator of eq. (12) of Tudora, *EPJA* 54, 87
+(2018), doi:10.1140/epja/i2018-12521-7, and of the thesis. It takes the last neutron of a chain
+as emitted as often as the first, which over-represents the cold end of the chain and gives a
+spectrum softer than the multiplicity it goes with implies.
+
+The weighting applies to what the neutrons carry. The residual temperature and the residual
+energy written against fragment mass belong to the nucleus the chain ends on; with the count
+equiprobable on `1 … n` each residual is the last with the same probability, so their average
+over the sequences is uniform under either weighting.
+"""
+abstract type SequenceWeighting end
+
+"""
+    UniformSequenceWeighting()
+
+Every sequence that carries the quantity counts once.
+"""
+struct UniformSequenceWeighting <: SequenceWeighting end
+
+"""
+    EmissionProbabilityWeighting()
+
+The `k`-th sequence of a chain of `n` counts with `(n+1−k)/n`.
+"""
+struct EmissionProbabilityWeighting <: SequenceWeighting end
+
+"""
+    sequence_weight(weighting, chain, sequence) -> Float64
+
+The weight of one sequence of `chain` under `weighting`: `1` under
+[`UniformSequenceWeighting`](@ref), `(n+1−k)/n` under [`EmissionProbabilityWeighting`](@ref),
+with `n = chain.possible` and `k = sequence.index`.
+"""
+sequence_weight(::UniformSequenceWeighting, ::EmissionChain, ::EmissionSequence) = 1.0
+sequence_weight(
+    ::EmissionProbabilityWeighting,
+    chain::EmissionChain,
+    sequence::EmissionSequence,
+) = (chain.possible + 1 - sequence.index) / chain.possible
+
+"""
+    sequence_average(chain, quantity[, weighting]) -> Union{Float64,Nothing}
+
+Average a per-sequence quantity over the sequences where it is defined, `k_max` of them, with
+the weights of `weighting`, a [`SequenceWeighting`](@ref); uniform where none is given.
 
 `quantity` is one of `:temperature`, `:residual_energy` or `:mean_neutron_energy`.
 """
-function sequence_average(chain::EmissionChain, quantity::Symbol)
+function sequence_average(
+    chain::EmissionChain,
+    quantity::Symbol,
+    weighting::SequenceWeighting,
+)
     quantity in (:temperature, :residual_energy, :mean_neutron_energy) ||
         throw(ArgumentError("unknown per-sequence quantity $quantity"))
     total = 0.0
-    counted = 0
+    norm = 0.0
     for sequence in chain.sequences
         value = getfield(sequence, quantity)
         value === nothing && continue
-        total += value
-        counted += 1
+        weight = sequence_weight(weighting, chain, sequence)
+        total += weight * value
+        norm += weight
     end
-    return counted == 0 ? nothing : total / counted
+    return norm > 0 ? total / norm : nothing
 end
+
+sequence_average(chain::EmissionChain, quantity::Symbol) =
+    sequence_average(chain, quantity, UniformSequenceWeighting())
 
 """
     emission_chain(table, model, cross_section, fragment, excitation; kwargs...)

@@ -24,6 +24,7 @@ struct Configuration
     maxwellian_temperature::Float64
     spectrum_pair_weighting::SpectrumWeighting
     spectrum_average::SpectrumAverage
+    sequence_weighting::SequenceWeighting
     significant_digits::Int
     source::String
     data_directory::String
@@ -96,6 +97,7 @@ const CONFIGURATION_KEYS = Dict(
         "points",
         "pair_weighting",
         "average",
+        "sequence_weighting",
     ),
     "output" => ("significant_digits",),
 )
@@ -238,8 +240,11 @@ function load_configuration(
         kinetic_energies,
         data_directory,
     )
-    spectrum_grid, maxwellian, spectrum_pair_weighting, spectrum_average =
-        _load_spectrum(document)
+    spectrum_grid,
+    maxwellian,
+    spectrum_pair_weighting,
+    spectrum_average,
+    sequence_weighting = _load_spectrum(document)
     significant_digits = _load_output(document)
 
     return Configuration(
@@ -258,6 +263,7 @@ function load_configuration(
         maxwellian,
         spectrum_pair_weighting,
         spectrum_average,
+        sequence_weighting,
         significant_digits,
         abspath(path),
         abspath(data_directory),
@@ -761,8 +767,13 @@ function _masses_without_width(
 end
 
 function _load_spectrum(document::AbstractDict)
-    haskey(document, "spectrum") ||
-        return nothing, 1.42, MultiplicityWeighting(), PerNeutronAverage()
+    haskey(document, "spectrum") || return (
+        nothing,
+        1.42,
+        MultiplicityWeighting(),
+        PerNeutronAverage(),
+        EmissionProbabilityWeighting(),
+    )
     section = _section(document, "spectrum")
     maxwellian = Float64(
         _bounded(
@@ -797,8 +808,17 @@ function _load_spectrum(document::AbstractDict)
             "per_neutron",
         ),
     )
+    sequence_weighting = _sequence_weighting(
+        _choice(
+            section,
+            "sequence_weighting",
+            ("emission_probability", "uniform"),
+            "spectrum.sequence_weighting",
+            "emission_probability",
+        ),
+    )
     _value(section, "enabled", Bool, "spectrum.enabled", true) ||
-        return nothing, maxwellian, pair_weighting, average
+        return nothing, maxwellian, pair_weighting, average, sequence_weighting
     lower = Float64(
         _bounded(
             _value(section, "energy_min", Real, "spectrum.energy_min", 0.05),
@@ -830,13 +850,15 @@ function _load_spectrum(document::AbstractDict)
     # Logarithmic grid: the spectrum spans four decades, and a linear grid does not resolve the
     # sub-MeV shape.
     grid = 10 .^ range(log10(lower), log10(upper); length = points)
-    return grid, maxwellian, pair_weighting, average
+    return grid, maxwellian, pair_weighting, average, sequence_weighting
 end
 
 _spectrum_pair_weighting(kind::String) =
     kind == "excitation" ? ExcitationWeighting() : MultiplicityWeighting()
 _spectrum_average(kind::String) =
     kind == "per_neutron" ? PerNeutronAverage() : PerFissionAverage()
+_sequence_weighting(kind::String) =
+    kind == "uniform" ? UniformSequenceWeighting() : EmissionProbabilityWeighting()
 
 function _load_output(document::AbstractDict)
     section = _section(document, "output")

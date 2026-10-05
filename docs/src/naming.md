@@ -254,7 +254,7 @@ A run writes to `data/sims/<system>/<run>`, and an output follows the same
 | `T_vs_A.dat` | residual temperature |
 | `E_star_vs_A.dat` | fragment excitation energy |
 | `E_r_vs_A.dat` | residual energy before emission |
-| `eps_vs_A.dat` | mean centre-of-mass neutron energy |
+| `eps_vs_A.dat` | mean centre-of-mass neutron energy, per emitted neutron under the default sequence weighting |
 | `nu_vs_TKE.dat`, `E_star_vs_TKE.dat` | the same against total kinetic energy |
 | `spectrum_vs_E.dat` | the laboratory prompt neutron spectrum |
 | `Y_vs_A.dat`, `Y_vs_Z.dat`, `Y_vs_TKE.dat` | the fragment yield projections |

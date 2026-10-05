@@ -45,6 +45,7 @@ points = 300                      # logarithmic grid points, 8 to 4000
 maxwellian_temperature = 1.42     # MeV, above 0 to 5; the reference the ratio is taken against
 pair_weighting = "multiplicity"   # one of: "multiplicity" | "excitation"; light and heavy weights within a pair
 average = "per_neutron"           # one of: "per_fission" | "per_neutron"; weight of a pair spectrum in the total, Y or Y ν_pair
+sequence_weighting = "emission_probability"  # one of: "emission_probability" | "uniform"; weight of the k-th neutron of a chain of n, (n+1−k)/n or 1
 
 [output]
 significant_digits = 8            # significant figures in tabulated output, 1 to 15

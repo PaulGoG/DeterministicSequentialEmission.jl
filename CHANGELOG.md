@@ -76,6 +76,13 @@ here.
 - `check.jl`: the formatting gate, then the test suite.
 - A References page in the documentation listing every source with its DOI, through
   `DocumenterCitations.jl`; docstrings cite by DOI as well.
+- `[spectrum] sequence_weighting = "emission_probability" | "uniform"` selects how the emission
+  sequences of a fragment are weighted in its spectra and its mean neutron energy. The default,
+  `emission_probability`, weights the `k`-th neutron of a chain of `n` by `(n+1−k)/n`, its
+  probability of emission under `ν = (n+1)/2`, and averages `⟨ε⟩(A)` per emitted neutron;
+  `uniform` is the average of the thesis and of Tudora *et al.* (2018), with `⟨ε⟩(A)` averaged
+  per fission. Multiplicities, residual temperatures and excitation energies do not depend on
+  it. The key is a token of the run identifier.
 
 ### Changed
 

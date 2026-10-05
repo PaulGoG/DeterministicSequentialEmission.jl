@@ -238,3 +238,54 @@ end
     @test length(solved) >= 2
     @test issorted(solved; rev = true)
 end
+
+@testset "sequence weighting" begin
+    table = mass_table()
+    model = BackShiftedFermiGas(table)
+    cross_section = VariableCrossSection()
+    fragmentation = fragmentation_at(134, 52)
+    balance = energetics(table, CF252, fragmentation, 170.0)
+    method = ExcitationEnergyRatio(
+        SegmentedCurve([(126, 0.5), (130, 0.14), (150, 0.607), (174, 0.865)]),
+    )
+    split = partition(method, fragmentation, value(balance.TXE))
+    chain = emission_chain(table, model, cross_section, fragmentation.light, split.light)
+    n = chain.possible
+    @test count(is_solved, chain.sequences) >= 2
+    @test [sequence.index for sequence in chain.sequences] == 1:n
+
+    uniform = UniformSequenceWeighting()
+    probability = EmissionProbabilityWeighting()
+
+    # One for every sequence, or the probability that the k-th neutron is emitted when the
+    # count is equiprobable on 1 … n. Summed over the chain the probabilities are ν = (n+1)/2,
+    # which is what ties the weighting to the multiplicity.
+    @test all(
+        sequence_weight(uniform, chain, sequence) == 1 for sequence in chain.sequences
+    )
+    probabilities =
+        [sequence_weight(probability, chain, sequence) for sequence in chain.sequences]
+    @test probabilities ≈ [(n + 1 - k) / n for k in 1:n] rtol = RTOL
+    @test sum(probabilities) ≈ neutron_multiplicity(chain) rtol = RTOL
+
+    for quantity in (:temperature, :residual_energy, :mean_neutron_energy)
+        carrying = [s for s in chain.sequences if getfield(s, quantity) !== nothing]
+        values = [getfield(s, quantity) for s in carrying]
+        # Uniform, named or not, is the arithmetic mean to the bit.
+        @test sequence_average(chain, quantity, uniform) ===
+              sequence_average(chain, quantity)
+        @test sequence_average(chain, quantity) == foldl(+, values) / length(values)
+        weights = [(n + 1 - s.index) / n for s in carrying]
+        @test sequence_average(chain, quantity, probability) ≈
+              sum(weights .* values) / sum(weights) rtol = RTOL
+    end
+
+    # The chain cools as it emits, so the early neutrons are the energetic ones and the
+    # emission-probability mean lies above the uniform one.
+    @test sequence_average(chain, :mean_neutron_energy, probability) >
+          sequence_average(chain, :mean_neutron_energy)
+
+    cold = emission_chain(table, model, cross_section, fragmentation.heavy, 0.0)
+    @test sequence_average(cold, :mean_neutron_energy, probability) === nothing
+    @test_throws ArgumentError sequence_average(chain, :nonsense, probability)
+end

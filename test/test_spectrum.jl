@@ -281,3 +281,66 @@ end
     @test total_weight(PerFissionAverage(), 2.0, light, heavy) == 2.0
     @test total_weight(PerNeutronAverage(), 2.0, light, heavy) ≈ 2.0 * ν_pair rtol = RTOL
 end
+
+@testset "chain spectra under the emission probability weighting" begin
+    table = mass_table()
+    model = BackShiftedFermiGas(table)
+    cross_section = VariableCrossSection()
+    fragmentation = fragmentation_at(134, 52)
+    balance = energetics(table, CF252, fragmentation, 170.0)
+    method = ExcitationEnergyRatio(
+        SegmentedCurve([(126, 0.5), (130, 0.14), (150, 0.607), (174, 0.865)]),
+    )
+    split = partition(method, fragmentation, value(balance.TXE))
+    E_light, _ = fragment_energy_per_nucleon(fragmentation, 170.0)
+    chain = emission_chain(table, model, cross_section, fragmentation.light, split.light)
+    @test count(is_solved, chain.sequences) >= 2
+    weighting = EmissionProbabilityWeighting()
+
+    # Normalized weights of unit-area spectra leave a unit-area spectrum, in both frames.
+    area, _ = quadgk(
+        E -> chain_spectrum(chain, cross_section, E_light, E, weighting),
+        0,
+        Inf;
+        rtol = 1e-10,
+    )
+    @test area ≈ 1 atol = 1e-7
+    cm_area, _ = quadgk(
+        ε -> chain_centre_of_mass_spectrum(chain, cross_section, ε, weighting),
+        0,
+        Inf;
+        rtol = 1e-10,
+    )
+    @test cm_area ≈ 1 atol = 1e-7
+
+    # The first moment is the mean neutron energy under the same weighting, and the laboratory
+    # one adds the kinetic energy per nucleon.
+    cm_moment, _ = quadgk(
+        ε -> ε * chain_centre_of_mass_spectrum(chain, cross_section, ε, weighting),
+        0,
+        Inf;
+        rtol = 1e-11,
+    )
+    @test cm_moment ≈ sequence_average(chain, :mean_neutron_energy, weighting) rtol = 1e-8
+    lab_moment, _ = quadgk(
+        E -> E * chain_spectrum(chain, cross_section, E_light, E, weighting),
+        0,
+        Inf;
+        rtol = 1e-11,
+    )
+    @test lab_moment ≈ E_light + cm_moment rtol = 1e-7
+
+    # Harder than the uniform average of the same chain.
+    @test cm_moment > sequence_average(chain, :mean_neutron_energy)
+
+    # Named or not, the uniform weighting is the same spectrum to the bit.
+    uniform = UniformSequenceWeighting()
+    @test chain_spectrum(chain, cross_section, E_light, 2.0, uniform) ===
+          chain_spectrum(chain, cross_section, E_light, 2.0)
+    @test chain_centre_of_mass_spectrum(chain, cross_section, 1.0, uniform) ===
+          chain_centre_of_mass_spectrum(chain, cross_section, 1.0)
+
+    barren = emission_chain(table, model, cross_section, fragmentation.heavy, 0.0)
+    @test chain_spectrum(barren, cross_section, E_light, 2.0, weighting) == 0
+    @test chain_centre_of_mass_spectrum(barren, cross_section, 2.0, weighting) == 0
+end

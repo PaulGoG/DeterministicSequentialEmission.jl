@@ -172,8 +172,24 @@ The spectrum is the same statement in energy. Model and measurement are both abs
 the model spectrum integrates to one neutron by construction, and every retrieved set is
 reported against the same 1.42 MeV Maxwellian — so nothing is scaled to anything. Each
 fragmentation enters the total by its yield times its multiplicity, so every emitted neutron
-counts once, as it does in a measurement. The model is about 4 % soft in `⟨E⟩`, 2.04 MeV
-against 2.13: it lies above the data below 1.5 MeV and below them above 2 MeV.
+counts once, as it does in a measurement. Within a fragment the `k`-th neutron of a chain of `n`
+counts with `(n+1−k)/n`, its probability of emission under `ν = (n+1)/2`. The mean laboratory
+energy of ²⁵²Cf(sf) is 2.17 MeV against 2.13 measured, and those of the three thermal systems
+lie 1 to 2 % below the measured values. The uniform average over the sequences of the earlier
+work, `[spectrum] sequence_weighting = "uniform"`, is 4 to 7 % soft.
+
+Three departures from measurement are known and are not tuned away.
+- The multiplicity `ν = (n+1)/2` responds to excitation energy too weakly. At fixed mass
+  `−dTKE/dν` is 11.5 MeV per neutron for ²⁵²Cf against 7.3 measured (Göök *et al.*,
+  doi:10.1103/PhysRevC.90.064611), which leaves 10.3 MeV per fission for γ rays against 6.8
+  (Nifenecker *et al.*, doi:10.1016/0375-9474(72)90296-5), and the distribution of the neutron
+  number is too broad in all four systems.
+- The spectra of the thermal systems relative to that of ²⁵²Cf are reproduced less well than
+  under the uniform average, χ²/N of 2.7 to 5.0 against 2.0 to 4.1: the softness of the
+  uniform average is nearly common to the four systems and cancels in a ratio, and the residual
+  difference between them, 3 to 4 % in mean energy, does not.
+- `⟨ε⟩` falls too steeply with TKE at fixed mass under either weighting, −0.028 MeV⁻¹ for
+  ²⁵²Cf against −0.018 from the data of Bowman *et al.* (doi:10.1103/PhysRev.129.2133).
 
 ## Configuration
 
@@ -319,7 +335,10 @@ checks.
 This branch is a rewrite. The code as submitted with the 2023 MSc thesis, and the thesis itself,
 are on the [`original`](../../tree/original) branch. `main` reproduces its physics behind a
 tested, configured, documented interface; where it deviates, the deviation is deliberate and
-recorded.
+recorded. Two defaults of the spectrum are such deviations, the per-neutron average over
+fragmentations and the emission-probability weighting of the sequences of a fragment;
+`[spectrum] average = "per_fission"` with `sequence_weighting = "uniform"` is the spectrum of
+the thesis.
 
 The rewrite is pinned against the thesis run archived outside this repository: ²⁵²Cf(SF),
 `A_H ∈ [126, 174]`, `TKE = 130:2:230` MeV, 5 charge numbers per `A`, AME2020, variable

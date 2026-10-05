@@ -207,6 +207,23 @@ end
                 "[output]" => "[spectrum]\naverage = \"per_event\"\n\n[output]",
             )
 
+            # The sequences of a fragment are weighted by their emission probability unless
+            # the uniform average is asked for, and the choice names the run.
+            @test with_spectrum.sequence_weighting isa EmissionProbabilityWeighting
+            uniform = _configuration(
+                directory,
+                "[output]" => "[spectrum]\nsequence_weighting = \"uniform\"\n\n[output]",
+            )
+            @test uniform.sequence_weighting isa UniformSequenceWeighting
+            @test run_parameters(with_spectrum)["sw"] == "emission_probability"
+            @test run_parameters(uniform)["sw"] == "uniform"
+            @test run_identifier(uniform) != run_identifier(with_spectrum)
+            @test _rejects(
+                directory,
+                "spectrum.sequence_weighting",
+                "[output]" => "[spectrum]\nsequence_weighting = \"linear\"\n\n[output]",
+            )
+
             # "wahl" takes Wahl's Zₚ model in place of a table, at the best layer the system
             # reaches. ²⁵²Cf(sf) is one of the four reactions of the 1988 evaluation, so it reaches
             # the first, and the model serves the domain directly.

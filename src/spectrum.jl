@@ -100,19 +100,21 @@ function _laboratory(
 end
 
 """
-    chain_spectrum(chain, cross_section, E_f, E) -> Float64
+    chain_spectrum(chain, cross_section, E_f, E[, weighting]) -> Float64
 
 The laboratory spectrum of one fragment, averaged over the emission sequences that carry a
 temperature.
 
 ```
-N_f(E) = (1/k_max) Σ_{k solved} N(E; α_k, T_k, E_f)
+N_f(E) = Σ_{k solved} w_k N(E; α_k, T_k, E_f) / Σ_{k solved} w_k
 ```
 
-The denominator is `k_max`, the number of solved sequences, as in [`sequence_average`](@ref)
-and eq. (12) of Tudora, *EPJA* 54, 87 (2018), doi:10.1140/epja/i2018-12521-7. Sequences without
-a temperature carry no spectrum and are skipped, although they count towards `n` and hence
-towards the multiplicity weighting of the pair spectrum.
+`w_k` is the [`sequence_weight`](@ref) of `weighting`, uniform (`w_k = 1`, denominator
+`k_max`) where none is given. The uniform case is the average of
+[`sequence_average`](@ref) and of eq. (12) of Tudora, *EPJA* 54, 87 (2018),
+doi:10.1140/epja/i2018-12521-7. Sequences without a temperature carry no spectrum and are
+skipped, although they count towards `n` and hence towards the multiplicity weighting of the
+pair spectrum.
 
 Returns `0` for a chain that solved nothing.
 """
@@ -121,42 +123,63 @@ function chain_spectrum(
     cross_section::EvaporationCrossSection,
     E_f::Real,
     E::Real,
+    weighting::SequenceWeighting,
 )
     total = 0.0
-    counted = 0
+    norm = 0.0
     for sequence in chain.sequences
         is_solved(sequence) || continue
-        counted += 1
+        weight = sequence_weight(weighting, chain, sequence)
         α = alpha_parameter(chain.fragment.A - sequence.index)
-        total += laboratory_spectrum(cross_section, α, sequence.temperature, E_f, E)
+        total +=
+            weight * laboratory_spectrum(cross_section, α, sequence.temperature, E_f, E)
+        norm += weight
     end
-    return counted == 0 ? 0.0 : total / counted
+    return norm > 0 ? total / norm : 0.0
 end
 
+chain_spectrum(
+    chain::EmissionChain,
+    cross_section::EvaporationCrossSection,
+    E_f::Real,
+    E::Real,
+) = chain_spectrum(chain, cross_section, E_f, E, UniformSequenceWeighting())
+
 """
-    chain_centre_of_mass_spectrum(chain, cross_section, ε) -> Float64
+    chain_centre_of_mass_spectrum(chain, cross_section, ε[, weighting]) -> Float64
 
-The sequence-averaged centre-of-mass spectrum of one fragment, `Φ(ε) = (1/k_max) Σ_k φ_k(ε)`.
+The sequence-averaged centre-of-mass spectrum of one fragment,
+`Φ(ε) = Σ_{k solved} w_k φ_k(ε) / Σ_{k solved} w_k`, with `w_k` the
+[`sequence_weight`](@ref) of `weighting`, uniform (`w_k = 1`, denominator `k_max`) where none is
+given.
 
-Same denominator and the same skip rule as [`chain_spectrum`](@ref). This is the quantity
+Same weights and the same skip rule as [`chain_spectrum`](@ref). This is the quantity
 measured centre-of-mass spectra are compared against, and its first moment is
-`sequence_average(chain, :mean_neutron_energy)` by construction.
+`sequence_average(chain, :mean_neutron_energy, weighting)` by construction.
 """
 function chain_centre_of_mass_spectrum(
     chain::EmissionChain,
     cross_section::EvaporationCrossSection,
     ε::Real,
+    weighting::SequenceWeighting,
 )
     total = 0.0
-    counted = 0
+    norm = 0.0
     for sequence in chain.sequences
         is_solved(sequence) || continue
-        counted += 1
+        weight = sequence_weight(weighting, chain, sequence)
         α = alpha_parameter(chain.fragment.A - sequence.index)
-        total += centre_of_mass_spectrum(cross_section, α, sequence.temperature, ε)
+        total += weight * centre_of_mass_spectrum(cross_section, α, sequence.temperature, ε)
+        norm += weight
     end
-    return counted == 0 ? 0.0 : total / counted
+    return norm > 0 ? total / norm : 0.0
 end
+
+chain_centre_of_mass_spectrum(
+    chain::EmissionChain,
+    cross_section::EvaporationCrossSection,
+    ε::Real,
+) = chain_centre_of_mass_spectrum(chain, cross_section, ε, UniformSequenceWeighting())
 
 """
     SpectrumWeighting

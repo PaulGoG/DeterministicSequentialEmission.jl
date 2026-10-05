@@ -154,12 +154,12 @@ function run_pipeline(configuration::Configuration)
             key = (fragment.A, fragment.Z, Float64(TKE))
             ν[key] = neutron_multiplicity(chain)
             excitation[key] = energy
-            for (store, quantity) in (
-                (temperature, :temperature),
-                (residual, :residual_energy),
-                (neutron_energy, :mean_neutron_energy),
+            for (store, quantity, weighting) in (
+                (temperature, :temperature, UniformSequenceWeighting()),
+                (residual, :residual_energy, UniformSequenceWeighting()),
+                (neutron_energy, :mean_neutron_energy, configuration.sequence_weighting),
             )
-                averaged = sequence_average(chain, quantity)
+                averaged = sequence_average(chain, quantity, weighting)
                 averaged === nothing || (store[key] = averaged)
             end
         end
@@ -199,7 +199,13 @@ function run_pipeline(configuration::Configuration)
         curve(temperature),
         curve(excitation),
         curve(residual),
-        curve(neutron_energy),
+        _pairs(
+            average(
+                neutron_energy,
+                _neutron_weights(configuration.sequence_weighting, weights, ν);
+                over = (:charge, :kinetic_energy),
+            ),
+        ),
         by_energy(ν),
         by_energy(excitation),
         spectrum,
@@ -229,6 +235,29 @@ heavy-side sum is exactly half the sum over all fragments.
 """
 _pair_weight(fragmentation::Fragmentation, yield::Float64) =
     yield * split_weight(fragmentation)
+
+# Weights of the contraction of ⟨ε⟩ over charge and kinetic energy. Under the emission
+# probability weighting the mean is taken over the emitted neutrons, so a fragment counts
+# with its yield times its multiplicity; the uniform weighting keeps the yield alone.
+_neutron_weights(
+    ::UniformSequenceWeighting,
+    weights::FragmentQuantity,
+    ::FragmentQuantity,
+) = weights
+
+function _neutron_weights(
+    ::EmissionProbabilityWeighting,
+    weights::FragmentQuantity,
+    ν::FragmentQuantity{Float64},
+)
+    scaled = FragmentQuantity{Float64}()
+    for (key, weight) in weights.values
+        multiplicity = get(ν.values, key, nothing)
+        multiplicity === nothing && continue
+        scaled[key] = Float64(value(weight)) * multiplicity
+    end
+    return scaled
+end
 
 # Laboratory spectrum of the system: each solved pair contributes its two chains, weighted by
 # `_pair_weight` scaled by `total_weight`, and within the pair by `pair_weights`. Unit area by
@@ -269,10 +298,20 @@ function _run_spectrum(
         for (w, light, heavy, share, E_light, E_heavy) in records
             accumulated +=
                 w * (
-                    share[1] *
-                    chain_spectrum(light, configuration.cross_section, E_light, E) +
-                    share[2] *
-                    chain_spectrum(heavy, configuration.cross_section, E_heavy, E)
+                    share[1] * chain_spectrum(
+                        light,
+                        configuration.cross_section,
+                        E_light,
+                        E,
+                        configuration.sequence_weighting,
+                    ) +
+                    share[2] * chain_spectrum(
+                        heavy,
+                        configuration.cross_section,
+                        E_heavy,
+                        E,
+                        configuration.sequence_weighting,
+                    )
                 )
         end
         return accumulated / total
@@ -333,6 +372,7 @@ const RUN_IDENTIFIER_ABBREVIATIONS = Dict(
     "method" => "part",
     "pair_weighting" => "pw",
     "average" => "avg",
+    "sequence_weighting" => "sw",
     "total" => "Ytot",
     "symmetrize" => "Ysym",
 )
@@ -366,6 +406,7 @@ function run_parameters(configuration::Configuration)
         "method" => _method_token(configuration.method),
         "pair_weighting" => _pair_weighting_token(configuration.spectrum_pair_weighting),
         "average" => _average_token(configuration.spectrum_average),
+        "sequence_weighting" => _sequence_weighting_token(configuration.sequence_weighting),
     ]
     if configuration.model isa GilbertCameron
         push!(entries, "deformed_branch" => configuration.model.deformed_branch)
@@ -428,6 +469,8 @@ _pair_weighting_token(::MultiplicityWeighting) = "multiplicity"
 _pair_weighting_token(::ExcitationWeighting) = "excitation"
 _average_token(::PerFissionAverage) = "per_fission"
 _average_token(::PerNeutronAverage) = "per_neutron"
+_sequence_weighting_token(::UniformSequenceWeighting) = "uniform"
+_sequence_weighting_token(::EmissionProbabilityWeighting) = "emission_probability"
 
 """
     write_results(result, directory) -> String
@@ -653,6 +696,8 @@ function run_metadata(result::RunResult)
         "spectrum_pair_weighting" =>
             _pair_weighting_token(configuration.spectrum_pair_weighting),
         "spectrum_average" => _average_token(configuration.spectrum_average),
+        "spectrum_sequence_weighting" =>
+            _sequence_weighting_token(configuration.sequence_weighting),
         "spectrum_grid_MeV" => grid === nothing ? "none" : [first(grid), last(grid)],
         "spectrum_points" => grid === nothing ? 0 : length(grid),
         "yield" => fragment_yield === nothing ? "none" : sprint(show, fragment_yield),

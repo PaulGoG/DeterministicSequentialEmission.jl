@@ -124,7 +124,11 @@ export EmissionSequence,
     is_solved,
     neutron_multiplicity,
     post_neutron_mass,
-    sequence_average
+    sequence_average,
+    SequenceWeighting,
+    UniformSequenceWeighting,
+    EmissionProbabilityWeighting,
+    sequence_weight
 export Configuration, load_configuration
 export RunResult,
     input_mean_kinetic_energy,
