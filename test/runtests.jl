@@ -28,17 +28,15 @@ include("physics.jl")
         @test check_no_stale_explicit_imports(DeterministicSequentialEmission) === nothing
 
         using JET
-        using JET: AnyFrameModule
-        using Measurements: Measurements
-        using DrWatson: DrWatson
-        # Measurements.jl keeps per-term derivatives in a dictionary whose iteration JET
-        # cannot follow, and DrWatson's savename takes an empty `expand` default whose element
-        # type JET cannot resolve; the reports raised there are about those dependencies'
-        # internals, not about this package, so they are excluded by frame rather than
-        # silenced wholesale.
+        # A report counts only where the problem is detected in a frame of this package. The
+        # rest is about the internals of what it calls: Measurements.jl keeps per-term
+        # derivatives in a dictionary whose iteration JET cannot follow, DrWatson's savename
+        # takes an empty `expand` default whose element type JET cannot resolve, and the JET
+        # that Julia 1.11 admits (0.9) raises two reports inside Base's twice-precision ranges
+        # and its broadcasting machinery that JET 0.12 on Julia 1.13 does not.
         JET.test_package(
             DeterministicSequentialEmission;
-            ignored_modules = (AnyFrameModule(Measurements), AnyFrameModule(DrWatson)),
+            target_modules = (DeterministicSequentialEmission,),
         )
     end
 end

@@ -58,6 +58,9 @@ jobs:
         with:
           version: '1'
       - uses: julia-actions/cache@v3
+      # The build step installs the General registry, which the formatter and test environments
+      # resolve against; without it the runner has no registry at all.
+      - uses: julia-actions/julia-buildpkg@v1
       # check.jl holds the directory list and the formatter version bound, so the gate applied
       # here and the gate a contributor applies locally cannot drift apart. `--check` reports
       # differences rather than rewriting; the tests it then runs are the same ones the test job
@@ -120,5 +123,6 @@ jobs:
         run: |
           using Documenter: DocMeta, doctest
           using DeterministicSequentialEmission
-          DocMeta.setdocmeta!(DeterministicSequentialEmission, :DocTestSetup, :(using DeterministicSequentialEmission); recursive=true)
+          # The same setup as docs/make.jl: the doctests use types the domain package exports.
+          DocMeta.setdocmeta!(DeterministicSequentialEmission, :DocTestSetup, :(using DeterministicSequentialEmission, FissionFragmentsDomain); recursive=true)
           doctest(DeterministicSequentialEmission)
