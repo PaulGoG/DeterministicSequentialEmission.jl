@@ -156,6 +156,31 @@ densities in the Fermi-gas regime. Because the number of sequences `n` is an int
 configuration, the post-neutron fragment mass `A_p = A − n` is an integer too, without rounding —
 which is what makes the model suitable for independent fission product yields.
 
+The physics is the literature's; the implementation is mine. The deterministic sequential
+emission treatment — the energy balance solved sequence by sequence at every fragmentation, the
+residual temperature as its outcome rather than an assumed distribution, and the sequence average
+that turns per-sequence quantities into observables — is the model of Tudora, Hambsch and
+Tobosaru, *Eur. Phys. J. A* **54**, 87 (2018), doi:10.1140/epja/i2018-12521-7, with the
+systematics of its residual quantities in *Eur. Phys. J. A* **56**, 84 (2020),
+doi:10.1140/epja/s10050-020-00059-2, its validation against measurement in *Eur. Phys. J. A*
+**55**, 98 (2019), doi:10.1140/epja/i2019-12782-6, its post-neutron fragment yields in
+*Eur. Phys. J. A* **58**, 126 (2022), doi:10.1140/epja/s10050-022-00766-y, and its place beside
+the point-by-point model in *EPJ Web Conf.* **256**, 00017 (2021),
+doi:10.1051/epjconf/202125600017. The partition of the total excitation energy by the
+temperature ratio `R_T(A_H)` and the evaporation framework are those of the point-by-point
+model, Tudora and Hambsch, *Eur. Phys. J. A* **53**, 159 (2017), doi:10.1140/epja/i2017-12347-9;
+the extraction of `R_T(A_H)` from measured `ν(A)`, which the companion package implements, is
+Tudora and Gogîță, *Eur. Phys. J. A* **60**, 190 (2024), doi:10.1140/epja/s10050-024-01375-7.
+The Weisskopf-Ewing evaporation spectrum in closed form and its transformation to the laboratory
+follow Madland and Nix, *Nucl. Sci. Eng.* **81**, 213 (1982), doi:10.13182/NSE82-5, and Terrell,
+*Phys. Rev.* **113**, 527 (1959), doi:10.1103/PhysRev.113.527; the conventions of the evaluated
+spectra are those of Capote *et al.*, *Nucl. Data Sheets* **131**, 1 (2016),
+doi:10.1016/j.nds.2015.12.002. The level densities, the charge distribution and the masses are
+cited in the domain package and on the References page of the documentation. This package is my
+Julia implementation of that physics, rewritten from the code of my 2023 MSc thesis; where it
+departs from the published formulation, the departure is stated and recorded under
+*Provenance* below.
+
 ![Prompt neutron multiplicity against fragment mass, four fissioning systems](plots/multiplicity_vs_experiment.png)
 
 The sawtooth is the signature observable, and it is not fitted: the total excitation energy is
@@ -361,8 +386,9 @@ second moment — over the whole domain.
 
 ## How to cite
 
-A published result that rests on this package should cite the software, and the measurements
-behind its input data as `data/README.md` describes. `CITATION.cff` carries the same entry.
+A published result that rests on this package should cite the software, the papers under *The
+model* for the physics, and the measurements behind its input data as `data/README.md`
+describes. `CITATION.cff` carries the same entry.
 
 ```bibtex
 @software{Gogita_DeterministicSequentialEmission_jl,
