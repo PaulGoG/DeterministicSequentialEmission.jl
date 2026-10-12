@@ -7,7 +7,7 @@ Notable changes to DeterministicSequentialEmission.jl. The format follows
 The code as submitted with the 2023 MSc thesis is on the `original` branch and is not versioned
 here.
 
-## [Unreleased]
+## [0.1.0] - 2026-10-12
 
 ### Added
 
