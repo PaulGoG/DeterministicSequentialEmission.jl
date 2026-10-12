@@ -43,7 +43,7 @@ data/
 | `<system>/nu_vs_A/*.dat` | measured `ν(A)` per fragment | `A nu nu_uncertainty` |
 | `<system>/eps_vs_A/*.dat` | mean centre-of-mass energy of the prompt neutrons against pre-neutron fragment mass | `A eps eps_uncertainty`, MeV |
 | `<system>/eps_vs_A_TKE/*.dat` | the same against mass and total kinetic energy; ²⁵²Cf and ²³³U only | `A TKE eps eps_uncertainty` |
-| `Cf252_sf/T_vs_A/*.dat`, `Cf252_sf/lambda_vs_A/*.dat` | temperature and exponent of the form fitted to the centre-of-mass spectrum of a fragment's neutrons, against fragment mass; the record states the form | `A T T_uncertainty`, MeV; `A lambda lambda_uncertainty` |
+| `Cf252_sf/T_eff_vs_A/*.dat`, `Cf252_sf/lambda_vs_A/*.dat` | effective temperature and exponent of the form fitted to the centre-of-mass spectrum of a fragment's neutrons, against fragment mass; the record states the form | `A T_eff T_eff_uncertainty`, MeV; `A lambda lambda_uncertainty` |
 | `<system>/P_vs_nu/*.dat` | probability of emitting `ν` prompt neutrons in a fission, as tabulated | `nu P P_uncertainty` |
 | `<system>/spectrum_vs_E/*.dat` | measured prompt neutron spectrum in the laboratory frame | `E spectrum spectrum_uncertainty` |
 | `<system>/spectrum_maxwellian_ratio_vs_E/*.dat` | the spectrum as a ratio to a Maxwellian, whose temperature the record states | `E spectrum_maxwellian_ratio spectrum_maxwellian_ratio_uncertainty` |
@@ -68,7 +68,7 @@ written in floating point — some of these tables were emitted by a generator a
 where they mean `118`.
 
 The shipped configurations take their fragment yields from EXFOR through ExforFissionData.jl
-v0.2.8. For each system, `Y(A)` and `⟨TKE⟩(A)` come from one experiment, or its measured matrix
+v0.3.0. For each system, `Y(A)` and `⟨TKE⟩(A)` come from one experiment, or its measured matrix
 does. A width that experiment did not report is borrowed from another on the same system, or on
 the same compound nucleus, and the run record flags it:
 
@@ -112,7 +112,7 @@ reproduce a retrieval exactly, since EXFOR entries are immutable once published.
 The yield inputs of the shipped configurations:
 
 ```bash
-git clone --branch v0.2.8 https://github.com/PaulGoG/ExforFissionData.jl
+git clone --branch v0.3.0 https://github.com/PaulGoG/ExforFissionData.jl
 cd ExforFissionData.jl
 julia scripts/retrieve.jl config/Cf252_sf_Y_vs_A_TKE.toml
 julia scripts/retrieve.jl config/U235_nth_Y_vs_A.toml
@@ -136,7 +136,7 @@ julia scripts/retrieve.jl config/U233_nth_nu_vs_A.toml
 julia scripts/retrieve.jl config/Cf252_sf_spectrum_maxwellian_ratio_vs_E.toml
 ```
 
-The tree held here is the retrieval of every configuration that package ships, at v0.2.8. Three of
+The tree held here is the retrieval of every configuration that package ships, at v0.3.0. Three of
 them, the joint `Y(A,TKE)` of ²³⁵U, ²³⁹Pu and ²³³U, find no dataset in the archive.
 
 Read the `retrieval.toml` it writes before using what it retrieved. It records, per dataset, the
@@ -157,13 +157,16 @@ The neutron-energy and spectrum-ratio tables need their record more than the oth
   `preliminary:` qualifier, as their publication calls its results. `MXW`, on the sets of
   Nishio (1998) and Tsuchiya (2000), is the average over the incident thermal spectrum, as on
   their ν(A) sets.
-- `T_vs_A`, `lambda_vs_A`: `fit_form` gives the form each parameter belongs to and
+- `T_eff_vs_A`, `lambda_vs_A`: `fit_form` gives the form each parameter belongs to and
   `fit_evidence` the equation of the publication.
 - `P_vs_nu`: a distribution is written as tabulated and never renormalised; `distribution_sum`,
   `mean_multiplicity` and its deviation from `ν̄`, `mean_deviation`, are recorded per dataset.
   The Boldeman (1967) sets of ²³³U, ²³⁵U and ²³⁹Pu are superseded by the 1985 reanalysis of the
   same measurement, and the ²⁵²Cf sets 30046011 and 30772015 are four runs of one experiment at
-  different discriminator biases; each names the others in `correlated_with`.
+  different discriminator biases; each names the others in `correlated_with`. The evaluations
+  of Holden (1988), V0045011, V0045012 and V0045013 for ²³³U, ²³⁵U and ²³⁹Pu, are written like a
+  measurement and flagged `evaluation:`, with `evaluation_warning` naming them under
+  `[datasets]`; the archive holds none for ²⁵²Cf.
 - `spectrum_cf252_ratio_vs_E`: both orientations occur in one directory and none is inverted;
   `ratio_orientation` says which a dataset is. The ²³⁵U sets 41516017 and 41597002 are one
   measurement published twice and name each other in `correlated_with`; the first is superseded
@@ -196,8 +199,8 @@ Four further qualifiers say what a table holds where its directory alone would m
   publication averages the points above 0.5 MeV and does not say whether the range below
   enters the mean, so `mean_threshold_mev` is not to be applied as a cut.
 - `spectrum_form:` on four ²⁵²Cf sets under `spectrum_vs_E` that tabulate `N(E)/√E`.
-- `evaluation:` on the ²⁵²Cf spectrum of Mannhart (1987), V0101002, which is an evaluation and
-  not a measurement.
+- `evaluation:` on the ²⁵²Cf spectrum of Mannhart (1987), V0101002, and on the P(ν) of Holden
+  (1988), V0045011, V0045012 and V0045013, which are evaluations and not measurements.
 
 Eight ν(A) subentries are coded without the `/FRG` that marks a multiplicity per fragment: for ²⁵²Cf
 Britt (1964), Piksaykin (1977), Budtz-Jørgensen (1988), Zeynalov (2011) and Göök (2014); for ²³⁹Pu
@@ -216,7 +219,7 @@ not drawn in the figures. Both ν(A) sets of Batenkov also carry the `preliminar
 from experimental `ν(A)` and tabulates it at every integer `A_H`.
 
 **Stage the whole results directory of one run, not one table out of it.** `scripts/run.jl`
-of that package writes `data/sims/<system>/<run>/`, some seventy files for ²⁵²Cf; the ones this
+of that package writes `data/sims/<system>/<run>/`, some seventy-five files for ²⁵²Cf; the ones this
 package reads are
 
 ```
@@ -226,6 +229,7 @@ data/sims/<system>/<run>/
 ├── r_nu_vs_A_H_pivots_<curve>.csv           its pivots; A_H,r_nu,r_nu_uncertainty; not read here
 ├── total_average_R_T_<run>.csv              ⟨R_T⟩ per curve and yield distribution
 ├── dataset_diagnostics.csv
+├── leave_one_out_<run>.csv                  the refits with each dataset left out; not read here
 ├── metadata.toml                            commit, platform, every accession used
 └── configuration.toml, Manifest.toml        the run's own configuration and environment
 ```
@@ -238,9 +242,9 @@ also records the accession of each dataset curve. Copy the whole directory to
 `label`, `"systematic_trend"` for the shipped configurations. Keep one staged run per system —
 two manifests in one directory is refused, because nothing would say which run to take.
 
-The staged runs are those of the configurations FissionTemperatureRatio.jl v0.2.3 ships, on the
-ExforFissionData v0.2.4 retrieval, with each system's primary `Y(A)` and `⟨TKE⟩(A)` as above;
-v0.2.8 writes the tables of that retrieval byte for byte. `U235_nres` reads the thermal run.
+The staged runs are those of the configurations FissionTemperatureRatio.jl v0.3.0 ships, on the
+ExforFissionData v0.3.0 retrieval, with each system's primary `Y(A)` and `⟨TKE⟩(A)` as above.
+`U235_nres` reads the thermal run.
 
 Copying one table by hand is what this replaces, and the reason is physical rather than tidy: the
 two CSVs above hold different quantities in the same column position, `R_T ≈ 1.2` against

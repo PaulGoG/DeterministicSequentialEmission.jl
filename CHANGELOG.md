@@ -28,7 +28,7 @@ here.
   level density ratio loads with a warning, since the partition here applies `R_T` charge by charge.
   A manifest without the record loads with a warning.
 - The shipped configurations take their fragment yields from EXFOR, through ExforFissionData.jl
-  (v0.2.8 at the time of writing), in place of staged tables.
+  (v0.3.0 at the time of writing), in place of staged tables.
   - ²⁵²Cf: the measured matrix of Göök et al. (2014), on its 1-MeV bin centres, so the TKE grid is
     now 130.5–229.5 MeV.
   - ²³⁵U: Al-Adili et al. (2016), with Baba's width.
@@ -86,6 +86,12 @@ here.
 
 ### Changed
 
+- The staged temperature-ratio runs are those of FissionTemperatureRatio.jl v0.3.0 on the
+  ExforFissionData v0.3.0 retrieval. Its trend covariance takes the error of a pooled dataset as
+  correlated along the mass axis, Basova (1979) and Zamyatnin (1979) are pooled as one
+  experiment, and Nishio (1995) leaves the ²³⁹Pu pool: the trend `⟨R_T⟩` moves from 1.0878 to
+  1.0821 for ²⁵²Cf and from 1.0268 to 1.0388 for ²³⁹Pu, `⟨ν⟩` by −0.0005 and −0.0014, `⟨E⟩` by
+  −0.001 and +0.005 MeV; ²³⁵U and ²³³U are unchanged.
 - `shell_correction_file = "gilbert_cameron"` takes the Gilbert–Cameron table the domain package
   now ships, Table III of the 1965 paper verified against the print and against Geant4. The five
   shipped configurations name it; a path under the data directory still works.
@@ -128,7 +134,7 @@ here.
   `−dTKE/dν` is 11.5 MeV per neutron for ²⁵²Cf against 7.3 measured, and the distribution of
   the neutron number is too broad in all four systems.
 - The ²⁵²Cf laboratory spectrum follows the measured shape between 0.3 and 5 MeV, lies below the
-  data under 0.3 MeV and above them beyond 6 MeV; `⟨E⟩` is 2.17 MeV against a measured 2.13.
+  data under 0.3 MeV and above them beyond 6 MeV; `⟨E⟩` is 2.16 MeV against a measured 2.13.
   The spectra of the thermal systems relative to that of ²⁵²Cf are reproduced less well than
   under `sequence_weighting = "uniform"`, and `⟨ε⟩` falls too steeply with TKE at fixed mass.
 - Post-emission distributions are not yet ported.

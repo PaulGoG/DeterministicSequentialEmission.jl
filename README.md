@@ -172,7 +172,7 @@ model spectrum integrates to one neutron by construction, and every retrieved se
 against the same 1.42 MeV Maxwellian — so nothing is scaled to anything. Each fragmentation enters
 the total by its yield times its multiplicity, so every emitted neutron counts once, as it does in a
 measurement. Within a fragment the `k`-th neutron of a chain of `n` counts with `(n+1−k)/n`, its
-probability of emission under `ν = (n+1)/2`. The mean laboratory energy of ²⁵²Cf(sf) is 2.17 MeV
+probability of emission under `ν = (n+1)/2`. The mean laboratory energy of ²⁵²Cf(sf) is 2.16 MeV
 against 2.13 measured, and those of the three thermal systems lie 1 to 2.5 % below the measured
 values. The ²⁵²Cf spectrum follows the measured shape between 0.3 and 5 MeV, lies below the data
 under 0.3 MeV and above them beyond 6 MeV. The uniform average over the sequences of the earlier
@@ -212,7 +212,7 @@ as EXFOR codes it — and that one token names the configuration, the input tree
 the output tree under `data/sims/`. It is also what separates the thermal run of ²³⁵U from the
 resonance one, which the reaction code `n,f` alone cannot.
 
-Every fragment yield comes from EXFOR through ExforFissionData.jl v0.2.8. ²⁵²Cf takes the measured
+Every fragment yield comes from EXFOR through ExforFissionData.jl v0.3.0. ²⁵²Cf takes the measured
 `Y(A,TKE)` matrix of Göök et al. (2014). For the thermal systems the archive holds no matrix, so
 the yield is reconstructed from one experiment's `Y(A)` and `⟨TKE⟩(A)`:
 - Al-Adili et al. (2016) for ²³⁵U;
@@ -301,9 +301,8 @@ subdirectory = "U235_nth/temperature_ratio"
 curve_label = "systematic_trend"
 ```
 
-The shipped configurations read the FissionTemperatureRatio.jl v0.2.3 runs on the
-ExforFissionData v0.2.4 multiplicities, which v0.2.8 writes unchanged, staged that way for each
-system.
+The shipped configurations read the FissionTemperatureRatio.jl v0.3.0 runs on the
+ExforFissionData v0.3.0 retrieval, staged that way for each system.
 
 The manifest declares what its curves tabulate, and this package refuses one declaring anything
 but `R_T` against `A_H`. The run writes `R_T(A_H)` and the multiplicity ratio `r_ν(A_H)` in the
