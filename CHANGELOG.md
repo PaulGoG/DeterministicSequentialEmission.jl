@@ -7,6 +7,17 @@ Notable changes to DeterministicSequentialEmission.jl. The format follows
 The code as submitted with the 2023 MSc thesis is on the `original` branch and is not versioned
 here.
 
+## [0.1.1] - 2026-10-12
+
+### Changed
+
+- The README and the documentation cite by DOI the physics the package implements: the
+  deterministic sequential emission model, the point-by-point partition and evaporation
+  framework it builds on, the extraction of the temperature ratio from measured multiplicities,
+  and the spectrum treatments, so that the published formulation is told from this
+  implementation of it. The documentation pages cite through the References page, and the
+  bibliography gains the 2022 and 2024 papers.
+
 ## [0.1.0] - 2026-10-12
 
 ### Added
