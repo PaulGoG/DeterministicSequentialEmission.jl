@@ -1,0 +1,28 @@
+# https://docs.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+  - package-ecosystem: "julia"
+    directories:
+      - "/"
+      - "/docs"
+      - "/formatter"
+      - "/plotting"
+      - "/test"
+    schedule:
+      interval: "weekly"
+    # Standard libraries are versioned with Julia itself, so the proposed bounds admit no release.
+    ignore:
+      - dependency-name: "TOML"
+      - dependency-name: "Test"
+    groups:
+      julia-dependencies:
+        patterns:
+          - "*"

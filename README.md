@@ -1,5 +1,11 @@
 # DeterministicSequentialEmission.jl
 
+[![CI](https://github.com/PaulGoG/DeterministicSequentialEmission.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/PaulGoG/DeterministicSequentialEmission.jl/actions/workflows/CI.yml?query=branch%3Amain)
+[![Documentation (stable)](https://img.shields.io/badge/docs-stable-blue.svg)](https://PaulGoG.github.io/DeterministicSequentialEmission.jl/stable/)
+[![Documentation (dev)](https://img.shields.io/badge/docs-dev-blue.svg)](https://PaulGoG.github.io/DeterministicSequentialEmission.jl/dev/)
+[![Aqua QA](https://raw.githubusercontent.com/JuliaTesting/Aqua.jl/master/badge.svg)](https://github.com/JuliaTesting/Aqua.jl)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 Prompt neutron emission from fission fragments, treated sequence by sequence.
 
 ## File structure
@@ -53,7 +59,7 @@ DeterministicSequentialEmission.jl/
 │   └── sims/<system>/<run>/  tables and provenance of a run — not tracked
 ├── plots/                    multiplicity_vs_experiment and prompt_neutron_spectrum tracked; diagnostics not
 ├── formatter/                activate.jl, Project.toml — pinned JuliaFormatter
-├── .github/dormant/          CI.yml, dependabot.yml and the moves that restore them, held until the public release
+├── .github/                  CI workflow and Dependabot configuration
 ├── .JuliaFormatter.toml
 ├── .gitattributes
 ├── activate.jl
@@ -125,7 +131,7 @@ julia docs/make.jl
 | Component | State |
 |---|---|
 | Package environment, test and docs environments | done |
-| Continuous integration, dependency updates, docs deployment | dormant until the public release, under `.github/dormant/` |
+| Continuous integration, dependency updates, docs deployment | test matrix on Julia 1.11 and current stable, the formatting gate, a configuration check, Documenter deployment; Dependabot weekly |
 | Fragmentation domain, masses, charge distribution, level density, yields | from `FissionFragmentsDomain.jl` 0.2.3 |
 | One name per quantity, from configuration key to column header (`docs/src/naming.md`) | done |
 | TXE partition — scission modelling, `E*_H/TXE (A_H)`, `R_T (A_H)` | done |
