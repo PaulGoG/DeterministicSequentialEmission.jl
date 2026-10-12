@@ -36,7 +36,7 @@ DeterministicSequentialEmission.jl/
 │   └── pipeline.jl           run_pipeline, write_results, run identifiers
 ├── config/                   Cf252_sf, U235_nth, U235_nres, U233_nth, Pu239_nth
 ├── scripts/run.jl            entry point
-├── plotting/                 activate.jl, Project.toml, figures.jl
+├── plotting/                 activate.jl, Project.toml, theme.jl, figures.jl
 ├── test/
 │   ├── activate.jl, Project.toml
 │   ├── runtests.jl           the suite, then Aqua, ExplicitImports, JET
@@ -45,7 +45,7 @@ DeterministicSequentialEmission.jl/
 │   └── references/Cf252_sf/  pinned tables of the archived run
 ├── docs/
 │   ├── activate.jl, Project.toml, make.jl
-│   └── src/                  index, running, naming, system, fragmentation, energetics, emission, observables
+│   └── src/                  index, running, naming, domain, energetics, emission, references, refs.bib
 ├── data/
 │   ├── README.md             what each file is and where to obtain it
 │   ├── reference/            evaluations that belong to no one system; not tracked
@@ -53,7 +53,7 @@ DeterministicSequentialEmission.jl/
 │   └── sims/<system>/<run>/  tables and provenance of a run — not tracked
 ├── plots/                    multiplicity_vs_experiment and prompt_neutron_spectrum tracked; diagnostics not
 ├── formatter/                activate.jl, Project.toml — pinned JuliaFormatter
-├── .github/dormant/          CI.yml, dependabot.yml, held until the public release
+├── .github/dormant/          CI.yml, dependabot.yml and the moves that restore them, held until the public release
 ├── .JuliaFormatter.toml
 ├── .gitattributes
 ├── activate.jl
@@ -83,7 +83,8 @@ julia scripts/run.jl config/Cf252_sf.toml
 
 That writes `data/sims/Cf252_sf/<run>/`: `nu_vs_A.dat`, `T_vs_A.dat`, `E_star_vs_A.dat`, the
 residual quantities, the projections against total kinetic energy, the fragment yield
-projections, the laboratory spectrum, a table of totals, and the provenance — `metadata.toml`
+projections, the charge-distribution diagnostics, the laboratory spectrum, a table of totals,
+and the provenance — `metadata.toml`
 recording the configuration, the package version, the commit and the platform, beside copies of
 the configuration and the resolved `Manifest.toml`. `<run>` is the run identifier,
 built from the configuration keys that change the result, so two runs of one system that differ
@@ -96,36 +97,27 @@ Redraw the figures from what those runs wrote, without solving anything again:
 julia plotting/figures.jl
 ```
 
-That draws the two figures under *The model* from every system a run has written, a panel of
-the quantities internal to the emission chain — `E*(A)`, `Ē_r(A)`, `⟨T⟩(A)`, `⟨ε⟩(A)` — and a
-diagnostic of the charge distribution each run was weighted by — Wahl's model with the reaction's
-own 1988 parameters, for every shipped system — against the alternatives: the 2002 systematics
-and the conventional means. Those have no experimental counterpart, so they are diagnostics and are not tracked. Every figure is exported
-as PDF and PNG beside a `.toml` sidecar naming, per system, the run drawn, the commit its
-metadata records and the measured files, so a panel traces to a configuration and a commit; the
-two tracked figures carry their sidecars in the repository.
+That draws the two figures under *The model* from every system a run has written, a panel of the
+quantities internal to the emission chain — `E*(A)`, `Ē_r(A)`, `⟨T⟩(A)`, `⟨ε⟩(A)` — and a diagnostic
+of the charge distribution each run was weighted by — Wahl's model with the reaction's own 1988
+parameters, for every shipped system — against the alternatives: the 2002 systematics and the
+conventional means. Those have no experimental counterpart, so they are diagnostics and are not
+tracked. Every figure is exported as PDF and PNG beside a `.toml` sidecar naming, per system, the
+run drawn, the commit its metadata records and the measured files, so a panel traces to a
+configuration and a commit; the two tracked figures carry their sidecars in the repository.
 
 The charge-distribution diagnostic is worth reading whenever a system is investigated. It shows
 where a reaction's own parameters and the systematics part company, which is the uncertainty a
 system without a fit of its own inherits. It also shows where a run given a table has fallen off
 the end of that table onto the flat fallback.
 
-Run the test suite, and build the documentation:
-
-```
-julia check.jl --check
-julia docs/make.jl
-```
-
-`check.jl --check` verifies the formatting without rewriting anything, then runs the test suite
-with its static analysis.
-
-Before committing, apply the gate — format against `.JuliaFormatter.toml` with the
-pinned formatter, then run the tests:
+Run the gate — formatting against `.JuliaFormatter.toml` with the pinned formatter, then the
+test suite with its static analysis — and build the documentation:
 
 ```
 julia check.jl            # format in place, then test
-julia check.jl --check    # report differences without rewriting
+julia check.jl --check    # fail on formatting differences without rewriting, then test
+julia docs/make.jl
 ```
 
 ## Status
@@ -164,19 +156,20 @@ The sawtooth is the signature observable, and it is not fitted: the total excita
 shared between the fragments by a temperature ratio `R_T(A_H)` extracted from measured `ν(A)` by
 a companion package, the emission chain is then solved configuration by configuration, and the
 result is contracted against the measured fragment yield `Y(A, TKE)`. Total multiplicities come
-out within −5 % to +5 % of the evaluated values, with no parameter adjusted per system.
+out within 5.5 % of the evaluated values, from −5.3 % for ²⁵²Cf to +5.4 % for ²³³U, with no
+parameter adjusted per system.
 
 ![Prompt fission neutron spectrum of 252-Cf as a ratio to a Maxwellian](plots/prompt_neutron_spectrum.png)
 
-The spectrum is the same statement in energy. Model and measurement are both absolute here —
-the model spectrum integrates to one neutron by construction, and every retrieved set is
-reported against the same 1.42 MeV Maxwellian — so nothing is scaled to anything. Each
-fragmentation enters the total by its yield times its multiplicity, so every emitted neutron
-counts once, as it does in a measurement. Within a fragment the `k`-th neutron of a chain of `n`
-counts with `(n+1−k)/n`, its probability of emission under `ν = (n+1)/2`. The mean laboratory
-energy of ²⁵²Cf(sf) is 2.17 MeV against 2.13 measured, and those of the three thermal systems
-lie 1 to 2 % below the measured values. The ²⁵²Cf spectrum follows the measured shape between
-0.3 and 5 MeV, lies below the data under 0.3 MeV and above them beyond 6 MeV. The uniform average over the sequences of the earlier
+The spectrum is the same statement in energy. Model and measurement are both absolute here — the
+model spectrum integrates to one neutron by construction, and every retrieved set is reported
+against the same 1.42 MeV Maxwellian — so nothing is scaled to anything. Each fragmentation enters
+the total by its yield times its multiplicity, so every emitted neutron counts once, as it does in a
+measurement. Within a fragment the `k`-th neutron of a chain of `n` counts with `(n+1−k)/n`, its
+probability of emission under `ν = (n+1)/2`. The mean laboratory energy of ²⁵²Cf(sf) is 2.17 MeV
+against 2.13 measured, and those of the three thermal systems lie 1 to 2.5 % below the measured
+values. The ²⁵²Cf spectrum follows the measured shape between 0.3 and 5 MeV, lies below the data
+under 0.3 MeV and above them beyond 6 MeV. The uniform average over the sequences of the earlier
 work, `[spectrum] sequence_weighting = "uniform"`, is 4 to 7 % soft.
 
 Three departures from measurement are known and are not tuned away.
@@ -194,11 +187,11 @@ Three departures from measurement are known and are not tuned away.
 
 ## Configuration
 
-Everything a run needs is in one file. `config/Cf252_sf.toml` is the annotated reference; the
-other four are the same file with the system changed. Each is named for the system it declares,
-and the test suite asserts that, so a file cannot drift from what it runs. Each key carries its allowed values or its
-bounds as a comment, and the loader enforces exactly what the comment says — a configuration
-that cannot be honoured fails on load, naming the key.
+Everything a run needs is in one file. `config/Cf252_sf.toml` is the annotated reference; the other
+four are the same file with the system changed. Each is named for the system it declares, and the
+test suite asserts that, so a file cannot drift from what it runs. Each key carries its allowed
+values or its bounds as a comment, and the loader enforces exactly what the comment says — a
+configuration that cannot be honoured fails on load, naming the key.
 
 | System | Configuration | Note |
 |---|---|---|
@@ -275,11 +268,11 @@ best-founded source the system reaches:
 3. **the conventional means**, `ΔZ = −0.5` and `σ_Z = 0.6` at every mass.
 
 `charge_distribution_file = "wahl"` takes the first that answers, and the run metadata records
-which; the shipped configurations use it. An evaluated table named in the configuration outranks all three. EXFOR holds the
-independent yields the model is fitted to, but too sparsely per mass to fit a Gaussian at each,
-which is why the model exists. Everything here is fitted to spontaneous, thermal and resonance
-fission; above roughly 8 MeV multiple-chance fission opens, and the model's separate high-energy
-branches would be needed.
+which; the shipped configurations use it. An evaluated table named in the configuration outranks all
+three. EXFOR holds the independent yields the model is fitted to, but too sparsely per mass to fit a
+Gaussian at each, which is why the model exists. Everything here is fitted to spontaneous, thermal
+and resonance fission; above roughly 8 MeV multiple-chance fission opens, and the model's separate
+high-energy branches would be needed.
 
 ## Companion packages
 
@@ -307,11 +300,10 @@ ExforFissionData v0.2.4 multiplicities, which v0.2.8 writes unchanged, staged th
 system.
 
 The manifest declares what its curves tabulate, and this package refuses one declaring anything
-but `R_T` against `A_H`. That is worth the indirection: the run writes `R_T(A_H)` and the
-multiplicity ratio `r_ν(A_H)` side by side, in the same column of two files, and `R_T ≈ 1.2` and
-`r_ν ≈ 0.5` are both plausible numbers. A curve picked by hand can be the wrong quantity, and the
-model will run to completion and report a result nobody can tell is wrong. Reading the record
-makes the quantity a matter of record too.
+but `R_T` against `A_H`. The run writes `R_T(A_H)` and the multiplicity ratio `r_ν(A_H)` in the
+same column of two files, and both are plausible numbers, so a curve picked by path can be the
+wrong quantity and still run to completion. `data/README.md` lists what the staged directory
+holds.
 
 Produce that run with `ratio_averaging = "charge_resolved"`. This partition re-expands `R_T` with
 per-`(A_H, Z_H)` level density parameters and reduces over `Z` afterwards, and only the

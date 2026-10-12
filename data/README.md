@@ -199,18 +199,17 @@ Four further qualifiers say what a table holds where its directory alone would m
 - `evaluation:` on the ²⁵²Cf spectrum of Mannhart (1987), V0101002, which is an evaluation and
   not a measurement.
 
-Eight ν(A) subentries are coded without the `/FRG` that marks a multiplicity per fragment: for
-²⁵²Cf Britt (1964), Piksaykin (1977), Budtz-Jørgensen (1988), Zeynalov (2011) and Göök (2014); for
-²³⁹Pu Tsuchiya (2000) and Batenkov (2004); for ²³⁵U Batenkov (2004). So is the ν(A,TKE) of
-Budtz-Jørgensen. The retrieval reads them by a complement test on the data. For a per-fragment `ν(A)` the pair sum
-`ν(A) + ν(A₀−A)` varies along the sawtooth, and only its yield-weighted mean equals `ν̄`; a
-multiplicity per fission is the same for both complements. The record of each dataset gives the
-basis of the reading, the deviation of the weighted pair sum from `ν̄`, and the paper that
-corroborates it where one was consulted. For two of them the pair sum does not return `ν̄`: the ²³⁹Pu sets of
-Tsuchiya, +3.9 ± 0.6 %, which its publication normalises to 2.88 neutrons per fission, and
-Batenkov, −10.7 ± 1.3 %. They are written uncorrected, flagged
-`scale_consistent = false`, and not drawn in the figures. Both ν(A) sets of Batenkov also carry
-the `preliminary:` qualifier.
+Eight ν(A) subentries are coded without the `/FRG` that marks a multiplicity per fragment: for ²⁵²Cf
+Britt (1964), Piksaykin (1977), Budtz-Jørgensen (1988), Zeynalov (2011) and Göök (2014); for ²³⁹Pu
+Tsuchiya (2000) and Batenkov (2004); for ²³⁵U Batenkov (2004). So is the ν(A,TKE) of
+Budtz-Jørgensen. The retrieval reads them by a complement test on the data. For a per-fragment
+`ν(A)` the pair sum `ν(A) + ν(A₀−A)` varies along the sawtooth, and only its yield-weighted mean
+equals `ν̄`; a multiplicity per fission is the same for both complements. The record of each dataset
+gives the basis of the reading, the deviation of the weighted pair sum from `ν̄`, and the paper that
+corroborates it where one was consulted. For two of them the pair sum does not return `ν̄`: the
+²³⁹Pu sets of Tsuchiya, +3.9 ± 0.6 %, which its publication normalises to 2.88 neutrons per fission,
+and Batenkov, −10.7 ± 1.3 %. They are written uncorrected, flagged `scale_consistent = false`, and
+not drawn in the figures. Both ν(A) sets of Batenkov also carry the `preliminary:` qualifier.
 
 **The temperature ratio `R_T(A_H)`** for the temperature-ratio TXE partition —
 [`FissionTemperatureRatio.jl`](https://github.com/PaulGoG/FissionTemperatureRatio.jl) extracts it

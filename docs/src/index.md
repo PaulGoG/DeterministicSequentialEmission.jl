@@ -17,13 +17,15 @@ with Weisskopf-Ewing evaporation spectra in the centre-of-mass system and fragme
 densities in the Fermi-gas regime. Because the number of sequences `n` is an integer at every
 configuration, the post-neutron fragment mass `A_p = A − n` is an integer without rounding.
 
-A run is driven by a TOML configuration and writes its tables; see [Running a case](running.md).
-The vocabulary every name in this package is drawn from is set out in [Naming](naming.md).
-The reference below follows the order a configuration is consumed in: the fissioning system and
-its nuclides, the tabular input contract, the mass evaluation, the charge distribution and the
-fragmentation domain it produces, the level density, the energy balance, the TXE partition, the
-evaporation and the emission chain it drives, the yields, the contractions that turn a
-configuration-resolved quantity into an observable, and the spectrum.
+A run is driven by a TOML configuration and writes its tables; see [Running a case](running.md),
+which also documents the configuration and the pipeline. The vocabulary every name in this
+package is drawn from is set out in [Naming](naming.md). What the model takes from the fragments
+before emission begins — nuclides and systems, masses, the charge distribution and the
+fragmentation domain, level densities, the energy balance, yields and the temperature-ratio run
+record — lives in the domain package, summarised under
+[The fragmentation domain](domain.md). The reference of this package follows the order a
+configuration is consumed in: [the excitation-energy partition](energetics.md), then
+[the evaporation, the emission chain and the spectrum](emission.md).
 
 ```@index
 ```

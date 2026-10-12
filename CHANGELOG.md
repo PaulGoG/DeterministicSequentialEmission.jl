@@ -23,12 +23,12 @@ here.
   table (`mass_excess_file = "ame2020"`), the charge distribution, level density parameters, the
   energy balance, fragment yields and averages, and the temperature-ratio run record.
 - A staged `R_T(A_H)` run whose manifest records its `[domain]` is checked against the
-  configuration: a different level density model or Gilbert–Cameron branch, number of charges
-  per mass, charge model or mass table is refused, naming the key. A curve inverted through an effective level density
-  ratio loads with a warning, since the partition here applies `R_T` charge by charge. A
-  manifest without the record loads with a warning.
+  configuration: a different level density model or Gilbert–Cameron branch, number of charges per
+  mass, charge model or mass table is refused, naming the key. A curve inverted through an effective
+  level density ratio loads with a warning, since the partition here applies `R_T` charge by charge.
+  A manifest without the record loads with a warning.
 - The shipped configurations take their fragment yields from EXFOR, through ExforFissionData.jl
-  v0.2.0, in place of staged tables.
+  (v0.2.8 at the time of writing), in place of staged tables.
   - ²⁵²Cf: the measured matrix of Göök et al. (2014), on its 1-MeV bin centres, so the TKE grid is
     now 130.5–229.5 MeV.
   - ²³⁵U: Al-Adili et al. (2016), with Baba's width.
@@ -115,17 +115,21 @@ here.
   sequences to 5 × 10⁻⁹ MeV, and the yield matrix cell for cell, 48 985 of them.
 - The averaged observables `ν(A)`, `T(A)`, `E*(A)` and `E*(TKE)` agree with the archived run to
   between 4 × 10⁻¹⁵ and 7 × 10⁻¹⁴.
-- Total multiplicities within −7 % to +5 % of the evaluated values across four fissioning systems,
-  with no parameter adjusted per system.
+- Total multiplicities within 5.5 % of the evaluated values across four fissioning systems, with
+  no parameter adjusted per system.
 - Between thermal and 580 eV, `ν(A)` moves by at most 5 × 10⁻⁴ neutrons and the total by 10⁻⁷.
 - The prompt neutron spectrum satisfies unit area, `⟨E⟩ = E_f + ⟨ε⟩` and the second-moment
   identity over the whole domain.
 
 ### Known limitations
 
-- Total multiplicity is 7 % low for ²⁵²Cf and ²³⁹Pu and 4–5 % high for ²³⁵U and ²³³U; undiagnosed.
-- The laboratory spectrum is soft for ²⁵²Cf: `⟨E⟩` is 2.01 MeV against a measured 2.13 with the
-  per-neutron average, 1.96 MeV with the per-fission one. The remainder is not a weighting
-  effect.
+- Total multiplicity is 5 % low for ²⁵²Cf, 2 % low for ²³⁹Pu and 5 % high for ²³⁵U and ²³³U. The
+  multiplicity rule `ν = (n+1)/2` responds to excitation energy too weakly: at fixed mass
+  `−dTKE/dν` is 11.5 MeV per neutron for ²⁵²Cf against 7.3 measured, and the distribution of
+  the neutron number is too broad in all four systems.
+- The ²⁵²Cf laboratory spectrum follows the measured shape between 0.3 and 5 MeV, lies below the
+  data under 0.3 MeV and above them beyond 6 MeV; `⟨E⟩` is 2.17 MeV against a measured 2.13.
+  The spectra of the thermal systems relative to that of ²⁵²Cf are reproduced less well than
+  under `sequence_weighting = "uniform"`, and `⟨ε⟩` falls too steeply with TKE at fixed mass.
 - Post-emission distributions are not yet ported.
 - Only the low-energy Wahl branch is implemented, so multiple-chance fission is not covered.

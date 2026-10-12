@@ -103,7 +103,7 @@ the same rule turns `read_segments` into [`read_segmented_curve`](@ref). `load_<
 not `read_configuration`.
 
 An accessor is named for the quantity it returns, not for the access:
-[`charge_polarization`](@ref)`(distribution, A)`, not `polarization_at(distribution, A)`.
+[`charge_polarization`](@extref FissionFragmentsDomain :jl:method:`FissionFragmentsDomain.charge_polarization-Tuple{ChargeDistribution, Integer}`)`(distribution, A)`, not `polarization_at(distribution, A)`.
 
 Type names carry no `Data` suffix and no abstract noun standing in for a description: the
 piecewise-linear curve a partition is read from is a [`SegmentedCurve`](@ref), not a
@@ -189,7 +189,8 @@ data/
     ├── E_def_vs_A_Z.dat
     ├── temperature_ratio/          one staged FissionTemperatureRatio.jl run
     ├── Y_vs_A_TKE.dat
-    └── nu_vs_A/
+    └── <observable>/               a retrieved quantity: nu_vs_A, Y_vs_A, TKE_vs_A, spectrum_vs_E, …
+        ├── retrieval.toml          what the retrieval kept and excluded, with the reason
         └── <accession>_<Author>_<year>.dat
 ```
 
@@ -258,6 +259,7 @@ A run writes to `data/sims/<system>/<run>`, and an output follows the same
 | `nu_vs_TKE.dat`, `E_star_vs_TKE.dat` | the same against total kinetic energy |
 | `spectrum_vs_E.dat` | the laboratory prompt neutron spectrum |
 | `Y_vs_A.dat`, `Y_vs_Z.dat`, `Y_vs_TKE.dat` | the fragment yield projections |
+| `charge_distribution_vs_A.dat`, `_wahl_per_reaction`, `_wahl_systematics`, `_mean` | the charge distribution the run was weighted by and the three alternatives — Wahl's 1988 per-reaction model, the 2002 systematics, the conventional means — each reduced to effective Gaussians; the metadata records which layer the first is |
 | `totals.dat` | one row per quantity averaged over the whole run |
 | `metadata.toml` | how it was produced: configuration, commit, environment, machine |
 | `configuration.toml` | the configuration the run loaded, copied |
