@@ -112,16 +112,54 @@ the lightest fragments, `A < 90`, where it lies below the data.
 | ²³³U(n_th,f) | Fraser 1966 | 14369005 | Annu. Rev. Nucl. Sci. **16**, 379 (1966), doi:10.1146/annurev.ns.16.120166.002115 |
 | | Nishio 1998 | 22660003 | J. Nucl. Sci. Technol. **35**, 631 (1998), doi:10.1080/18811248.1998.9733919 |
 
+## Post-neutron product mass yield
+
+![Post-neutron product mass yield of the four systems against the evaluated independent yields](product_mass_yield.png)
+
+The product mass yield `Y(A_p)` is the pre-neutron yield carried through the emission chains.
+A fragment whose chain allows `n` sequences ends on each of its `n` residuals with probability
+`1/n`, so its products lie on `A − 1 … A − n`, and the mass its products have lost equals its
+multiplicity exactly — 1.78 per fragment for ²⁵²Cf, the ⟨ν⟩ = 3.56 per fission of the sawtooth
+figure. No parameter enters. The evaluated independent yields of ENDF/B-VIII.0 and JEFF-3.3,
+summed over charge, are lines with their uncertainty as a band: they are evaluations, not
+measurements. The run's own pre-neutron `Y(A)`, dotted, shows what the emission did: it moves
+both humps inward by the mass lost, sharpens them, and builds the even-`Z` structure the
+evaluations carry — the peaks at `A_p = 134` and `138` of ²³⁵U, at `134`–`136` of ²³⁹Pu, at
+`136` of ²³³U — out of a pre-neutron yield that has none. The centroids of the two humps agree
+with the evaluations within 0.8 u in every system.
+
+| System | ⟨A_p⟩ light: model / ENDF/B-VIII.0 / JEFF-3.3 | ⟨A_p⟩ heavy | largest `Y(A_p)`: model / ENDF/B-VIII.0 |
+|---|---|---|---|
+| ²⁵²Cf(sf) | 106.9 / 106.1 / 106.2 | 141.7 / 141.9 / 142.1 | 106 (6.4 %) / 107 (6.6 %) |
+| ²³⁵U(n_th,f) | 94.9 / 94.9 / 94.9 | 138.6 / 138.7 / 138.7 | 134 (7.7 %) / 134 (7.9 %) |
+| ²³⁹Pu(n_th,f) | 98.9 / 99.0 / 99.0 | 138.3 / 138.1 / 138.2 | 134 (6.9 %) / 134 (7.7 %) |
+| ²³³U(n_th,f) | 93.5 / 93.4 / 93.3 | 137.9 / 138.2 / 138.2 | 136 (7.7 %) / 93 (7.0 %) |
+
+Where it departs: the heavy hump of ²³⁹Pu peaks at 6.9 % against 7.6–7.7 % evaluated, the
+light hump of ²³³U at 7.5 % against 7.0 %, and the outer flank of the heavy hump of ²⁵²Cf falls
+below the evaluations beyond `A_p ≈ 150`. The published prescription of the model, which
+subtracts the full number of possible sequences from every fragment, is one key away,
+`[products] count = "sequence_count"`; for ²⁵²Cf it removes 2.58 neutrons per fragment, 45 %
+more than the multiplicity, and moves the humps a further 0.8 u inward.
+
+| Library | Reference |
+|---|---|
+| ENDF/B-VIII.0, NFY and SFY sublibraries, MF8 MT454 at 0.0253 eV or spontaneous | Brown *et al.*, Nucl. Data Sheets **148**, 1 (2018), doi:10.1016/j.nds.2018.02.001 |
+| JEFF-3.3, NFY and SFY, the same | Plompen *et al.*, Eur. Phys. J. A **56**, 181 (2020), doi:10.1140/epja/s10050-020-00141-9; NEA Data Bank record doi:10.82555/nhfqy-hvz09 |
+
+Isomeric states are summed and uncertainties added in quadrature; JEFF-3.3's ternary particles
+are left out. The measured post-neutron mass yields and independent yields of EXFOR are not
+retrieved yet; when they are, they enter this figure as markers.
+
 ## Not drawn yet
 
 The runs write more than the figures show, and the retrieval holds measurements the figures do
 not yet use. Each of these enters this file with its figure and its dataset table when it is
 ready.
 
-- Post-emission distributions: the fragment mass and charge yields after neutron emission,
-  against the independent and post-neutron yields of the evaluations. The model gives an integer
-  `A_p = A − n` at every configuration, which is what makes it suitable for them; the port from
-  the thesis code is pending, as the README's status table says.
+- The independent yields `Y(A_p, Z)` and the product kinetic energies `KE_p(A_p)`, `KE_p(Z)`
+  and `TKE_p`, which the runs write beside `Y(A_p)`, against the evaluations' independent yields
+  and the measured post-neutron kinetic energies.
 - The neutron number distribution `P(ν)`, against the retrieved `P_vs_nu` sets; the model's is
   known to be too broad in all four systems.
 - `ν(TKE)` and `⟨ε⟩(TKE)`, which the runs write and the retrieval holds as `nu_vs_A_TKE` and

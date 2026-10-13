@@ -1,21 +1,21 @@
 figure = "prompt_neutron_spectrum"
 
 [systems.Cf252_sf]
-gitcommit = "73e2bb19e21fd16d2f873b8c92f945165daf70bd"
+gitcommit = "v0.1.1-3-g1ac22b1-dirty"
 measured = ["Cf252_sf/spectrum_maxwellian_ratio_vs_E/14278002_V.P.Poenitz_1982.dat", "Cf252_sf/spectrum_maxwellian_ratio_vs_E/30775002_J.W.Boldeman_1986.dat", "Cf252_sf/spectrum_maxwellian_ratio_vs_E/40418008_M.V.Blinov_1973.dat", "Cf252_sf/spectrum_maxwellian_ratio_vs_E/41158003_A.Lajtai_1990.dat"]
-run = "AHmax=174_AHmin=126_En=0_TKEmax=229.5_TKEmin=130.5_TKEstep=1_Tmax=2_Ysym=true_Ytot=200_avg=per_neutron_ldm=BSFG_nZ=5_part=temperature_ratio_pw=multiplicity_sigma=variable_sw=emission_probability"
+run = "AHmax=174_AHmin=126_En=0_TKEmax=229.5_TKEmin=130.5_TKEstep=1_Tmax=2_Ysym=true_Ytot=200_avg=per_neutron_ldm=BSFG_nZ=5_part=temperature_ratio_pc=emission_probability_pw=multiplicity_sigma=variable_sw=emission_probability"
 
 [systems.Pu239_nth]
-gitcommit = "73e2bb19e21fd16d2f873b8c92f945165daf70bd"
+gitcommit = "v0.1.1-3-g1ac22b1-dirty"
 measured = ["Pu239_nth/spectrum_cf252_ratio_vs_E/40871009_V.N.Nefedov_1983.dat", "Pu239_nth/spectrum_cf252_ratio_vs_E/40871010_V.N.Nefedov_1983.dat", "Pu239_nth/spectrum_cf252_ratio_vs_E/40872006_B.I.Starostov_1983.dat"]
-run = "AHmax=159_AHmin=120_En=2.53e-8_TKEmax=210_TKEmin=130_TKEstep=1_Tmax=2_Ysym=true_Ytot=200_avg=per_neutron_ldm=BSFG_nZ=5_part=temperature_ratio_pw=multiplicity_sigma=variable_sw=emission_probability"
+run = "AHmax=159_AHmin=120_En=2.53e-8_TKEmax=210_TKEmin=130_TKEstep=1_Tmax=2_Ysym=true_Ytot=200_avg=per_neutron_ldm=BSFG_nZ=5_part=temperature_ratio_pc=emission_probability_pw=multiplicity_sigma=variable_sw=emission_probability"
 
 [systems.U233_nth]
-gitcommit = "73e2bb19e21fd16d2f873b8c92f945165daf70bd"
+gitcommit = "v0.1.1-3-g1ac22b1-dirty"
 measured = ["U233_nth/spectrum_cf252_ratio_vs_E/40871013_V.N.Nefedov_1983.dat", "U233_nth/spectrum_cf252_ratio_vs_E/40872008_B.I.Starostov_1983.dat"]
-run = "AHmax=159_AHmin=117_En=2.53e-8_TKEmax=200_TKEmin=100_TKEstep=1_Tmax=2_Ysym=true_Ytot=200_avg=per_neutron_ldm=BSFG_nZ=5_part=temperature_ratio_pw=multiplicity_sigma=variable_sw=emission_probability"
+run = "AHmax=159_AHmin=117_En=2.53e-8_TKEmax=200_TKEmin=100_TKEstep=1_Tmax=2_Ysym=true_Ytot=200_avg=per_neutron_ldm=BSFG_nZ=5_part=temperature_ratio_pc=emission_probability_pw=multiplicity_sigma=variable_sw=emission_probability"
 
 [systems.U235_nth]
-gitcommit = "73e2bb19e21fd16d2f873b8c92f945165daf70bd"
+gitcommit = "v0.1.1-3-g1ac22b1-dirty"
 measured = ["U235_nth/spectrum_cf252_ratio_vs_E/40871011_V.N.Nefedov_1983.dat", "U235_nth/spectrum_cf252_ratio_vs_E/40871012_V.N.Nefedov_1983.dat", "U235_nth/spectrum_cf252_ratio_vs_E/40872007_B.I.Starostov_1983.dat", "U235_nth/spectrum_cf252_ratio_vs_E/41597002_A.S.Vorobyev_2013.dat"]
-run = "AHmax=160_AHmin=118_En=2.53e-8_TKEmax=200_TKEmin=100_TKEstep=1_Tmax=2_Ysym=true_Ytot=200_avg=per_neutron_ldm=BSFG_nZ=5_part=temperature_ratio_pw=multiplicity_sigma=variable_sw=emission_probability"
+run = "AHmax=160_AHmin=118_En=2.53e-8_TKEmax=200_TKEmin=100_TKEstep=1_Tmax=2_Ysym=true_Ytot=200_avg=per_neutron_ldm=BSFG_nZ=5_part=temperature_ratio_pc=emission_probability_pw=multiplicity_sigma=variable_sw=emission_probability"

@@ -33,6 +33,12 @@ here.
   run-identifier token `pc`, so every run identifier changes.
 - `ProductCount`, `EmissionProbabilityCount`, `SequenceCount` and `product_masses`.
 
+- The product mass yield figure: `Y(A_p)` of the four systems against the evaluated
+  independent yields of ENDF/B-VIII.0 and JEFF-3.3, summed over charge, with the run's own
+  pre-neutron `Y(A)` as a guide; `results/README.md` reports the hump centroids and peaks.
+- `scripts/stage_product_yields.jl`, which stages those evaluated yields from the public
+  ENDF-6 files with their provenance.
+
 ### Changed
 
 - The per-system comparison figures are laid out on a two-column grid rather than stacked, each

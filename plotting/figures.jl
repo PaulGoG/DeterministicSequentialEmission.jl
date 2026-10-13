@@ -14,11 +14,13 @@
 #   <data>/<system>/eps_vs_A/*.dat                           A eps eps_uncertainty
 #   <data>/<system>/spectrum_maxwellian_ratio_vs_E/*.dat     E spectrum_maxwellian_ratio [...]
 #   <data>/<system>/spectrum_cf252_ratio_vs_E/*.dat          E spectrum_cf252_ratio [...]
+#   <data>/<system>/Y_post_vs_A_p/*.dat                      A_p Y Y_uncertainty
 #
 # which is the layout that package writes, with a retrieval.toml beside the files that is read
-# for the orientation of a ratio and for datasets a later one supersedes. Columns are taken by
-# position, not by header text. Both directories default to data/ under the project and neither
-# is version-controlled.
+# for the orientation of a ratio and for datasets a later one supersedes. The evaluated product
+# yields under Y_post_vs_A_p/ are staged by scripts/stage_product_yields.jl as <library>.dat with
+# a provenance.toml beside them. Columns are taken by position, not by header text. Both
+# directories default to data/ under the project and neither is version-controlled.
 #
 # Each figure is written to results/ as PDF and PNG, beside a TOML sidecar that names, for every
 # system drawn, the run directory, the commit recorded in its metadata, and the measured files.
@@ -124,6 +126,19 @@ const CHARGE_SOURCES = (
         linestyle = :dot,
         colour = SKY_BLUE,
     ),
+)
+
+# Evaluated fission product yield libraries the product-yield figure draws, each `<file>` under
+# `<data>/<system>/Y_post_vs_A_p/`, staged by scripts/stage_product_yields.jl. Evaluations are
+# lines, not markers: they are not measurements.
+const EVALUATED_YIELDS = (
+    (
+        file = "ENDF-B-VIII.0.dat",
+        label = "ENDF/B-VIII.0",
+        linestyle = :dash,
+        colour = VERMILION,
+    ),
+    (file = "JEFF-3.3.dat", label = "JEFF-3.3", linestyle = :dashdot, colour = BLUE),
 )
 
 """
@@ -430,17 +445,27 @@ function label_guide!(slot, value::Real, label, limits::Tuple{Real, Real}; side:
     return overlay
 end
 
-"The provenance entry of one system: the run drawn, its commit, and the measured files used."
-function system_record(directory::AbstractString, sets::Vector{MeasuredSet})
+"""
+The provenance entry of one system: the run drawn, its commit, the measured files used, and the
+evaluated ones where a figure draws evaluations.
+"""
+function system_record(
+    directory::AbstractString,
+    sets::Vector{MeasuredSet};
+    evaluated::Vector{String} = String[],
+)
     measured = String[]
     for set in sets, path in set.paths
         push!(measured, relpath(path, MEASURED))
     end
-    return Dict{String, Any}(
+    record = Dict{String, Any}(
         "run" => basename(directory),
         "gitcommit" => gitcommit(directory),
         "measured" => measured,
     )
+    isempty(evaluated) ||
+        (record["evaluated"] = [relpath(path, MEASURED) for path in evaluated])
+    return record
 end
 
 function export_figure(figure::Figure, name::AbstractString, systems::Dict{String, Any})
@@ -890,6 +915,123 @@ function figure_spectra(drawable::Vector{Case})
 end
 
 """
+Draw the post-neutron product mass yield `Y(A_p)` of every system whose run tabulated it, on
+the shared grid: the model as the black line, the run's own pre-neutron `Y(A)` as a dotted
+guide, the evaluated independent yields summed over charge as coloured lines with their
+uncertainty as a band, and the measured post-neutron mass yields, where retrieved, as markers.
+The annotation band above the data carries the system; all panels share one mass range.
+"""
+function figure_product_yield(drawable::Vector{Case})
+    panels = []
+    for case in drawable
+        directory = run_directory(case)
+        path = joinpath(directory, "Y_post_vs_A_p.dat")
+        isfile(path) || continue
+        A_p, Y_p, _ = read_columns(path)
+        A, Y, _ = read_columns(joinpath(directory, "Y_vs_A.dat"))
+        evaluated = []
+        for library in EVALUATED_YIELDS
+            file = joinpath(MEASURED, case.label, "Y_post_vs_A_p", library.file)
+            isfile(file) || continue
+            x, y, σ = read_columns(file)
+            keep = first(MASS_WINDOW) .<= x .<= last(MASS_WINDOW)
+            push!(evaluated, (library, file, x[keep], y[keep], σ[keep]))
+        end
+        sets = load_measured(
+            case.label,
+            "Y_post_vs_A_p",
+            MASS_WINDOW;
+            skip = [library.file for library in EVALUATED_YIELDS],
+        )
+        push!(panels, (; case, directory, A_p, Y_p, A, Y, evaluated, sets))
+    end
+    isempty(panels) && return nothing
+
+    masses = Float64[]
+    for p in panels
+        append!(masses, p.A_p)
+        append!(masses, p.A)
+        foreach(e -> append!(masses, e[3]), p.evaluated)
+        foreach(set -> append!(masses, set.x), p.sets)
+    end
+    xlimits = padded_limits(masses)
+
+    rows = cld(length(panels), GRID_COLUMNS)
+    banks = legend_rows(length(p.sets) + length(p.evaluated) + 2 for p in panels)
+    figure = Figure(size = (GRID_WIDTH, GRID_ROW_HEIGHT * rows))
+    provenance = Dict{String, Any}()
+    for (index, p) in pairs(panels)
+        row, column = fldmod1(index, GRID_COLUMNS)
+        bottom = row == rows
+        cell = GridLayout(figure[row, column])
+        slot = cell[2, 1]
+        axis = panel(
+            slot;
+            ylabel = L"Y(A_p)\ [\%]",
+            xlabel = L"Product mass $A_p$",
+            ylabelvisible = column == 1,
+            xlabelvisible = bottom,
+            xticklabelsvisible = bottom,
+            xticks = 80:20:180,
+            yticks = 0:2:12,
+        )
+        begin_panel!()
+        handles = Any[]
+        labels = Any[]
+        # The pre-neutron yield first, beneath everything: it is the guide the shift is read
+        # against.
+        push!(
+            handles,
+            lines!(axis, p.A, p.Y; color = GUIDE_COLOUR, linestyle = :dot, linewidth = 1.5),
+        )
+        push!(labels, L"Pre-neutron $Y(A)$")
+        ordinates = vcat(p.Y_p, p.Y)
+        for (library, _, x, y, σ) in p.evaluated
+            any(>(0), σ) && band!(axis, x, y .- σ, y .+ σ; color = (library.colour, 0.2))
+            push!(
+                handles,
+                lines!(
+                    axis,
+                    x,
+                    y;
+                    color = library.colour,
+                    linestyle = library.linestyle,
+                    linewidth = 2.5,
+                ),
+            )
+            push!(labels, library.label)
+            append!(ordinates, y .+ σ)
+        end
+        for set in p.sets
+            push!(handles, draw_measured!(axis, set))
+            push!(labels, set.label)
+        end
+        push!(handles, lines!(axis, p.A_p, p.Y_p; color = :black, linewidth = 3))
+        push!(labels, "This model")
+
+        # One line of annotation above all the data: both humps reach the top, so no corner is
+        # free, and the band is reserved over the whole width.
+        low, high = ordinate_limits(ordinates, p.sets; cleared = xlimits)
+        ylimits = (max(low, 0.0), high + ANNOTATION_BAND * (high - low))
+        xlims!(axis, xlimits...)
+        ylims!(axis, ylimits...)
+        annotate!(axis, MathText[p.case.notation]; corner = :upper_left)
+
+        panel_legend!(cell, handles, labels, banks)
+        provenance[p.case.label] = system_record(
+            p.directory,
+            p.sets;
+            evaluated = String[e[2] for e in p.evaluated],
+        )
+    end
+    rowgap!(figure.layout, 12)
+    colgap!(figure.layout, 12)
+
+    export_figure(figure, "product_mass_yield", provenance)
+    return nothing
+end
+
+"""
 Draw the quantities internal to the sequential treatment against fragment mass, one panel each
 in a 2 × 2 grid, every system as a line in its fixed style. None has a measured counterpart, so
 the comparison is between systems.
@@ -1075,6 +1217,7 @@ function main()
     figure_multiplicity(drawable)
     figure_spectra(drawable)
     figure_mean_neutron_energy(drawable)
+    figure_product_yield(drawable)
     figure_residual_quantities(drawable)
     figure_charge_distribution(drawable)
     return nothing

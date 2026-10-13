@@ -222,6 +222,17 @@ closure, which barely emit in the model, and below `A ≈ 90`, where it lies und
 `results/README.md` lists every dataset drawn, with its reference, and what the runs write that
 is not drawn yet.
 
+![Post-neutron product mass yield of the four systems against the evaluated independent yields](results/product_mass_yield.png)
+
+The product mass yield is the pre-neutron yield carried through the emission chains, with no
+parameter in it: a fragment whose chain allows `n` sequences ends on each of its `n` residuals
+with probability `1/n`, so the mass its products have lost is its multiplicity. Against the
+evaluated independent yields of ENDF/B-VIII.0 and JEFF-3.3, summed over charge, the centroids
+of both humps agree within 0.8 u in every system, and the even-`Z` structure of the heavy
+hump — the peaks at `A_p = 134` and `138` of ²³⁵U — comes out of a pre-neutron yield that has
+none. The published prescription, which subtracts the full number of possible sequences, is
+one key away, `[products] count = "sequence_count"`, and reproduces the archived thesis run.
+
 Three departures from measurement are known and are not tuned away.
 - The multiplicity `ν = (n+1)/2` responds to excitation energy too weakly. At fixed mass
   `−dTKE/dν` is 11.5 MeV per neutron for ²⁵²Cf against 7.3 measured (Göök *et al.*,

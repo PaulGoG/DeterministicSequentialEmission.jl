@@ -23,6 +23,9 @@
 !/results/mean_neutron_energy_vs_experiment.png
 !/results/mean_neutron_energy_vs_experiment.pdf
 !/results/mean_neutron_energy_vs_experiment.toml
+!/results/product_mass_yield.png
+!/results/product_mass_yield.pdf
+!/results/product_mass_yield.toml
 
 # Libraries do not pin a manifest; each environment resolves against [compat].
 Manifest*.toml
