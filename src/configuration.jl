@@ -25,6 +25,8 @@ struct Configuration
     spectrum_pair_weighting::SpectrumWeighting
     spectrum_average::SpectrumAverage
     sequence_weighting::SequenceWeighting
+    products_enabled::Bool
+    product_count::ProductCount
     significant_digits::Int
     source::String
     data_directory::String
@@ -99,6 +101,7 @@ const CONFIGURATION_KEYS = Dict(
         "average",
         "sequence_weighting",
     ),
+    "products" => ("enabled", "count"),
     "output" => ("significant_digits",),
 )
 
@@ -245,6 +248,7 @@ function load_configuration(
     spectrum_pair_weighting,
     spectrum_average,
     sequence_weighting = _load_spectrum(document)
+    products_enabled, product_count = _load_products(document)
     significant_digits = _load_output(document)
 
     return Configuration(
@@ -264,6 +268,8 @@ function load_configuration(
         spectrum_pair_weighting,
         spectrum_average,
         sequence_weighting,
+        products_enabled,
+        product_count,
         significant_digits,
         abspath(path),
         abspath(data_directory),
@@ -859,6 +865,26 @@ _spectrum_average(kind::String) =
     kind == "per_neutron" ? PerNeutronAverage() : PerFissionAverage()
 _sequence_weighting(kind::String) =
     kind == "uniform" ? UniformSequenceWeighting() : EmissionProbabilityWeighting()
+
+# An absent section takes the defaults, so a configuration written before the products existed
+# still loads.
+function _load_products(document::AbstractDict)
+    haskey(document, "products") || return true, EmissionProbabilityCount()
+    section = _section(document, "products")
+    count = _product_count(
+        _choice(
+            section,
+            "count",
+            ("emission_probability", "sequence_count"),
+            "products.count",
+            "emission_probability",
+        ),
+    )
+    return _value(section, "enabled", Bool, "products.enabled", true), count
+end
+
+_product_count(kind::String) =
+    kind == "sequence_count" ? SequenceCount() : EmissionProbabilityCount()
 
 function _load_output(document::AbstractDict)
     section = _section(document, "output")

@@ -42,11 +42,13 @@ This is why the configuration key is `charge_distribution_file` while the file i
 | *A*₀, *Z*₀ | `A_0`, `Z_0` | `A₀`, `Z₀` | compound nucleus mass, charge |
 | *Z* | `Z` | `Z` | fragment charge |
 | *N* | `N` | `N` | neutron number |
+| *N*_p | `N_p` | `N_p` | post-neutron product neutron number, *A*_p − *Z* |
 | *Z*_p | `Z_p` | `Zₚ` | most probable charge |
 | Δ*Z* | `dZ` | `ΔZ` | charge polarization |
 | σ_*Z* | `sigma_Z` | `σ_Z` | charge dispersion |
 | *p*(*Z*,*A*) | `p_Z` | `p` | isobaric charge probability |
 | TKE | `TKE` | `TKE` | total kinetic energy, pre-neutron |
+| KE | `KE` | `KE` | fragment kinetic energy, pre-neutron |
 | TXE | `TXE` | `TXE` | total excitation energy |
 | *E** | `E_star` | `excitation` | fragment excitation energy |
 | *Q* | `Q` | `Q` | Q value |
@@ -63,6 +65,10 @@ This is why the configuration key is `charge_distribution_file` while the file i
 | *Y* | `Y` | `Y` | fragment yield |
 | *N*(*E*) | `spectrum` | `spectrum` | prompt neutron spectrum |
 | *R*_T | `R_T` | `R_T` | temperature ratio, T_L/T_H |
+
+A post-neutron quantity is the pre-neutron one qualified: `_post` in a file name, a subscript p in
+an equation and in Julia. `Y_post_vs_A_p.dat` holds *Y*_p(*A*_p), `TKE_post_vs_A_p.dat` holds
+TKE_p against the heavy product mass.
 
 `rms` is retired. It named a root-mean-square of nothing stated; the quantity is the Gaussian
 dispersion of the isobaric charge distribution, and the field writes σ_Z.
@@ -134,7 +140,7 @@ the output directory it writes. A system carrying more than one configuration wo
 declares, so a file cannot drift from what it runs.
 
 Sections are `[system]`, `[fragmentation]`, `[energetics]`, `[level_density]`, `[evaporation]`,
-`[partition]`, `[yield]`, `[spectrum]` and `[output]`, and **a key is never prefixed with its
+`[partition]`, `[yield]`, `[spectrum]`, `[products]` and `[output]`, and **a key is never prefixed with its
 section's name**: `[level_density] model`, not `level_density_model`.
 
 A key's comment states three things and nothing else: what the key is, in one short line; the
@@ -259,8 +265,13 @@ A run writes to `data/sims/<system>/<run>`, and an output follows the same
 | `nu_vs_TKE.dat`, `E_star_vs_TKE.dat` | the same against total kinetic energy |
 | `spectrum_vs_E.dat` | the laboratory prompt neutron spectrum |
 | `Y_vs_A.dat`, `Y_vs_Z.dat`, `Y_vs_TKE.dat` | the fragment yield projections |
+| `Y_post_vs_A_p.dat` | post-neutron product mass yield |
+| `Y_post_vs_A_p_Z.dat` | independent product yields, before β decay, in three columns `A_p Z Y` |
+| `Y_post_vs_N_p.dat` | product yield against product neutron number |
+| `KE_post_vs_A_p.dat`, `KE_post_vs_Z.dat` | mean product kinetic energy against product mass and against charge |
+| `TKE_post_vs_A_p.dat` | mean post-neutron total kinetic energy against the heavy product mass |
 | `charge_distribution_vs_A.dat`, `_wahl_per_reaction`, `_wahl_systematics`, `_mean` | the charge distribution the run was weighted by and the three alternatives — Wahl's 1988 per-reaction model, the 2002 systematics, the conventional means — each reduced to effective Gaussians; the metadata records which layer the first is |
-| `totals.dat` | one row per quantity averaged over the whole run |
+| `totals.dat` | one row per quantity averaged over the whole run, `mean_product_mass_loss` (`⟨A − A_p⟩` per fragment) and `mean_TKE_post` among them where the products are written |
 | `metadata.toml` | how it was produced: configuration, commit, environment, machine |
 | `configuration.toml` | the configuration the run loaded, copied |
 | `Manifest.toml` | the resolved environment the run executed in, copied |

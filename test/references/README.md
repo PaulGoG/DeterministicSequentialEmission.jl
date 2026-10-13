@@ -36,6 +36,7 @@ produced under is part of its name, because two of them differ in nothing else.
 | `sequences_excitation_ratio.dat`, `sequences_temperature_ratio.dat` | per-sequence `Sₙ`, `a`, `T`, `Ē_r`, `⟨ε⟩` |
 | `nu_vs_A.dat`, `T_vs_A.dat`, `E_star_vs_A.dat`, `E_star_vs_TKE.dat` | the averaged observables |
 | `Y_vs_A.dat`, `Y_vs_Z.dat`, `Y_vs_TKE.dat`, `TKE_vs_A_H.dat` | the fragment yield projections |
+| `Y_post_vs_A_p_excitation_ratio.dat`, `Y_post_vs_A_p_temperature_ratio.dat` | the post-neutron mass yield `Y_p(A_p)` under each partition, `A_p = A − n`, 98 rows, summing to 200 |
 
 The two excitation files sample the same configurations — `A_H` ∈ {126, 134, 144, 154, 164,
 174}, all five charge numbers, the whole TKE grid, 1200 rows each — so the partitions can be
@@ -44,7 +45,8 @@ assert agreement below `1e-8` rather than to machine precision: `5e-9` is exact 
 
 Only the header lines were rewritten when the naming convention was applied; every data row is
 byte-identical to what the archived run produced, and `.gitattributes` keeps these files exempt
-from line-ending normalisation so they stay that way.
+from line-ending normalisation so they stay that way. The two post-neutron tables were written
+with CRLF terminators and are kept with LF; their data rows are otherwise the archived ones.
 
 The sample is a regression guard, not the extent of what has been checked. Both partitions have
 been swept over **every** record of their archived run — 9819 and 9788 — and reproduce each one

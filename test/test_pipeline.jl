@@ -160,6 +160,36 @@
         @test isfinite(result.mean_neutron_lab_energy)
         @test 1.0 < result.mean_neutron_lab_energy < 3.0
 
+        # The fixture has no [products] section, so the products are written under the default
+        # count. Without a yield the weights are the charge probabilities, and the products are
+        # normalised to 200 all the same; the product TKE, resolved in TKE, is not written.
+        for (name, header) in (
+            ("Y_post_vs_A_p.dat", "A_p Y"),
+            ("Y_post_vs_A_p_Z.dat", "A_p Z Y"),
+            ("Y_post_vs_N_p.dat", "N_p Y"),
+            ("KE_post_vs_A_p.dat", "A_p KE"),
+            ("KE_post_vs_Z.dat", "Z KE"),
+        )
+            path = joinpath(destination, name)
+            @test isfile(path)
+            @test first(readlines(path)) == header
+        end
+        @test !isfile(joinpath(destination, "TKE_post_vs_A_p.dat"))
+        @test !isempty(result.product_total_kinetic_energy)
+        independent = read_delimited_table(
+            joinpath(destination, "Y_post_vs_A_p_Z.dat"),
+            TableSpec([:A_p, :Z, :Y]; skip = 1),
+        )
+        @test sum(column(independent, :Y, Float64)) ≈ 200 rtol = 1e-6
+        @test sum(last, result.product_mass_yield) ≈ 200 rtol = 1e-12
+        @test result.mean_product_mass_loss ≈ result.total_multiplicity rtol = 1e-12
+        totals = Dict(
+            first(fields) => parse(Float64, last(fields)) for
+            fields in split.(readlines(joinpath(destination, "totals.dat"))[2:end])
+        )
+        @test totals["mean_product_mass_loss"] ≈ totals["nu_per_fragment"] rtol = 1e-7
+        @test totals["mean_TKE_post"] < totals["mean_TKE"]
+
         # The provenance record is the script's to write, not the library's.
         @test !isfile(joinpath(destination, "metadata.toml"))
 
@@ -175,6 +205,8 @@
         @test parsed["system"]["label"] == "Cf252_sf"
         @test isequal(parsed["result"]["mean_E_MeV"], metadata["result"]["mean_E_MeV"])
         @test parsed["model"]["heavy_masses"] == [126, 140]
+        @test parsed["model"]["product_count"] == "emission_probability"
+        @test parsed["result"]["mean_product_mass_loss"] ≈ result.mean_product_mass_loss
     end
 end
 

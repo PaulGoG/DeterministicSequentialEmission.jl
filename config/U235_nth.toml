@@ -49,5 +49,9 @@ pair_weighting = "multiplicity"   # one of: "multiplicity" | "excitation"; light
 average = "per_neutron"           # one of: "per_fission" | "per_neutron"; weight of a pair spectrum in the total, Y or Y ν_pair
 sequence_weighting = "emission_probability"  # one of: "emission_probability" | "uniform"; weight of the k-th neutron of a chain of n, (n+1−k)/n or 1
 
+[products]
+enabled = true                    # write the post-neutron product distributions
+count = "emission_probability"    # one of: "emission_probability" | "sequence_count"; the number of neutrons subtracted from a fragment's mass
+
 [output]
 significant_digits = 8            # significant figures in tabulated output, 1 to 15

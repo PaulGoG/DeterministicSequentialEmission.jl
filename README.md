@@ -38,6 +38,7 @@ DeterministicSequentialEmission.jl/
 │   ├── partition.jl          TXE partition: scission modelling, E*_H/TXE, R_T
 │   ├── evaporation.jl        evaporation cross sections and ⟨ε⟩
 │   ├── sequences.jl          the sequential equations and emission chains
+│   ├── products.jl           post-neutron product counts and distributions
 │   ├── spectrum.jl           centre-of-mass and laboratory spectra
 │   ├── configuration.jl      TOML schema and validation
 │   └── pipeline.jl           run_pipeline, write_results, run identifiers
@@ -90,7 +91,8 @@ julia scripts/run.jl config/Cf252_sf.toml
 
 That writes `data/sims/Cf252_sf/<run>/`: `nu_vs_A.dat`, `T_vs_A.dat`, `E_star_vs_A.dat`, the
 residual quantities, the projections against total kinetic energy, the fragment yield
-projections, the charge-distribution diagnostics, the laboratory spectrum, a table of totals,
+projections, the post-neutron product distributions, the charge-distribution diagnostics, the
+laboratory spectrum, a table of totals,
 and the provenance — `metadata.toml`
 recording the configuration, the package version, the commit and the platform, beside copies of
 the configuration and the resolved `Manifest.toml`. `<run>` is the run identifier,
@@ -141,7 +143,7 @@ julia docs/make.jl
 | Prompt fission neutron spectrum — centre-of-mass and laboratory, in closed form | done |
 | Configuration, provenance, entry point | done |
 | Figures (CairoMakie), redrawn from written tables; `results/README.md` | done |
-| Post-emission distributions | to port |
+| Post-emission distributions — `Y_p(A_p)`, `Y_p(A_p, Z)`, `Y_p(N_p)`, `KE_p`, `TKE_p`, two product counts | done |
 
 ## The model
 

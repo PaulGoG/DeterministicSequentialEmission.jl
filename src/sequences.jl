@@ -112,7 +112,9 @@ The mass number of the last residual fragment, `A_p = A − n`, an integer by co
 `A_p` uses `n`, not `ν`: it is a property of the chain, the nucleus on which the cascade ends,
 rather than a sequence average. A global treatment yields only an averaged `ν(A,Z,TKE)`, whose
 `A − ν` must be rounded (Tudora, *EPJA* 58, 126 (2022), doi:10.1140/epja/s10050-022-00766-y, §2.4). Consequently
-`⟨A⟩ − ⟨A_p⟩` equals the yield average of `n`, not `⟨ν⟩`.
+`⟨A⟩ − ⟨A_p⟩` equals the yield average of `n`, not `⟨ν⟩`. It is the product mass under
+[`SequenceCount`](@ref); the default [`EmissionProbabilityCount`](@ref) of [`product_masses`](@ref)
+spreads the product over the chain's `n` residuals, and the mass loss is then `ν`.
 """
 post_neutron_mass(chain::EmissionChain) = chain.fragment.A - chain.possible
 

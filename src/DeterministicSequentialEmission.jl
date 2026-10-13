@@ -129,6 +129,7 @@ export EmissionSequence,
     UniformSequenceWeighting,
     EmissionProbabilityWeighting,
     sequence_weight
+export ProductCount, EmissionProbabilityCount, SequenceCount, product_masses
 export Configuration, load_configuration
 export RunResult,
     input_mean_kinetic_energy,
@@ -151,6 +152,7 @@ const PACKAGE_ROOT = dirname(@__DIR__)
 include("partition.jl")
 include("evaporation.jl")
 include("sequences.jl")
+include("products.jl")
 include("spectrum.jl")
 include("configuration.jl")
 include("pipeline.jl")

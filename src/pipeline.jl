@@ -10,10 +10,16 @@ const Curve = Vector{Tuple{Float64, Float64}}
     RunResult
 
 What one run produced: the domain it swept, the averaged observables against fragment mass and
-against total kinetic energy, the totals, and the prompt neutron spectrum where one was asked
-for. [`run_pipeline`](@ref) produces it; [`write_results`](@ref) writes it.
+against total kinetic energy, the totals, the prompt neutron spectrum where one was asked for,
+and the post-neutron product distributions where they were. [`run_pipeline`](@ref) produces it;
+[`write_results`](@ref) writes it.
 
-Curves are [`Curve`](@ref)s.
+Curves are [`Curve`](@ref)s. The products, empty when `[products]` is disabled, are
+`product_mass_yield` `(A_p, Y)`, `product_yield` `(A_p, Z, Y)` sorted by `A_p` and then `Z`,
+`product_neutron_yield` `(N_p, Y)`, `product_kinetic_energy` `(A_p, KE)`,
+`product_kinetic_energy_by_charge` `(Z, KE)` and `product_total_kinetic_energy` `(A_p, TKE)`
+keyed by the heavy product mass; `mean_product_mass_loss`, `⟨A − A_p⟩` per fragment, and
+`mean_product_total_kinetic_energy` are their totals, `NaN` when disabled.
 """
 struct RunResult
     configuration::Configuration
@@ -32,6 +38,14 @@ struct RunResult
     total_multiplicity::Float64
     mean_kinetic_energy::Float64
     mean_neutron_lab_energy::Float64
+    product_mass_yield::Curve
+    product_yield::Vector{Tuple{Int, Int, Float64}}
+    product_neutron_yield::Curve
+    product_kinetic_energy::Curve
+    product_kinetic_energy_by_charge::Curve
+    product_total_kinetic_energy::Curve
+    mean_product_mass_loss::Float64
+    mean_product_total_kinetic_energy::Float64
 
     # Explicit inner constructor: concrete argument types, no generic `convert` path into the
     # type.
@@ -52,6 +66,14 @@ struct RunResult
         total_multiplicity::Real,
         mean_kinetic_energy::Real,
         mean_neutron_lab_energy::Real,
+        product_mass_yield::Curve,
+        product_yield::Vector{Tuple{Int, Int, Float64}},
+        product_neutron_yield::Curve,
+        product_kinetic_energy::Curve,
+        product_kinetic_energy_by_charge::Curve,
+        product_total_kinetic_energy::Curve,
+        mean_product_mass_loss::Real,
+        mean_product_total_kinetic_energy::Real,
     )
         return new(
             configuration,
@@ -70,6 +92,14 @@ struct RunResult
             Float64(total_multiplicity),
             Float64(mean_kinetic_energy),
             Float64(mean_neutron_lab_energy),
+            product_mass_yield,
+            product_yield,
+            product_neutron_yield,
+            product_kinetic_energy,
+            product_kinetic_energy_by_charge,
+            product_total_kinetic_energy,
+            Float64(mean_product_mass_loss),
+            Float64(mean_product_total_kinetic_energy),
         )
     end
 end
@@ -96,7 +126,9 @@ against the yield weights, and return the result without writing it; [`write_res
 writes the tables, and `scripts/run.jl` adds the provenance. The sweep is deterministic, with
 no sampling. A configuration is dropped where `TXE` is non-positive, the partition input does
 not cover it, or the mass table does not reach a fragment; the counts of attempted and solved
-configurations are reported with the result.
+configurations are reported with the result. The post-neutron product distributions are
+contracted from the same chains, normalised to the total of the input yield, `[yield] total`,
+or to `DEFAULT_YIELD_TOTAL` (200) where none was loaded.
 """
 function run_pipeline(configuration::Configuration)
     domain = fragmentation_domain(
@@ -189,6 +221,28 @@ function run_pipeline(configuration::Configuration)
         ),
     )
 
+    products = if configuration.products_enabled
+        _product_distributions(
+            chains,
+            weights,
+            configuration.system.compound.A,
+            configuration.product_count,
+            configuration.fragment_yield === nothing ? DEFAULT_YIELD_TOTAL :
+            configuration.fragment_yield.total,
+        )
+    else
+        (
+            mass_yield = Curve(),
+            yield = Tuple{Int, Int, Float64}[],
+            neutron_yield = Curve(),
+            kinetic_energy = Curve(),
+            kinetic_energy_by_charge = Curve(),
+            total_kinetic_energy = Curve(),
+            mass_loss = NaN,
+            mean_total_kinetic_energy = NaN,
+        )
+    end
+
     result = RunResult(
         configuration,
         solved,
@@ -212,6 +266,14 @@ function run_pipeline(configuration::Configuration)
         Float64(total),
         _mean_kinetic_energy(weights),
         mean_lab,
+        products.mass_yield,
+        products.yield,
+        products.neutron_yield,
+        products.kinetic_energy,
+        products.kinetic_energy_by_charge,
+        products.total_kinetic_energy,
+        products.mass_loss,
+        products.mean_total_kinetic_energy,
     )
     return result
 end
@@ -373,6 +435,7 @@ const RUN_IDENTIFIER_ABBREVIATIONS = Dict(
     "pair_weighting" => "pw",
     "average" => "avg",
     "sequence_weighting" => "sw",
+    "count" => "pc",
     "total" => "Ytot",
     "symmetrize" => "Ysym",
 )
@@ -407,6 +470,7 @@ function run_parameters(configuration::Configuration)
         "pair_weighting" => _pair_weighting_token(configuration.spectrum_pair_weighting),
         "average" => _average_token(configuration.spectrum_average),
         "sequence_weighting" => _sequence_weighting_token(configuration.sequence_weighting),
+        "count" => _product_count_token(configuration.product_count),
     ]
     if configuration.model isa GilbertCameron
         push!(entries, "deformed_branch" => configuration.model.deformed_branch)
@@ -471,13 +535,16 @@ _average_token(::PerFissionAverage) = "per_fission"
 _average_token(::PerNeutronAverage) = "per_neutron"
 _sequence_weighting_token(::UniformSequenceWeighting) = "uniform"
 _sequence_weighting_token(::EmissionProbabilityWeighting) = "emission_probability"
+_product_count_token(::EmissionProbabilityCount) = "emission_probability"
+_product_count_token(::SequenceCount) = "sequence_count"
 
 """
     write_results(result, directory) -> String
 
 Write the tables of a run into `directory`: one two-column file per curve, the fragment yield
-projections, the charge distribution the run used beside the ones it could have used, and a
-table of totals.
+projections, the post-neutron product distributions with the independent yields
+`Y_post_vs_A_p_Z.dat` in three columns, the charge distribution the run used beside the ones it
+could have used, and a table of totals.
 
 `directory` is created. A directory already holding a run is refused, not overwritten;
 `scripts/run.jl` moves an existing run aside as `#1`, `#2`, …. The provenance record is written
@@ -503,11 +570,18 @@ function write_results(result::RunResult, directory::AbstractString)
         ("nu_vs_TKE.dat", "TKE nu", result.multiplicity_by_energy),
         ("E_star_vs_TKE.dat", "TKE E_star", result.excitation_by_energy),
         ("spectrum_vs_E.dat", "E spectrum", result.spectrum),
+        ("Y_post_vs_A_p.dat", "A_p Y", result.product_mass_yield),
+        ("Y_post_vs_N_p.dat", "N_p Y", result.product_neutron_yield),
+        ("KE_post_vs_A_p.dat", "A_p KE", result.product_kinetic_energy),
+        ("KE_post_vs_Z.dat", "Z KE", result.product_kinetic_energy_by_charge),
+        ("TKE_post_vs_A_p.dat", "A_p TKE", result.product_total_kinetic_energy),
     )
     # A yield placed at the mean TKE of each mass has no TKE distribution, so the tables resolved
-    # in TKE would describe one it does not have; they are not written.
+    # in TKE would describe one it does not have; they are not written. Nor is the product TKE,
+    # which a yield without a TKE distribution does not have either.
     distributed = configuration.yield_width != "none"
-    resolved_in_energy = ("nu_vs_TKE.dat", "E_star_vs_TKE.dat", "Y_vs_TKE.dat")
+    resolved_in_energy =
+        ("nu_vs_TKE.dat", "E_star_vs_TKE.dat", "Y_vs_TKE.dat", "TKE_post_vs_A_p.dat")
     for (name, header, values) in curves
         isempty(values) && continue
         distributed || !(name in resolved_in_energy) || continue
@@ -542,20 +616,41 @@ function write_results(result::RunResult, directory::AbstractString)
         end
     end
 
+    if !isempty(result.product_yield)
+        open(joinpath(directory, "Y_post_vs_A_p_Z.dat"), "w") do io
+            println(io, "A_p Z Y")
+            for (A_p, Z, Y) in result.product_yield
+                println(
+                    io,
+                    _significant(Float64(A_p), digits),
+                    " ",
+                    _significant(Float64(Z), digits),
+                    " ",
+                    _significant(Y, digits),
+                )
+            end
+        end
+    end
+
     _write_charge_distributions(directory, configuration, digits)
 
+    totals = [
+        ("nu_per_fragment", result.total_multiplicity),
+        ("nu_per_fission", 2 * result.total_multiplicity),
+        ("mean_TKE", result.mean_kinetic_energy),
+        ("mean_E", result.mean_neutron_lab_energy),
+        ("configurations_solved", Float64(result.configurations_solved)),
+        ("configurations_attempted", Float64(result.configurations_attempted)),
+        ("yield_reached", result.yield_reached),
+        ("segment_coverage", result.segment_coverage),
+    ]
+    if configuration.products_enabled
+        push!(totals, ("mean_product_mass_loss", result.mean_product_mass_loss))
+        push!(totals, ("mean_TKE_post", result.mean_product_total_kinetic_energy))
+    end
     open(joinpath(directory, "totals.dat"), "w") do io
         println(io, "quantity value")
-        for (name, quantity) in (
-            ("nu_per_fragment", result.total_multiplicity),
-            ("nu_per_fission", 2 * result.total_multiplicity),
-            ("mean_TKE", result.mean_kinetic_energy),
-            ("mean_E", result.mean_neutron_lab_energy),
-            ("configurations_solved", Float64(result.configurations_solved)),
-            ("configurations_attempted", Float64(result.configurations_attempted)),
-            ("yield_reached", result.yield_reached),
-            ("segment_coverage", result.segment_coverage),
-        )
+        for (name, quantity) in totals
             println(io, name, " ", _significant(quantity, digits))
         end
     end
@@ -700,6 +795,8 @@ function run_metadata(result::RunResult)
             _sequence_weighting_token(configuration.sequence_weighting),
         "spectrum_grid_MeV" => grid === nothing ? "none" : [first(grid), last(grid)],
         "spectrum_points" => grid === nothing ? 0 : length(grid),
+        "products" => configuration.products_enabled,
+        "product_count" => _product_count_token(configuration.product_count),
         "yield" => fragment_yield === nothing ? "none" : sprint(show, fragment_yield),
         "yield_symmetrized" => configuration.yield_symmetrized,
         "yield_kinetic_energy_width" => configuration.yield_width,
@@ -725,6 +822,10 @@ function run_metadata(result::RunResult)
         "yield_reached" => result.yield_reached,
         "segment_coverage" => result.segment_coverage,
     )
+    if configuration.products_enabled
+        totals["mean_product_mass_loss"] = result.mean_product_mass_loss
+        totals["mean_TKE_post_MeV"] = result.mean_product_total_kinetic_energy
+    end
     return Dict{String, Any}("system" => system, "model" => model, "result" => totals)
 end
 
