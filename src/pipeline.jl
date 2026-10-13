@@ -543,7 +543,7 @@ _product_count_token(::SequenceCount) = "sequence_count"
 
 Write the tables of a run into `directory`: one two-column file per curve, the fragment yield
 projections, the post-neutron product distributions with the independent yields
-`Y_post_vs_A_p_Z.dat` in three columns, the charge distribution the run used beside the ones it
+`Y_vs_A_p_Z.dat` in three columns, the charge distribution the run used beside the ones it
 could have used, and a table of totals.
 
 `directory` is created. A directory already holding a run is refused, not overwritten;
@@ -570,18 +570,18 @@ function write_results(result::RunResult, directory::AbstractString)
         ("nu_vs_TKE.dat", "TKE nu", result.multiplicity_by_energy),
         ("E_star_vs_TKE.dat", "TKE E_star", result.excitation_by_energy),
         ("spectrum_vs_E.dat", "E spectrum", result.spectrum),
-        ("Y_post_vs_A_p.dat", "A_p Y", result.product_mass_yield),
-        ("Y_post_vs_N_p.dat", "N_p Y", result.product_neutron_yield),
-        ("KE_post_vs_A_p.dat", "A_p KE", result.product_kinetic_energy),
-        ("KE_post_vs_Z.dat", "Z KE", result.product_kinetic_energy_by_charge),
-        ("TKE_post_vs_A_p.dat", "A_p TKE", result.product_total_kinetic_energy),
+        ("Y_vs_A_p.dat", "A_p Y", result.product_mass_yield),
+        ("Y_vs_N_p.dat", "N_p Y", result.product_neutron_yield),
+        ("KE_p_vs_A_p.dat", "A_p KE", result.product_kinetic_energy),
+        ("KE_p_vs_Z.dat", "Z KE", result.product_kinetic_energy_by_charge),
+        ("TKE_p_vs_A_p.dat", "A_p TKE", result.product_total_kinetic_energy),
     )
     # A yield placed at the mean TKE of each mass has no TKE distribution, so the tables resolved
     # in TKE would describe one it does not have; they are not written. Nor is the product TKE,
     # which a yield without a TKE distribution does not have either.
     distributed = configuration.yield_width != "none"
     resolved_in_energy =
-        ("nu_vs_TKE.dat", "E_star_vs_TKE.dat", "Y_vs_TKE.dat", "TKE_post_vs_A_p.dat")
+        ("nu_vs_TKE.dat", "E_star_vs_TKE.dat", "Y_vs_TKE.dat", "TKE_p_vs_A_p.dat")
     for (name, header, values) in curves
         isempty(values) && continue
         distributed || !(name in resolved_in_energy) || continue
@@ -617,7 +617,7 @@ function write_results(result::RunResult, directory::AbstractString)
     end
 
     if !isempty(result.product_yield)
-        open(joinpath(directory, "Y_post_vs_A_p_Z.dat"), "w") do io
+        open(joinpath(directory, "Y_vs_A_p_Z.dat"), "w") do io
             println(io, "A_p Z Y")
             for (A_p, Z, Y) in result.product_yield
                 println(
@@ -646,7 +646,7 @@ function write_results(result::RunResult, directory::AbstractString)
     ]
     if configuration.products_enabled
         push!(totals, ("mean_product_mass_loss", result.mean_product_mass_loss))
-        push!(totals, ("mean_TKE_post", result.mean_product_total_kinetic_energy))
+        push!(totals, ("mean_TKE_p", result.mean_product_total_kinetic_energy))
     end
     open(joinpath(directory, "totals.dat"), "w") do io
         println(io, "quantity value")
@@ -824,7 +824,7 @@ function run_metadata(result::RunResult)
     )
     if configuration.products_enabled
         totals["mean_product_mass_loss"] = result.mean_product_mass_loss
-        totals["mean_TKE_post_MeV"] = result.mean_product_total_kinetic_energy
+        totals["mean_TKE_p_MeV"] = result.mean_product_total_kinetic_energy
     end
     return Dict{String, Any}("system" => system, "model" => model, "result" => totals)
 end

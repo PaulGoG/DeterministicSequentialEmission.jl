@@ -67,7 +67,7 @@ guarded(
                 ExcitationEnergyRatio(
                     SegmentedCurve([(126, 0.5), (130, 0.14), (150, 0.607), (174, 0.865)]),
                 ),
-                "Y_post_vs_A_p_excitation_ratio.dat",
+                "Y_vs_A_p_excitation_ratio.dat",
             ),
             (
                 TemperatureRatio(
@@ -82,7 +82,7 @@ guarded(
                     ]),
                     model,
                 ),
-                "Y_post_vs_A_p_temperature_ratio.dat",
+                "Y_vs_A_p_temperature_ratio.dat",
             ),
         )
             # The sweep of run_pipeline, on the archived grid.

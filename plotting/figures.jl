@@ -14,11 +14,11 @@
 #   <data>/<system>/eps_vs_A/*.dat                           A eps eps_uncertainty
 #   <data>/<system>/spectrum_maxwellian_ratio_vs_E/*.dat     E spectrum_maxwellian_ratio [...]
 #   <data>/<system>/spectrum_cf252_ratio_vs_E/*.dat          E spectrum_cf252_ratio [...]
-#   <data>/<system>/Y_post_vs_A_p/*.dat                      A_p Y Y_uncertainty
+#   <data>/<system>/Y_vs_A_p/*.dat                      A_p Y Y_uncertainty
 #
 # which is the layout that package writes, with a retrieval.toml beside the files that is read
 # for the orientation of a ratio and for datasets a later one supersedes. The evaluated product
-# yields under Y_post_vs_A_p/ are staged by scripts/stage_product_yields.jl as <library>.dat with
+# yields under Y_vs_A_p/ are staged by scripts/stage_product_yields.jl as <library>.dat with
 # a provenance.toml beside them. Columns are taken by position, not by header text. Both
 # directories default to data/ under the project and neither is version-controlled.
 #
@@ -129,7 +129,7 @@ const CHARGE_SOURCES = (
 )
 
 # Evaluated fission product yield libraries the product-yield figure draws, each `<file>` under
-# `<data>/<system>/Y_post_vs_A_p/`, staged by scripts/stage_product_yields.jl. Evaluations are
+# `<data>/<system>/Y_vs_A_p/`, staged by scripts/stage_product_yields.jl. Evaluations are
 # lines, not markers: they are not measurements.
 const EVALUATED_YIELDS = (
     (
@@ -925,13 +925,13 @@ function figure_product_yield(drawable::Vector{Case})
     panels = []
     for case in drawable
         directory = run_directory(case)
-        path = joinpath(directory, "Y_post_vs_A_p.dat")
+        path = joinpath(directory, "Y_vs_A_p.dat")
         isfile(path) || continue
         A_p, Y_p, _ = read_columns(path)
         A, Y, _ = read_columns(joinpath(directory, "Y_vs_A.dat"))
         evaluated = []
         for library in EVALUATED_YIELDS
-            file = joinpath(MEASURED, case.label, "Y_post_vs_A_p", library.file)
+            file = joinpath(MEASURED, case.label, "Y_vs_A_p", library.file)
             isfile(file) || continue
             x, y, σ = read_columns(file)
             keep = first(MASS_WINDOW) .<= x .<= last(MASS_WINDOW)
@@ -939,7 +939,7 @@ function figure_product_yield(drawable::Vector{Case})
         end
         sets = load_measured(
             case.label,
-            "Y_post_vs_A_p",
+            "Y_vs_A_p",
             MASS_WINDOW;
             skip = [library.file for library in EVALUATED_YIELDS],
         )

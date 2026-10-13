@@ -12,8 +12,8 @@
 # point of spontaneous fission; sums the isomeric states of each (A_p, Z), and sums over Z for
 # the mass yield, adding uncertainties in quadrature. The ternary particles JEFF-3.3 lists among
 # the products are not fragments and are left out. Yields are written in per cent per fission,
-# 200 over both products, to data/<system>/Y_post_vs_A_p/<library>.dat (A_p Y Y_uncertainty)
-# and to data/<system>/Y_post_vs_A_p_Z/<library>.dat (A_p Z Y Y_uncertainty), <library> being
+# 200 over both products, to data/<system>/Y_vs_A_p/<library>.dat (A_p Y Y_uncertainty)
+# and to data/<system>/Y_vs_A_p_Z/<library>.dat (A_p Z Y Y_uncertainty), <library> being
 # ENDF-B-VIII.0 or JEFF-3.3. A provenance.toml in each directory records, per file, the source,
 # its SHA-256, the material, the energy point and the handling of isomers and ternary particles.
 #
@@ -468,13 +468,13 @@ function stage(data::AbstractString, library, system::FissioningSystem, obtained
     name = "$(library.token).dat"
     directory = joinpath(data, system.token)
     status_charge = stage_table(
-        joinpath(directory, "Y_post_vs_A_p_Z"),
+        joinpath(directory, "Y_vs_A_p_Z"),
         name,
         table_text("A_p Z Y Y_uncertainty", charges.rows),
         by_charge,
     )
     status_mass = stage_table(
-        joinpath(directory, "Y_post_vs_A_p"),
+        joinpath(directory, "Y_vs_A_p"),
         name,
         table_text("A_p Y Y_uncertainty", masses),
         by_mass,
@@ -512,8 +512,8 @@ function stage(data::AbstractString, library, system::FissioningSystem, obtained
         means.heavy,
         means.light + means.heavy
     )
-    println("    ", status_mass, " ", joinpath(directory, "Y_post_vs_A_p", name))
-    println("    ", status_charge, " ", joinpath(directory, "Y_post_vs_A_p_Z", name))
+    println("    ", status_mass, " ", joinpath(directory, "Y_vs_A_p", name))
+    println("    ", status_charge, " ", joinpath(directory, "Y_vs_A_p_Z", name))
     return nothing
 end
 

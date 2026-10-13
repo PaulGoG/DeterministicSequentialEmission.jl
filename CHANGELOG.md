@@ -21,10 +21,10 @@ here.
   Sets tabulated in the inverse orientation are inverted, the energy ranges of one EXFOR entry
   are joined, and superseded sets are skipped, as the retrieval record states.
 - The coverage badge.
-- The post-neutron product distributions: the mass yield `Y_post_vs_A_p.dat`, the independent
-  yields `Y_post_vs_A_p_Z.dat`, `Y_post_vs_N_p.dat`, the product kinetic energies
-  `KE_post_vs_A_p.dat` and `KE_post_vs_Z.dat`, and `TKE_post_vs_A_p.dat` against the heavy product
-  mass, normalised to the total of the input yield; `mean_product_mass_loss` and `mean_TKE_post`
+- The post-neutron product distributions: the mass yield `Y_vs_A_p.dat`, the independent
+  yields `Y_vs_A_p_Z.dat`, `Y_vs_N_p.dat`, the product kinetic energies
+  `KE_p_vs_A_p.dat` and `KE_p_vs_Z.dat`, and `TKE_p_vs_A_p.dat` against the heavy product
+  mass, normalised to the total of the input yield; `mean_product_mass_loss` and `mean_TKE_p`
   in `totals.dat`.
 - `[products]`, with `enabled` and `count`: `"emission_probability"` (the default) ends a chain of
   `n` possible sequences on each of its residuals with probability `1/n`, so that the products

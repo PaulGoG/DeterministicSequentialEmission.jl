@@ -82,9 +82,9 @@ mass-symmetric split, as in the spectrum; it is written against the heavy produc
 sequence count these are eqs. (8) and (9) of the paper; under the default the mean of `KE_p` over
 the endings of a chain is its eq. (12).
 
-A run writes `Y_post_vs_A_p.dat`, the independent yields `Y_post_vs_A_p_Z.dat`,
-`Y_post_vs_N_p.dat`, `KE_post_vs_A_p.dat`, `KE_post_vs_Z.dat` and `TKE_post_vs_A_p.dat`, and adds
-`mean_product_mass_loss`, `⟨A − A_p⟩` per fragment, and `mean_TKE_post` to `totals.dat`.
+A run writes `Y_vs_A_p.dat`, the independent yields `Y_vs_A_p_Z.dat`,
+`Y_vs_N_p.dat`, `KE_p_vs_A_p.dat`, `KE_p_vs_Z.dat` and `TKE_p_vs_A_p.dat`, and adds
+`mean_product_mass_loss`, `⟨A − A_p⟩` per fragment, and `mean_TKE_p` to `totals.dat`.
 
 ```@autodocs
 Modules = [DeterministicSequentialEmission]

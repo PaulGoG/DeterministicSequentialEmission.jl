@@ -164,20 +164,20 @@
         # count. Without a yield the weights are the charge probabilities, and the products are
         # normalised to 200 all the same; the product TKE, resolved in TKE, is not written.
         for (name, header) in (
-            ("Y_post_vs_A_p.dat", "A_p Y"),
-            ("Y_post_vs_A_p_Z.dat", "A_p Z Y"),
-            ("Y_post_vs_N_p.dat", "N_p Y"),
-            ("KE_post_vs_A_p.dat", "A_p KE"),
-            ("KE_post_vs_Z.dat", "Z KE"),
+            ("Y_vs_A_p.dat", "A_p Y"),
+            ("Y_vs_A_p_Z.dat", "A_p Z Y"),
+            ("Y_vs_N_p.dat", "N_p Y"),
+            ("KE_p_vs_A_p.dat", "A_p KE"),
+            ("KE_p_vs_Z.dat", "Z KE"),
         )
             path = joinpath(destination, name)
             @test isfile(path)
             @test first(readlines(path)) == header
         end
-        @test !isfile(joinpath(destination, "TKE_post_vs_A_p.dat"))
+        @test !isfile(joinpath(destination, "TKE_p_vs_A_p.dat"))
         @test !isempty(result.product_total_kinetic_energy)
         independent = read_delimited_table(
-            joinpath(destination, "Y_post_vs_A_p_Z.dat"),
+            joinpath(destination, "Y_vs_A_p_Z.dat"),
             TableSpec([:A_p, :Z, :Y]; skip = 1),
         )
         @test sum(column(independent, :Y, Float64)) ≈ 200 rtol = 1e-6
@@ -188,7 +188,7 @@
             fields in split.(readlines(joinpath(destination, "totals.dat"))[2:end])
         )
         @test totals["mean_product_mass_loss"] ≈ totals["nu_per_fragment"] rtol = 1e-7
-        @test totals["mean_TKE_post"] < totals["mean_TKE"]
+        @test totals["mean_TKE_p"] < totals["mean_TKE"]
 
         # The provenance record is the script's to write, not the library's.
         @test !isfile(joinpath(destination, "metadata.toml"))

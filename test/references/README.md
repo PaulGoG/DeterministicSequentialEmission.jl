@@ -36,7 +36,7 @@ produced under is part of its name, because two of them differ in nothing else.
 | `sequences_excitation_ratio.dat`, `sequences_temperature_ratio.dat` | per-sequence `Sₙ`, `a`, `T`, `Ē_r`, `⟨ε⟩` |
 | `nu_vs_A.dat`, `T_vs_A.dat`, `E_star_vs_A.dat`, `E_star_vs_TKE.dat` | the averaged observables |
 | `Y_vs_A.dat`, `Y_vs_Z.dat`, `Y_vs_TKE.dat`, `TKE_vs_A_H.dat` | the fragment yield projections |
-| `Y_post_vs_A_p_excitation_ratio.dat`, `Y_post_vs_A_p_temperature_ratio.dat` | the post-neutron mass yield `Y_p(A_p)` under each partition, `A_p = A − n`, 98 rows, summing to 200 |
+| `Y_vs_A_p_excitation_ratio.dat`, `Y_vs_A_p_temperature_ratio.dat` | the post-neutron mass yield `Y_p(A_p)` under each partition, `A_p = A − n`, 98 rows, summing to 200 |
 
 The two excitation files sample the same configurations — `A_H` ∈ {126, 134, 144, 154, 164,
 174}, all five charge numbers, the whole TKE grid, 1200 rows each — so the partitions can be

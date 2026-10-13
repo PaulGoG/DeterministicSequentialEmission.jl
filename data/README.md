@@ -48,8 +48,8 @@ data/
 | `<system>/spectrum_vs_E/*.dat` | measured prompt neutron spectrum in the laboratory frame | `E spectrum spectrum_uncertainty` |
 | `<system>/spectrum_maxwellian_ratio_vs_E/*.dat` | the spectrum as a ratio to a Maxwellian, whose temperature the record states | `E spectrum_maxwellian_ratio spectrum_maxwellian_ratio_uncertainty` |
 | `<system>/spectrum_cf252_ratio_vs_E/*.dat` | the ratio of the system's spectrum and that of ²⁵²Cf(sf) at the same outgoing energy, in the orientation the record states | `E spectrum_cf252_ratio spectrum_cf252_ratio_uncertainty` |
-| `<system>/Y_post_vs_A_p/<library>.dat` | evaluated post-neutron product mass yield, the independent yields summed over charge; `ENDF-B-VIII.0` and `JEFF-3.3`, staged by `scripts/stage_product_yields.jl` with a `provenance.toml` beside them | `A_p Y Y_uncertainty`, per cent per fission, 200 over both products |
-| `<system>/Y_post_vs_A_p_Z/<library>.dat` | the same resolved in charge: the evaluated independent yields before β decay, isomeric states summed | `A_p Z Y Y_uncertainty` |
+| `<system>/Y_vs_A_p/<library>.dat` | evaluated post-neutron product mass yield, the independent yields summed over charge; `ENDF-B-VIII.0` and `JEFF-3.3`, staged by `scripts/stage_product_yields.jl` with a `provenance.toml` beside them | `A_p Y Y_uncertainty`, per cent per fission, 200 over both products |
+| `<system>/Y_vs_A_p_Z/<library>.dat` | the same resolved in charge: the evaluated independent yields before β decay, isomeric states summed | `A_p Z Y Y_uncertainty` |
 
 A file name is `<quantity>_vs_<abscissa>`, which is a statement rather than a list of symbols.
 Where a quantity was measured more than once, the directory carries the quantity and the file
@@ -141,7 +141,7 @@ julia scripts/retrieve.jl config/Cf252_sf_spectrum_maxwellian_ratio_vs_E.toml
 The tree held here is the retrieval of every configuration that package ships, at v0.3.0. Three of
 them, the joint `Y(A,TKE)` of ²³⁵U, ²³⁹Pu and ²³³U, find no dataset in the archive.
 
-**Evaluated product yields.** `<system>/Y_post_vs_A_p/` and `<system>/Y_post_vs_A_p_Z/` hold the
+**Evaluated product yields.** `<system>/Y_vs_A_p/` and `<system>/Y_vs_A_p_Z/` hold the
 independent fission product yields of ENDF/B-VIII.0 (Brown *et al.*, *Nucl. Data Sheets* **148**,
 1 (2018), doi:10.1016/j.nds.2018.02.001) and JEFF-3.3 (Plompen *et al.*, *Eur. Phys. J. A* **56**,
 181 (2020), doi:10.1140/epja/s10050-020-00141-9), which the post-neutron product yields of the
