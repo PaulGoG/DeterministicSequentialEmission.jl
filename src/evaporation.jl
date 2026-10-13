@@ -70,14 +70,22 @@ const ALPHA_COEFFICIENT =
 """
     neutron_strength_function(A) -> Float64
 
-The s-wave neutron strength function `S₀(A)`, a piecewise-linear fit, with plateaux where the
-data support one, of the RIPL-3 resonance data, Capote et al., Nucl. Data Sheets 110, 3107
-(2009), doi:10.1016/j.nds.2009.10.004. Returned bare, not in the customary units of `10⁻⁴`:
-`S₀(140)` is `2.33e-4`, as [`alpha_parameter`](@ref) expects. As a function of `A` alone it
-cannot represent the `Z`-dependence of `S₀`, largest at `A = 111`–`124` and across the `N = 82`
-closure at `A = 136`–`146`. The resulting `α`, from 0.037 at `A = 120` to 1.24 at `A = 147`,
-extends beyond the band `0.21`–`0.55` over which the variable cross section was validated
-against an optical-model calculation.
+The s-wave neutron strength function `S₀(A)`: a piecewise-linear interpolation, with plateaux,
+through selected nuclei of the RIPL-3 s-wave resonance table, Capote et al., Nucl. Data Sheets
+110, 3107 (2009), doi:10.1016/j.nds.2009.10.004 — ²³Na, ⁵⁵Mn, ¹²⁰Sn, ¹⁴⁶Nd, ¹⁵²Gd among the
+nodes — not a least-squares fit. Returned bare, not in the customary units of `10⁻⁴`: `S₀(140)`
+is `2.33e-4`, as [`alpha_parameter`](@ref) expects. In cross-validation against the table it
+describes the stable nuclei as well as any function of `A` alone; as such a function it cannot
+carry the `Z`-dependence of `S₀`, largest at `A = 111`–`124` and across the `N = 82` closure at
+`A = 136`–`146`, and nothing is measured for the neutron-rich fragments 4–8 neutrons beyond the
+table. The resulting `α` runs from 0.037 at `A = 120` to 1.24 at `A = 146`. The closed-form
+`⟨ε⟩(T)` of the variable cross section was compared with an optical-model (Becchetti–Greenlees)
+calculation by Tudora, Hambsch and Tobosaru, Eur. Phys. J. A 54, 87 (2018),
+doi:10.1140/epja/i2018-12521-7, §2.1, over `A = 76`–`160` and `S₀ = 0.7`–`1.1 × 10⁻⁴`, i.e.
+`α = 0.21`–`0.55`, agreeing within 4 % for `T = 0.2`–`2` MeV; about half of the fragment masses
+fall outside that envelope here. The observables are weakly sensitive to the choice: across the
+alternatives tried, `ν(A)` is unchanged, `⟨ε⟩(A)` moves by at most 0.13 MeV at one mass,
+`⟨E⟩` by under 1.5 % and the ²⁵²Cf spectrum ratio at 10 MeV by under 2 %.
 """
 function neutron_strength_function(A::Integer)
     A <= 23 && return 2.5e-5
