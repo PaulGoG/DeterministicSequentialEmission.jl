@@ -3,6 +3,7 @@
 [![CI](https://github.com/PaulGoG/DeterministicSequentialEmission.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/PaulGoG/DeterministicSequentialEmission.jl/actions/workflows/CI.yml?query=branch%3Amain)
 [![Documentation (stable)](https://img.shields.io/badge/docs-stable-blue.svg)](https://PaulGoG.github.io/DeterministicSequentialEmission.jl/stable/)
 [![Documentation (dev)](https://img.shields.io/badge/docs-dev-blue.svg)](https://PaulGoG.github.io/DeterministicSequentialEmission.jl/dev/)
+[![Coverage](https://codecov.io/gh/PaulGoG/DeterministicSequentialEmission.jl/graph/badge.svg)](https://codecov.io/gh/PaulGoG/DeterministicSequentialEmission.jl)
 [![Aqua QA](https://raw.githubusercontent.com/JuliaTesting/Aqua.jl/master/badge.svg)](https://github.com/JuliaTesting/Aqua.jl)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
