@@ -20,7 +20,7 @@ DeterministicSequentialEmission.jl/
 ├── docs/                 Documenter site, own environment
 ├── data/                 input data — see data/README.md; none of it ships
 │   └── sims/             written by a run, data/sims/<system>/<run> — not tracked
-├── plots/                the two figures under The model; the diagnostic panels are not tracked
+├── results/              the model against measurement: three figures and their README; diagnostics not tracked
 ├── formatter/            pinned JuliaFormatter, so the gate cannot drift
 ├── check.jl              the gate: format, then test
 ├── activate.jl           activates and instantiates the root environment
@@ -57,7 +57,7 @@ DeterministicSequentialEmission.jl/
 │   ├── reference/            evaluations that belong to no one system; not tracked
 │   ├── <system>/             input data per fissioning system — not tracked
 │   └── sims/<system>/<run>/  tables and provenance of a run — not tracked
-├── plots/                    multiplicity_vs_experiment and prompt_neutron_spectrum tracked; diagnostics not
+├── results/                  README.md and three comparison figures with sidecars tracked; diagnostics not
 ├── formatter/                activate.jl, Project.toml — pinned JuliaFormatter
 ├── .github/                  CI workflow and Dependabot configuration
 ├── .JuliaFormatter.toml
@@ -103,14 +103,15 @@ Redraw the figures from what those runs wrote, without solving anything again:
 julia plotting/figures.jl
 ```
 
-That draws the two figures under *The model* from every system a run has written, a panel of the
-quantities internal to the emission chain — `E*(A)`, `Ē_r(A)`, `⟨T⟩(A)`, `⟨ε⟩(A)` — and a diagnostic
+That draws the three comparison figures of `results/README.md` from every system a run has
+written — `ν(A)`, the spectra and `⟨ε⟩(A)` against the measured sets, each listed there with its
+reference — a panel of the quantities internal to the emission chain — `E*(A)`, `Ē_r(A)`, `⟨T⟩(A)`, `⟨ε⟩(A)` — and a diagnostic
 of the charge distribution each run was weighted by — Wahl's model with the reaction's own 1988
 parameters, for every shipped system — against the alternatives: the 2002 systematics and the
 conventional means. Those have no experimental counterpart, so they are diagnostics and are not
 tracked. Every figure is exported as PDF and PNG beside a `.toml` sidecar naming, per system, the
 run drawn, the commit its metadata records and the measured files, so a panel traces to a
-configuration and a commit; the two tracked figures carry their sidecars in the repository.
+configuration and a commit; the three tracked figures carry their sidecars in `results/`.
 
 The charge-distribution diagnostic is worth reading whenever a system is investigated. It shows
 where a reaction's own parameters and the systematics part company, which is the uncertainty a
@@ -138,7 +139,7 @@ julia docs/make.jl
 | Sequential equations — constant and variable evaporation cross section | done |
 | Prompt fission neutron spectrum — centre-of-mass and laboratory, in closed form | done |
 | Configuration, provenance, entry point | done |
-| Figures (CairoMakie), redrawn from written tables | done |
+| Figures (CairoMakie), redrawn from written tables; `results/README.md` | done |
 | Post-emission distributions | to port |
 
 ## The model
@@ -181,7 +182,7 @@ Julia implementation of that physics, rewritten from the code of my 2023 MSc the
 departs from the published formulation, the departure is stated and recorded under
 *Provenance* below.
 
-![Prompt neutron multiplicity against fragment mass, four fissioning systems](plots/multiplicity_vs_experiment.png)
+![Prompt neutron multiplicity against fragment mass, four fissioning systems](results/multiplicity_vs_experiment.png)
 
 The sawtooth is the signature observable, and it is not fitted: the total excitation energy is
 shared between the fragments by a temperature ratio `R_T(A_H)` extracted from measured `ν(A)` by
@@ -190,18 +191,33 @@ result is contracted against the measured fragment yield `Y(A, TKE)`. Total mult
 out within 5.5 % of the evaluated values, from −5.3 % for ²⁵²Cf to +5.4 % for ²³³U, with no
 parameter adjusted per system.
 
-![Prompt fission neutron spectrum of 252-Cf as a ratio to a Maxwellian](plots/prompt_neutron_spectrum.png)
+![Prompt fission neutron spectra: 252-Cf as a ratio to a Maxwellian, the thermal systems as ratios to 252-Cf](results/prompt_neutron_spectrum.png)
 
 The spectrum is the same statement in energy. Model and measurement are both absolute here — the
-model spectrum integrates to one neutron by construction, and every retrieved set is reported
-against the same 1.42 MeV Maxwellian — so nothing is scaled to anything. Each fragmentation enters
-the total by its yield times its multiplicity, so every emitted neutron counts once, as it does in a
-measurement. Within a fragment the `k`-th neutron of a chain of `n` counts with `(n+1−k)/n`, its
-probability of emission under `ν = (n+1)/2`. The mean laboratory energy of ²⁵²Cf(sf) is 2.16 MeV
-against 2.13 measured, and those of the three thermal systems lie 1 to 2.5 % below the measured
-values. The ²⁵²Cf spectrum follows the measured shape between 0.3 and 5 MeV, lies below the data
-under 0.3 MeV and above them beyond 6 MeV. The uniform average over the sequences of the earlier
-work, `[spectrum] sequence_weighting = "uniform"`, is 4 to 7 % soft.
+²⁵²Cf spectrum integrates to one neutron by construction and every retrieved set is reported
+against the same 1.42 MeV Maxwellian; the thermal systems were measured as the ratio of their
+spectrum per fission to that of ²⁵²Cf, and the model takes that ratio with its own
+multiplicities — so nothing is scaled to anything. Each fragmentation enters the total by its
+yield times its multiplicity, so every emitted neutron counts once, as it does in a measurement.
+Within a fragment the `k`-th neutron of a chain of `n` counts with `(n+1−k)/n`, its probability
+of emission under `ν = (n+1)/2`. The mean laboratory energy of ²⁵²Cf(sf) is 2.16 MeV against 2.13
+measured, and those of the three thermal systems lie 1 to 2.5 % below the measured values. The
+²⁵²Cf spectrum follows the measured shape between 0.3 and 5 MeV, lies below the data under
+0.3 MeV and above them beyond 6 MeV. In the ratios to ²⁵²Cf the offset at low energy is the
+multiplicity error of the pair — `ν̄/ν̄_Cf` is 0.713 for ²³⁵U against 0.643 evaluated — and the
+fall with energy, the thermal spectrum being the softer, is reproduced for the two uranium
+isotopes and is too steep beyond 5 MeV for ²³⁹Pu. The uniform average over the sequences of the
+earlier work, `[spectrum] sequence_weighting = "uniform"`, is 4 to 7 % soft.
+
+![Mean centre-of-mass energy of the prompt neutrons against fragment mass, four fissioning systems](results/mean_neutron_energy_vs_experiment.png)
+
+The mean centre-of-mass energy of a fragment's neutrons, `⟨ε⟩(A)`, is the sequence average the
+energy balance returns, with no parameter of its own. It follows the measured means along both
+wings, where every emitted neutron's energy is set by the residual temperature its sequence
+solved for, and it fails in the band `A ≈ 126`–`134` of heavy fragments near the `N = 82`
+closure, which barely emit in the model, and below `A ≈ 90`, where it lies under the data.
+`results/README.md` lists every dataset drawn, with its reference, and what the runs write that
+is not drawn yet.
 
 Three departures from measurement are known and are not tuned away.
 - The multiplicity `ν = (n+1)/2` responds to excitation energy too weakly. At fixed mass

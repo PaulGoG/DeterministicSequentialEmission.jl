@@ -7,6 +7,27 @@ Notable changes to DeterministicSequentialEmission.jl. The format follows
 The code as submitted with the 2023 MSc thesis is on the `original` branch and is not versioned
 here.
 
+## [Unreleased]
+
+### Added
+
+- `results/`, with a README that shows the model against measurement: every figure beside the
+  datasets it draws, each with its EXFOR accession and reference, and what the runs write that
+  is not drawn yet.
+- The mean centre-of-mass neutron energy against fragment mass, `⟨ε⟩(A)`, for the four systems
+  against the retrieved centre-of-mass means.
+- The spectra of the three thermal systems as ratios of the spectrum per fission to that of
+  ²⁵²Cf(sf), which is how they were measured, with the model carrying its own multiplicities.
+  Sets tabulated in the inverse orientation are inverted, the energy ranges of one EXFOR entry
+  are joined, and superseded sets are skipped, as the retrieval record states.
+- The coverage badge.
+
+### Changed
+
+- The per-system comparison figures are laid out on a two-column grid rather than stacked, each
+  panel with its own legend above it.
+- The figures are written to `results/`, which replaces `plots/`.
+
 ## [0.1.1] - 2026-10-12
 
 ### Changed

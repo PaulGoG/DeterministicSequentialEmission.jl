@@ -10,15 +10,19 @@
 !/data/README.md
 
 # Pipeline output. Each run writes its tables and provenance under data/sims/<system>/<run>,
-# which the data/ rule above already ignores. The two figures the README shows are tracked, and
-# everything else a run draws is not.
-/plots/*
-!/plots/multiplicity_vs_experiment.png
-!/plots/multiplicity_vs_experiment.pdf
-!/plots/prompt_neutron_spectrum.png
-!/plots/prompt_neutron_spectrum.pdf
-!/plots/multiplicity_vs_experiment.toml
-!/plots/prompt_neutron_spectrum.toml
+# which the data/ rule above already ignores. The comparison figures results/README.md shows
+# are tracked with their sidecars; the diagnostic panels a run draws are not.
+/results/*
+!/results/README.md
+!/results/multiplicity_vs_experiment.png
+!/results/multiplicity_vs_experiment.pdf
+!/results/multiplicity_vs_experiment.toml
+!/results/prompt_neutron_spectrum.png
+!/results/prompt_neutron_spectrum.pdf
+!/results/prompt_neutron_spectrum.toml
+!/results/mean_neutron_energy_vs_experiment.png
+!/results/mean_neutron_energy_vs_experiment.pdf
+!/results/mean_neutron_energy_vs_experiment.toml
 
 # Libraries do not pin a manifest; each environment resolves against [compat].
 Manifest*.toml
