@@ -58,46 +58,80 @@ const SYSTEM_STYLE = Dict{String, Tuple{RGBf, Any}}(
     "U235_nres" => (SKY_BLUE, (:dot, :dense)),
 )
 
-# Colour and marker pairs handed to measured datasets in order of first appearance. Black is
-# reserved for the model curve.
-const DATASET_COLOURS =
-    (VERMILION, BLUISH_GREEN, REDDISH_PURPLE, SKY_BLUE, ORANGE, BLUE, YELLOW)
-const DATASET_MARKERS =
-    (:circle, :rect, :utriangle, :diamond, :dtriangle, :pentagon, :star5)
+"""
+    DatasetPalette(colours, markers)
 
-const DATASET_ASSIGNMENT = Dict{String, Int}()
-const PANEL_SLOTS = Set{Int}()
-const DATASET_TABLE_EXHAUSTED = Ref(false)
+Colour and marker pairs handed to measured datasets in order of first appearance, the slot each
+author–year label has been given, and the slots taken in the panel being drawn.
+"""
+struct DatasetPalette
+    colours::Vector{RGBf}
+    markers::Vector{Symbol}
+    assignment::Dict{String, Int}
+    taken::Set{Int}
+    exhausted::Base.RefValue{Bool}
+end
+
+function DatasetPalette(colours, markers)
+    length(colours) == length(markers) || throw(
+        DimensionMismatch("$(length(colours)) colours against $(length(markers)) markers"),
+    )
+    return DatasetPalette(
+        collect(RGBf, colours),
+        collect(Symbol, markers),
+        Dict{String, Int}(),
+        Set{Int}(),
+        Ref(false),
+    )
+end
+
+# The measured datasets of the multiplicity, energy and spectrum figures. Black is reserved for
+# the model curve.
+const DATASET_PALETTE = DatasetPalette(
+    (VERMILION, BLUISH_GREEN, REDDISH_PURPLE, SKY_BLUE, ORANGE, BLUE, YELLOW),
+    (:circle, :rect, :utriangle, :diamond, :dtriangle, :pentagon, :star5),
+)
+
+# The measured datasets of the product figures, which draw the evaluations in vermilion and
+# blue: those two are left out, and a dark purple outside the Okabe–Ito set takes the sixth slot.
+const DARK_PURPLE = RGBf(0.42, 0.24, 0.6)
+const PRODUCT_PALETTE = DatasetPalette(
+    (BLUISH_GREEN, REDDISH_PURPLE, SKY_BLUE, ORANGE, YELLOW, DARK_PURPLE),
+    (:circle, :rect, :utriangle, :diamond, :dtriangle, :pentagon),
+)
 
 "Start a new panel: the slots taken within it are free again."
-begin_panel!() = (empty!(PANEL_SLOTS); nothing)
+begin_panel!() =
+    (foreach(p -> empty!(p.taken), (DATASET_PALETTE, PRODUCT_PALETTE)); nothing)
 
 """
-    dataset_style(author_year) -> (colour, marker)
+    dataset_style([palette], author_year) -> (colour, marker)
 
-The colour and marker of a measured dataset, keyed by its author–year label. Slots are taken
-per panel, so no two datasets of one panel share a pair; a label keeps the slot it was first
-given wherever that slot is still free, so a dataset recurring in another panel looks the same.
-Beyond seven datasets in one panel the table is reused from the start, with a single warning.
+The colour and marker of a measured dataset, keyed by its author–year label, from `palette`,
+`DATASET_PALETTE` by default. Slots are taken per panel, so no two datasets of one panel share a
+pair; a label keeps the slot it was first given wherever that slot is still free, so a dataset
+recurring in another panel looks the same. Beyond the length of the palette in one panel the
+table is reused from the start, with a single warning.
 """
-function dataset_style(author_year::String)
-    slot = get(DATASET_ASSIGNMENT, author_year, 0)
-    if slot == 0 || slot in PANEL_SLOTS
-        free = [s for s in eachindex(DATASET_COLOURS) if !(s in PANEL_SLOTS)]
+dataset_style(author_year::String) = dataset_style(DATASET_PALETTE, author_year)
+
+function dataset_style(palette::DatasetPalette, author_year::String)
+    slot = get(palette.assignment, author_year, 0)
+    if slot == 0 || slot in palette.taken
+        free = [s for s in eachindex(palette.colours) if !(s in palette.taken)]
         if isempty(free)
-            DATASET_TABLE_EXHAUSTED[] ||
-                @warn "more than $(length(DATASET_COLOURS)) measured \
+            palette.exhausted[] || @warn "more than $(length(palette.colours)) measured \
                 datasets in one panel; colours and markers are reused" dataset =
-                    author_year
-            DATASET_TABLE_EXHAUSTED[] = true
-            slot = mod1(length(PANEL_SLOTS) + 1, length(DATASET_COLOURS))
+                author_year
+            palette.exhausted[] = true
+            slot = mod1(length(palette.taken) + 1, length(palette.colours))
         else
             slot = first(free)
         end
-        DATASET_ASSIGNMENT[author_year] = slot
+        palette.assignment[author_year] = slot
     end
-    push!(PANEL_SLOTS, slot)
-    return (DATASET_COLOURS[slot], DATASET_MARKERS[slot])
+    push!(palette.taken, slot)
+    return (palette.colours[slot], palette.markers[slot])
 end
 
 """

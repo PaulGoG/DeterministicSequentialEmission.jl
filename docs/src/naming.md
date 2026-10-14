@@ -73,8 +73,10 @@ holds the pre-neutron *Y*(*A*), `Y_vs_A_p.dat` the product *Y*(*A*_p); `TKE_p_vs
 *TKE*_p against the heavy product mass. Where ExforFissionData.jl has a token for a quantity,
 that token is the name here too, and abscissae come in its order, charge before product mass:
 `Y_vs_Z_A_p.dat`, with the columns `Z A_p Y`. A table a run writes under `data/sims/` then reads
-like the directory the retrieval or the staging writes under `data/<system>/`. The product
-neutron number has no token there and keeps `N_p`.
+like the directory the retrieval or the staging writes under `data/<system>/`, in one respect
+apart: a yield is in per cent per fission here and in the evaluations, and in fragments per
+fission where the retrieval writes it, as its record states. The product neutron number has no
+token there and keeps `N_p`.
 
 `rms` is retired. It named a root-mean-square of nothing stated; the quantity is the Gaussian
 dispersion of the isobaric charge distribution, and the field writes σ_Z.

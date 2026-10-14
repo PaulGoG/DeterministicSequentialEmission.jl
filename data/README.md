@@ -50,6 +50,9 @@ data/
 | `<system>/spectrum_cf252_ratio_vs_E/*.dat` | the ratio of the system's spectrum and that of ²⁵²Cf(sf) at the same outgoing energy, in the orientation the record states | `E spectrum_cf252_ratio spectrum_cf252_ratio_uncertainty` |
 | `<system>/Y_vs_A_p/<library>.dat` | evaluated post-neutron product mass yield, the independent yields summed over charge; `ENDF-B-VIII.0` and `JEFF-3.3`, staged by `scripts/stage_product_yields.jl` with a `provenance.toml` beside them | `A_p Y Y_uncertainty`, per cent per fission, 200 over both products |
 | `<system>/Y_vs_Z_A_p/<library>.dat` | the same resolved in charge: the evaluated independent yields before β decay, isomeric states summed | `Z A_p Y Y_uncertainty` |
+| `<system>/Y_vs_A_p/*.dat` | measured post-neutron product mass yield, EXFOR `MASS,SEC,FY`, and chain yields `MASS,CHN,FY`, retrieved beside the evaluations | `A_p Y Y_uncertainty`, fragments per fission, 2 over both products |
+| `<system>/Y_vs_Z_A_p/*.dat` | measured independent yields `ELEM/MASS,IND,FY`, isomeric states as the record states | `Z A_p Y Y_uncertainty`, fragments per fission |
+| `<system>/E_K_p_vs_A_p/*.dat` | measured mean kinetic energy of the products against product mass, `MASS,SEC,KE`; none for ²⁵²Cf | `A_p E_K_p E_K_p_uncertainty`, MeV |
 
 A file name is `<quantity>_vs_<abscissa>`, which is a statement rather than a list of symbols.
 Where a quantity was measured more than once, the directory carries the quantity and the file
@@ -138,8 +141,12 @@ julia scripts/retrieve.jl config/U233_nth_nu_vs_A.toml
 julia scripts/retrieve.jl config/Cf252_sf_spectrum_maxwellian_ratio_vs_E.toml
 ```
 
-The tree held here is the retrieval of every configuration that package ships, at v0.3.0. Three of
-them, the joint `Y(A,TKE)` of ²³⁵U, ²³⁹Pu and ²³³U, find no dataset in the archive.
+The tree held here is the retrieval of every configuration that package ships, at v0.4.0. Every
+table v0.3.0 also writes is byte-identical between the two versions, so the inputs above read the
+same numbers. v0.4.0 adds keys to every record, among them the unit of the subentry, the sum of a
+yield table and the handling of isomeric states, and the three post-neutron directories below.
+Three of the configurations, the joint `Y(A,TKE)` of ²³⁵U, ²³⁹Pu and ²³³U, find no dataset in
+the archive.
 
 **Evaluated product yields.** `<system>/Y_vs_A_p/` and `<system>/Y_vs_Z_A_p/` hold the
 independent fission product yields of ENDF/B-VIII.0 (Brown *et al.*, *Nucl. Data Sheets* **148**,
@@ -161,19 +168,46 @@ downloads the NFY and SFY sublibraries from the NNDC and from the NEA Data Bank
 beside the tables records the URL, the SHA-256 of what was downloaded, the material and the energy
 point. `--library` and `--system` restrict the staging; if a server refuses a scripted download,
 fetch the file in a browser and pass it with `--file <library>=<path>`. A table that differs from
-the one in place never replaces it; the old one moves aside as `<library>#1.dat`. The measured
-post-neutron yields — EXFOR `MASS,SEC,FY`, the independent yields `ELEM/MASS,IND,FY` and the
-product kinetic energies `MASS,SEC,KE` — are not retrieved here yet. ExforFissionData.jl v0.4.0
-writes them as `<accession>_<Author>_<year>.dat` into `Y_vs_A_p/`, `Y_vs_Z_A_p/` and
-`E_K_p_vs_A_p/` (`A_p E_K_p E_K_p_uncertainty`, MeV), the first two beside the evaluations, and
-the figures draw them as markers.
+the one in place never replaces it; the old one moves aside as `<library>#1.dat`.
+
+**Measured post-neutron products.** ExforFissionData.jl v0.4.0 retrieves three post-neutron
+observables, which the figures draw as markers against the model and the evaluations:
+`Y_vs_A_p/`, the product mass yields EXFOR codes `MASS,SEC,FY` and the chain yields it codes
+`MASS,CHN,FY`, which β decay, conserving `A`, makes post-neutron mass yields up to the
+delayed-neutron transfer between neighbouring chains; `Y_vs_Z_A_p/`, the independent yields
+`ELEM/MASS,IND,FY`; and `E_K_p_vs_A_p/`, the mean kinetic energy of the products against their
+mass, `MASS,SEC,KE`, of which the archive holds none for ²⁵²Cf. Each holds
+`<accession>_<Author>_<year>.dat` files with the `retrieval.toml` and the `subentries/` of the
+retrieval. The yields are written in fragments per fission, 2 over both products, against the
+per cent of the evaluations; `unit_written` in the record states the unit of each table, and
+`plotting/figures.jl` converts from it and stops on a unit it does not know. The kinetic energies
+are in MeV.
+
+```bash
+git clone --branch v0.4.0 https://github.com/PaulGoG/ExforFissionData.jl
+cd ExforFissionData.jl
+julia scripts/retrieve.jl config/<system>_Y_vs_A_p.toml
+julia scripts/retrieve.jl config/<system>_Y_vs_Z_A_p.toml
+julia scripts/retrieve.jl config/<system>_E_K_p_vs_A_p.toml
+```
+
+for each of `Cf252_sf`, `U235_nth`, `Pu239_nth` and `U233_nth`. In `Y_vs_A_p/` and
+`Y_vs_Z_A_p/` the retrieval sits beside the evaluations: the measured tables, `retrieval.toml`
+and `subentries/` next to `<library>.dat` and `provenance.toml`, with no name in common. A
+retrieval never writes into a directory that exists, and the staging script writes only its own
+files, so the two are merged by hand: the contents of the directory the retrieval writes are
+copied into the one holding the evaluations.
 
 Read the `retrieval.toml` it writes before using what it retrieved. It records, per dataset, the
 reaction code, the units and the qualifiers the archive attached, and those qualifiers matter:
 `DERIV` marks a dataset derived from other data rather than measured, `SPA` one averaged over a
 fission spectrum rather than the thermal one it is filed under. No yield input carries either, and
-the figures draw no such set. An uncertainty the archive does not state is written `NaN`, never 0;
-a 0 appears only where EXFOR states it, and `uncertainty_zero_rows` counts those rows.
+the neutron figures draw no such set; the product figures draw them with open markers, and
+`results/README.md` lists them. Of the post-neutron sets, those the record marks superseded are
+not drawn, and neither is the ²³⁵U product mass yield of Koblik (2014), 31738002, whose heavy
+products alone sum to 182 % per fission. An uncertainty the archive does not state is written
+`NaN`, never 0; a 0 appears only where EXFOR states it, and `uncertainty_zero_rows` counts those
+rows.
 
 The neutron-energy and spectrum-ratio tables need their record more than the others do:
 - `eps_vs_A`, `eps_vs_A_TKE`: each dataset states `ordinate_frame`, the centre of mass for every

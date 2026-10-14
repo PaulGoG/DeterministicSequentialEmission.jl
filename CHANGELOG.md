@@ -47,11 +47,23 @@ here.
   the pre-neutron `E_K(A)`, `E_K_p(Z)`, and `TKE_p(A_p)`, beside the pre-neutron `⟨TKE⟩(A)`.
   `results/README.md` documents each.
 - `plotting/figures.jl` takes the directory it writes to as an optional third argument.
+- The measured post-neutron products of EXFOR, retrieved by ExforFissionData.jl v0.4.0, in the
+  product figures: the product mass yields `MASS,SEC,FY` by name and the chain yields
+  `MASS,CHN,FY` pooled in `Y(A_p)`, the independent yields `ELEM/MASS,IND,FY` pooled in the
+  isotopic distributions, and the product kinetic energies `MASS,SEC,KE` in `E_K_p(A_p)`. Each
+  table is converted from the unit its `retrieval.toml` states, from fragments per fission to per
+  cent for the yields, and a unit the script does not know stops it. Sets qualified `SPA` or
+  `DERIV` are drawn with open markers; sets the record marks superseded, and the ²³⁵U mass yield
+  of Koblik (2014), are left out, and the sidecars name them. `results/README.md` lists every set
+  drawn with its accession and reference.
 
 ### Changed
 
 - The per-system comparison figures are laid out on a two-column grid rather than stacked, each
-  panel with its own legend above it.
+  panel with its own legend above it. In the product figures the legends of a grid row share one
+  row of the layout, so that its axes align whatever the number of entries, and the row grows by
+  each legend row beyond two; the measured sets there take colours other than the vermilion and
+  blue of the evaluations.
 - The figures are written to `results/`, which replaces `plots/`.
 
 ## [0.1.1] - 2026-10-12

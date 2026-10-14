@@ -19,12 +19,15 @@
 #   <data>/<system>/E_K_p_vs_A_p/*.dat                       A_p E_K_p E_K_p_uncertainty
 #
 # which is the layout that package writes, with a retrieval.toml beside the files that is read
-# for the orientation of a ratio and for datasets a later one supersedes. The evaluated product
-# yields under Y_vs_A_p/ and Y_vs_Z_A_p/ are staged by scripts/stage_product_yields.jl as
-# <library>.dat with a provenance.toml beside them. The pre-neutron mean total kinetic energy a
-# run was solved with is read from the input its configuration.toml names, under the same data
-# directory. Columns are taken by position, not by header text. Both directories default to
-# data/ under the project and neither is version-controlled.
+# for the orientation of a ratio, for datasets a later one supersedes, and for the unit and the
+# qualifiers of the post-neutron tables. The evaluated product yields under Y_vs_A_p/ and
+# Y_vs_Z_A_p/ are staged by scripts/stage_product_yields.jl as <library>.dat with a
+# provenance.toml beside them, next to the retrieved sets. The retrieval writes its yields in
+# fragments per fission and the evaluations are in per cent; each retrieved table is converted
+# from the unit its record states, and a unit the script does not know stops it. The pre-neutron
+# mean total kinetic energy a run was solved with is read from the input its configuration.toml
+# names, under the same data directory. Columns are taken by position, not by header text. Both
+# directories default to data/ under the project and neither is version-controlled.
 #
 # Each figure is written to results/, or to the figures directory given, as PDF and PNG, beside
 # a TOML sidecar that names, for every system drawn, the run directory, the commit recorded in its
@@ -103,6 +106,10 @@ const GRID_WIDTH = 1200
 const GRID_ROW_HEIGHT = 500
 const LEGEND_COLUMNS = 2
 
+# Height of one legend row at the base font size, by which a grid row grows where its legends
+# need more than two rows.
+const LEGEND_ROW_HEIGHT = 34
+
 const SPECTRUM_TICKS =
     ([0.1, 0.2, 0.5, 1.0, 2.0, 5.0, 10.0], ["0.1", "0.2", "0.5", "1", "2", "5", "10"])
 
@@ -155,6 +162,45 @@ const EVALUATED_YIELDS = (
         marker = :rect,
     ),
 )
+
+# Units the retrieval writes its post-neutron tables in, by observable, with the factor that
+# takes each to the unit the figures draw: per cent per fission for a yield, 200 over both
+# products as the evaluations and the model's tables are, and MeV for a kinetic energy. The
+# retrieval writes yields in fragments per fission, 2 over both products.
+const PRODUCT_UNITS = Dict(
+    "Y_vs_A_p" => Dict("PART/FIS" => 100.0, "PC/FIS" => 1.0),
+    "Y_vs_Z_A_p" => Dict("PART/FIS" => 100.0, "PC/FIS" => 1.0),
+    "E_K_p_vs_A_p" => Dict("MEV" => 1.0),
+)
+
+# Retrieved post-neutron datasets left out of the figures, by accession, with the reason. A set
+# its record flags as superseded is left out as well, and the one superseding it is drawn.
+const EXCLUDED = Dict(
+    "31738002" => "its heavy-product yields alone sum to 182 % per fission, where one side \
+        sums to 100 %, and it states no uncertainty",
+)
+
+# Archive qualifiers that mark a drawn set, with open markers: SPA, averaged over a neutron
+# spectrum other than the one it is filed under, and DERIV, derived from other data rather
+# than measured.
+const MARKED_QUALIFIERS = ("SPA", "DERIV")
+
+# The pooled measured families of the product figures: the chain yields, muted beneath the
+# named sets of the mass yield, and the independent yields of the isotopic distributions.
+const CHAIN_COLOUR = RGBf(0.62, 0.62, 0.62)
+const INDEPENDENT_COLOUR = BLUISH_GREEN
+const INDEPENDENT_MARKER = :diamond
+const INDEPENDENT_LABEL = "Measured, EXFOR independent yields"
+
+# Measured kinetic-energy series kept by name in a panel that holds more than the product palette
+# can tell apart; the others are pooled into one.
+const NAMED_KINETIC_ENERGY_SETS = 4
+
+# Marker sizes of the measured series of the product mass yield and kinetic energy. Up to some
+# 700 points share a panel there, a mass unit some 5 px wide, and markers of the base size 14
+# merge into bands; the chain yields are smaller still, beneath the named sets.
+const DENSE_MARKER_SIZE = 10
+const CHAIN_MARKER_SIZE = 7
 
 # Lower limit of the logarithmic yield axes [%], below which the yield figures draw no product;
 # and the product yield [%] below which a mean kinetic energy, taken over a handful of
@@ -259,18 +305,24 @@ function author_year(name::AbstractString)
     parts = split(replace(basename(name), ".dat" => ""), "_")
     length(parts) >= 3 || return String(name)
     author = replace(parts[2], "." => ". ")
+    # Transliterated names restored; EXFOR writes one author as both "Liu Chao" and
+    # "Chao Liu", and Liu is the family name.
     author = replace(
         author,
         "Goeoek" => "Göök",
         "Budtz-jorgensen" => "Budtz-Jørgensen",
         "Al-adili" => "Al-Adili",
+        "Guenther" => "Günther",
+        "LiuChao" => "Liu",
+        "ChaoLiu" => "Liu",
     )
     return strip(last(split(author, ". "))) * " " * parts[3]
 end
 
 # The measured datasets each figure shows, by EXFOR accession: a fixed selection per system, for
 # legibility. The data directory holds the whole retrieval. A system or observable not listed
-# shows every dataset retrieved.
+# shows every dataset retrieved. The post-neutron observables are curated by `load_products`
+# instead.
 const SHOWN = Dict(
     ("Cf252_sf", "nu_vs_A") =>
         ["23118006", "23175008", "23268005", "23764010", "41425014"],
@@ -280,11 +332,6 @@ const SHOWN = Dict(
     ("U233_nth", "nu_vs_A") => ["14369004", "22660005", "23595005", "41397004"],
     ("Cf252_sf", "spectrum_maxwellian_ratio_vs_E") =>
         ["14278002", "30775002", "40418008", "41158003"],
-    # The measured kinetic energies of the products are retrieved by ExforFissionData.jl from
-    # v0.4.0 on; none is drawn until it is selected here. The archive holds none for 252-Cf.
-    ("U235_nth", "E_K_p_vs_A_p") => String[],
-    ("Pu239_nth", "E_K_p_vs_A_p") => String[],
-    ("U233_nth", "E_K_p_vs_A_p") => String[],
 )
 
 """
@@ -366,6 +413,266 @@ function load_measured(
     end
     return join_complementary(sets)
 end
+
+"""
+A retrieved post-neutron dataset in the unit the figures draw: its accession, author–year label,
+the quantity modifier of its reaction code (`SEC`, `CHN` or `IND`), whether a qualifier in
+`MARKED_QUALIFIERS` marks it, its file, and its rows — the charge where the table is resolved in
+it, the product mass, the value and its uncertainty, zero where none is stated.
+"""
+struct ProductSet
+    accession::String
+    label::String
+    kind::String
+    marked::Bool
+    path::String
+    Z::Vector{Int}
+    A_p::Vector{Float64}
+    y::Vector{Float64}
+    σ::Vector{Float64}
+end
+
+"""
+    unit_factor(observable, unit) -> Float64
+
+The factor that takes a retrieved table of `observable`, written in `unit`, to the unit the
+figures draw it in. An observable or a unit that `PRODUCT_UNITS` does not list throws an
+`ArgumentError`: a table is converted from the unit its record states, never by assumption.
+
+```julia
+unit_factor("Y_vs_A_p", "PART/FIS")   # 100.0: fragments per fission to per cent
+```
+"""
+function unit_factor(observable::AbstractString, unit::AbstractString)
+    units = get(PRODUCT_UNITS, observable, nothing)
+    units === nothing &&
+        throw(ArgumentError("no unit conversion is defined for $observable"))
+    factor = get(units, unit, nothing)
+    known = join(sort!(collect(keys(units))), ", ")
+    factor === nothing &&
+        throw(ArgumentError("unknown unit \"$unit\" for $observable; known: $known"))
+    return factor
+end
+
+"The quantity modifier of an EXFOR reaction code: `CHN` in `94-PU-239(N,F)MASS,CHN,FY,,SPA`."
+function quantity_modifier(reaction_code::AbstractString)
+    fields = split(last(split(reaction_code, ')')), ',')
+    length(fields) >= 2 ||
+        throw(ArgumentError("no quantity modifier in the reaction code $reaction_code"))
+    return String(fields[2])
+end
+
+"""
+    load_products(system, observable) -> (sets, excluded)
+
+The retrieved datasets of one post-neutron observable of one system — `Y_vs_A_p`, `Y_vs_Z_A_p`
+or `E_K_p_vs_A_p` — each converted by [`unit_factor`](@ref) from the unit its record states as
+`unit_written`, beside the accessions left out, each with the reason: a set in `EXCLUDED`, and a
+set the record flags as superseded. The evaluations staged in the same directory are not read
+here. A table the record does not name, or names without a unit, throws an `ArgumentError`.
+"""
+function load_products(system::AbstractString, observable::AbstractString)
+    directory = joinpath(MEASURED, system, observable)
+    sets = ProductSet[]
+    excluded = Pair{String, String}[]
+    isdir(directory) || return sets, excluded
+    path = joinpath(directory, "retrieval.toml")
+    record = isfile(path) ? TOML.parsefile(path) : Dict{String, Any}()
+    entries = Dict{String, Any}(
+        entry["file"] => entry for entry in get(record, "accepted", Any[]) if
+        entry isa AbstractDict && haskey(entry, "file")
+    )
+    evaluations = Set(library.file for library in EVALUATED_YIELDS)
+    offset = observable == "Y_vs_Z_A_p" ? 1 : 0
+    for name in sort(filter(endswith(".dat"), readdir(directory)))
+        name in evaluations && continue
+        file = joinpath(directory, name)
+        entry = get(entries, name, nothing)
+        entry === nothing && throw(
+            ArgumentError(
+                "$file is not named in the retrieval record beside it, so its unit is unknown",
+            ),
+        )
+        tag = accession(name)
+        qualifiers = get(entry, "qualifiers", String[])
+        if haskey(EXCLUDED, tag)
+            push!(excluded, tag => EXCLUDED[tag])
+            continue
+        end
+        index = findfirst(startswith("superseded"), qualifiers)
+        if index !== nothing
+            by = match(r"by (\w+)", qualifiers[index])
+            push!(excluded, tag => "superseded by $(by === nothing ? "?" : by[1])")
+            continue
+        end
+        unit = get(entry, "unit_written", nothing)
+        unit isa AbstractString ||
+            throw(ArgumentError("no unit_written for $name in $path"))
+        factor = unit_factor(observable, unit)
+        Z = Int[]
+        A_p = Float64[]
+        y = Float64[]
+        σ = Float64[]
+        for row in read_rows(file)
+            length(row) >= 2 + offset && isfinite(row[2 + offset]) || continue
+            offset == 1 && push!(Z, round(Int, row[1]))
+            push!(A_p, row[1 + offset])
+            push!(y, factor * row[2 + offset])
+            u = length(row) >= 3 + offset ? row[3 + offset] : NaN
+            push!(σ, isfinite(u) ? factor * u : 0.0)
+        end
+        codes = [String(strip(first(split(q, ':')))) for q in qualifiers]
+        push!(
+            sets,
+            ProductSet(
+                tag,
+                author_year(name),
+                quantity_modifier(entry["reaction_code"]),
+                any(in(MARKED_QUALIFIERS), codes),
+                file,
+                Z,
+                A_p,
+                y,
+                σ,
+            ),
+        )
+    end
+    for (tag, reason) in excluded
+        println(
+            "  ",
+            rpad(system, 10),
+            " ",
+            rpad(observable, 13),
+            " not drawn: ",
+            tag,
+            ", ",
+            reason,
+        )
+    end
+    return sets, excluded
+end
+
+"""
+One marker series of a product figure: its legend label, the files drawn, the points, and which
+of them belong to a set that a qualifier in `MARKED_QUALIFIERS` marks.
+"""
+struct ProductSeries
+    label::String
+    paths::Vector{String}
+    x::Vector{Float64}
+    y::Vector{Float64}
+    σ::Vector{Float64}
+    marked::Vector{Bool}
+end
+
+"""
+    pooled_series(label, sets, window) -> ProductSeries
+
+The points of `sets` whose product mass lies in `window`, pooled under one `label`; a set with no
+point in the window does not enter, and the paths name the sets that do.
+"""
+function pooled_series(label::AbstractString, sets, window)
+    paths = String[]
+    x = Float64[]
+    y = Float64[]
+    σ = Float64[]
+    marked = Bool[]
+    for set in sets
+        inside = first(window) .<= set.A_p .<= last(window)
+        any(inside) || continue
+        push!(paths, set.path)
+        append!(x, set.A_p[inside])
+        append!(y, set.y[inside])
+        append!(σ, set.σ[inside])
+        append!(marked, fill(set.marked, count(inside)))
+    end
+    return ProductSeries(label, paths, x, y, σ, marked)
+end
+
+"""
+    named_series(sets, window) -> Vector{ProductSeries}
+
+One series per author–year label of `sets`, in `window`. Tables of one EXFOR entry under one
+label are one series, as [`join_complementary`](@ref) joins them; tables of different entries
+under one label each carry their entry.
+"""
+function named_series(sets, window)
+    entry(set) = first(set.accession, 5)
+    series = ProductSeries[]
+    for label in unique(set.label for set in sets)
+        members = filter(set -> set.label == label, sets)
+        entries = unique(entry.(members))
+        for number in entries
+            name = length(entries) == 1 ? label : "$label ($number)"
+            s = pooled_series(name, filter(m -> entry(m) == number, members), window)
+            isempty(s.x) || push!(series, s)
+        end
+    end
+    return series
+end
+
+"""
+    draw_series!(axis, series, colour, marker; markersize = 14, floor = -Inf)
+
+Error bars, cut off at `floor` for a logarithmic axis, then markers, of one product series:
+filled for the points of unmarked sets, open for those of marked ones. Returns the plot that
+stands for the series in a legend: the filled markers unless every point is marked.
+"""
+function draw_series!(
+    axis::Axis,
+    series::ProductSeries,
+    colour,
+    marker;
+    markersize = 14,
+    floor::Real = -Inf,
+)
+    bars = series.σ .> 0
+    any(bars) && rangebars!(
+        axis,
+        series.x[bars],
+        max.(series.y[bars] .- series.σ[bars], floor),
+        series.y[bars] .+ series.σ[bars];
+        color = (colour, 0.5),
+        linewidth = 1.5,
+    )
+    style = (; marker, markersize, strokecolor = darker(colour))
+    handle = nothing
+    filled = .!series.marked
+    if any(filled)
+        handle = scatter!(
+            axis,
+            series.x[filled],
+            series.y[filled];
+            color = colour,
+            strokewidth = 1.5,
+            style...,
+        )
+    end
+    if any(series.marked)
+        open = scatter!(
+            axis,
+            series.x[series.marked],
+            series.y[series.marked];
+            color = :transparent,
+            strokewidth = 2,
+            style...,
+        )
+        handle === nothing && (handle = open)
+    end
+    return handle
+end
+
+# The legend entry that explains the open markers of the product figures: an open marker
+# beside the qualifiers it stands for, grey where several families are drawn.
+const MARKED_LABEL = "SPA or DERIV"
+marked_key(; markersize = 14, marker = :circle, colour = GUIDE_LABEL_COLOUR) =
+    MarkerElement(;
+        marker = marker,
+        color = :transparent,
+        strokecolor = darker(colour),
+        strokewidth = 2,
+        markersize = markersize,
+    )
 
 function available(case::Case)
     directory = run_directory(case)
@@ -488,14 +795,16 @@ function label_guide!(slot, value::Real, label, limits::Tuple{Real, Real}; side:
 end
 
 """
-The provenance entry of one system: the run drawn, its commit, the measured files used, the
-evaluated ones where a figure draws evaluations, and the inputs of the run a guide is read from.
+The provenance entry of one system: the run drawn, its commit, the measured files used — of the
+`MeasuredSet`s or `ProductSeries` drawn — the evaluated ones where a figure draws evaluations, the
+inputs of the run a guide is read from, and the retrieved sets left out, each with the reason.
 """
 function system_record(
     directory::AbstractString,
-    sets::Vector{MeasuredSet};
+    sets::AbstractVector;
     evaluated::Vector{String} = String[],
     inputs::Vector{String} = String[],
+    excluded::Vector{Pair{String, String}} = Pair{String, String}[],
 )
     measured = String[]
     for set in sets, path in set.paths
@@ -509,6 +818,8 @@ function system_record(
     isempty(evaluated) ||
         (record["evaluated"] = [relpath(path, MEASURED) for path in evaluated])
     isempty(inputs) || (record["input"] = [relpath(path, MEASURED) for path in inputs])
+    isempty(excluded) ||
+        (record["excluded"] = ["$tag: $reason" for (tag, reason) in excluded])
     return record
 end
 
@@ -583,6 +894,60 @@ end
 
 "The rows every legend of a grid takes: enough for the panel with the most entries."
 legend_rows(counts) = maximum(cld(count, LEGEND_COLUMNS) for count in counts; init = 1)
+
+"""
+    grid_slots(figure, index; legend = true) -> (legend position, axis position)
+
+The layout positions of the legend and the axis of panel `index` of a per-system grid. With
+legends, each grid row is two rows of the figure, the legends above the axes, so that the legends
+of one grid row share one height and its axes align, whatever the number of entries of each
+legend; the legend position is `nothing` without them.
+"""
+function grid_slots(figure::Figure, index::Integer; legend::Bool = true)
+    row, column = fldmod1(index, GRID_COLUMNS)
+    legend || return nothing, figure[row, column]
+    return figure[2row - 1, column], figure[2row, column]
+end
+
+"""
+    grid_legend!(position, handles, labels, rows)
+
+The legend of one panel of a grid laid out by [`grid_slots`](@ref): `rows` banks of
+`LEGEND_COLUMNS` entries, frameless, at the foot of its cell, flush with the axis below it.
+"""
+function grid_legend!(position, handles, labels, rows::Integer)
+    Legend(
+        position,
+        handles,
+        labels;
+        nbanks = rows,
+        tellwidth = false,
+        tellheight = true,
+        valign = :bottom,
+        padding = (0, 0, 0, 0),
+        colgap = 16,
+        patchsize = (35, 20),
+    )
+    return nothing
+end
+
+"""
+    grid_gaps!(figure, rows; legend = true)
+
+The gaps of a grid of `rows` rows laid out by [`grid_slots`](@ref): 8 between a legend and its
+axis, 12 between grid rows and between the columns.
+"""
+function grid_gaps!(figure::Figure, rows::Integer; legend::Bool = true)
+    if legend
+        for gap in 1:(2rows - 1)
+            rowgap!(figure.layout, gap, isodd(gap) ? 8 : 12)
+        end
+    else
+        rows > 1 && rowgap!(figure.layout, 12)
+    end
+    colgap!(figure.layout, 12)
+    return nothing
+end
 
 "One panel of a per-system grid: the system, its run, the model curve and the measured sets."
 struct SystemPanel
@@ -970,8 +1335,11 @@ end
 Draw the post-neutron product mass yield `Y(A_p)` of every system whose run tabulated it, on
 the shared grid: the model as the black line, the run's own pre-neutron `Y(A)` as a dotted
 guide, the evaluated independent yields summed over charge as coloured lines with their
-uncertainty as a band, and the measured post-neutron mass yields, where retrieved, as markers.
-The annotation band above the data carries the system; all panels share one mass range.
+uncertainty as a band, and the retrieved post-neutron mass yields as markers — each `SEC` set
+named, the chain yields `CHN` pooled into one muted series, which β decay, conserving `A`,
+makes post-neutron mass yields up to the delayed-neutron transfer between chains. A set that a
+qualifier in `MARKED_QUALIFIERS` marks is drawn with open markers. The annotation band above the
+data carries the system; all panels share one mass range.
 """
 function figure_product_yield(drawable::Vector{Case})
     panels = []
@@ -989,13 +1357,29 @@ function figure_product_yield(drawable::Vector{Case})
             keep = first(MASS_WINDOW) .<= x .<= last(MASS_WINDOW)
             push!(evaluated, (library, file, x[keep], y[keep], σ[keep]))
         end
-        sets = load_measured(
-            case.label,
-            "Y_vs_A_p",
-            MASS_WINDOW;
-            skip = [library.file for library in EVALUATED_YIELDS],
+        products, excluded = load_products(case.label, "Y_vs_A_p")
+        for set in products
+            set.kind in ("SEC", "CHN") || throw(
+                ArgumentError(
+                    "$(set.path): a post-neutron mass yield coded $(set.kind), not SEC or CHN",
+                ),
+            )
+        end
+        named = named_series(filter(set -> set.kind == "SEC", products), MASS_WINDOW)
+        pool = pooled_series("", filter(set -> set.kind == "CHN", products), MASS_WINDOW)
+        n = length(pool.paths)
+        chain = ProductSeries(
+            "Chain yields ($n set$(n == 1 ? "" : "s"))",
+            pool.paths,
+            pool.x,
+            pool.y,
+            pool.σ,
+            pool.marked,
         )
-        push!(panels, (; case, directory, A_p, Y_p, A, Y, evaluated, sets))
+        push!(
+            panels,
+            (; case, directory, A_p, Y_p, A, Y, evaluated, named, chain, excluded),
+        )
     end
     isempty(panels) && return nothing
 
@@ -1004,19 +1388,30 @@ function figure_product_yield(drawable::Vector{Case})
         append!(masses, p.A_p)
         append!(masses, p.A)
         foreach(e -> append!(masses, e[3]), p.evaluated)
-        foreach(set -> append!(masses, set.x), p.sets)
+        foreach(s -> append!(masses, s.x), [p.named; p.chain])
     end
     xlimits = padded_limits(masses)
 
+    # Entries per legend: the guide, the evaluations, the named sets, the chain yields where
+    # any are drawn, the key to the open markers where any set is marked, and the model.
+    entries(p) =
+        2 +
+        length(p.evaluated) +
+        length(p.named) +
+        !isempty(p.chain.x) +
+        any(s -> any(s.marked), [p.named; p.chain])
     rows = cld(length(panels), GRID_COLUMNS)
-    banks = legend_rows(length(p.sets) + length(p.evaluated) + 2 for p in panels)
-    figure = Figure(size = (GRID_WIDTH, GRID_ROW_HEIGHT * rows))
+    banks = legend_rows(entries(p) for p in panels)
+    # Each legend row beyond the two of the house grid lengthens the row by its own height, so
+    # that the axes keep the height of the other grid figures.
+    height = GRID_ROW_HEIGHT + LEGEND_ROW_HEIGHT * max(banks - 2, 0)
+    # The tick label at A_p = 180 reaches past the right spine; the right padding holds it.
+    figure = Figure(size = (GRID_WIDTH, height * rows), figure_padding = (10, 24, 10, 10))
     provenance = Dict{String, Any}()
     for (index, p) in pairs(panels)
         row, column = fldmod1(index, GRID_COLUMNS)
         bottom = row == rows
-        cell = GridLayout(figure[row, column])
-        slot = cell[2, 1]
+        legend_slot, slot = grid_slots(figure, index)
         axis = panel(
             slot;
             ylabel = L"Y(A_p)\ [\%]",
@@ -1054,30 +1449,67 @@ function figure_product_yield(drawable::Vector{Case})
             push!(labels, library.label)
             append!(ordinates, y .+ σ)
         end
-        for set in p.sets
-            push!(handles, draw_measured!(axis, set))
-            push!(labels, set.label)
+        # The chain yields beneath the named sets, muted: they are many, and partial chains.
+        measured = ProductSeries[]
+        if !isempty(p.chain.x)
+            draw_series!(
+                axis,
+                p.chain,
+                CHAIN_COLOUR,
+                :circle;
+                markersize = CHAIN_MARKER_SIZE,
+            )
+            push!(measured, p.chain)
+        end
+        for s in p.named
+            colour, marker = dataset_style(PRODUCT_PALETTE, s.label)
+            push!(
+                handles,
+                draw_series!(axis, s, colour, marker; markersize = DENSE_MARKER_SIZE),
+            )
+            push!(labels, s.label)
+            push!(measured, s)
+        end
+        if !isempty(p.chain.x)
+            push!(
+                handles,
+                MarkerElement(;
+                    marker = :circle,
+                    markersize = CHAIN_MARKER_SIZE,
+                    color = CHAIN_COLOUR,
+                    strokecolor = darker(CHAIN_COLOUR),
+                    strokewidth = 1.5,
+                ),
+            )
+            push!(labels, p.chain.label)
+        end
+        if any(s -> any(s.marked), measured)
+            push!(handles, marked_key(; markersize = DENSE_MARKER_SIZE))
+            push!(labels, MARKED_LABEL)
         end
         push!(handles, lines!(axis, p.A_p, p.Y_p; color = :black, linewidth = 3))
         push!(labels, "This model")
+        for s in measured
+            append!(ordinates, s.y)
+        end
 
         # One line of annotation above all the data: both humps reach the top, so no corner is
         # free, and the band is reserved over the whole width.
-        low, high = ordinate_limits(ordinates, p.sets; cleared = xlimits)
+        low, high = padded_limits(ordinates)
         ylimits = (max(low, 0.0), high + ANNOTATION_BAND * (high - low))
         xlims!(axis, xlimits...)
         ylims!(axis, ylimits...)
         annotate!(axis, MathText[p.case.notation]; corner = :upper_left)
 
-        panel_legend!(cell, handles, labels, banks)
+        grid_legend!(legend_slot, handles, labels, banks)
         provenance[p.case.label] = system_record(
             p.directory,
-            p.sets;
+            measured;
             evaluated = String[e[2] for e in p.evaluated],
+            excluded = p.excluded,
         )
     end
-    rowgap!(figure.layout, 12)
-    colgap!(figure.layout, 12)
+    grid_gaps!(figure, rows)
 
     export_figure(figure, "product_mass_yield", provenance)
     return nothing
@@ -1306,8 +1738,7 @@ function figure_system_grid(
     for (index, p) in pairs(panels)
         row, column = fldmod1(index, GRID_COLUMNS)
         bottom = row == rows
-        cell = GridLayout(figure[row, column])
-        slot = cell[legend ? 2 : 1, 1]
+        legend_slot, slot = grid_slots(figure, index; legend = legend)
         axis = panel(
             slot;
             xlabel = xlabel,
@@ -1322,17 +1753,23 @@ function figure_system_grid(
         xlims!(axis, xlimits...)
         ylims!(axis, drawn.ylimits...)
         annotate!(axis, drawn.lines; corner = drawn.corner)
-        push!(legends, (cell, drawn.handles, drawn.labels))
+        push!(legends, (legend_slot, drawn.handles, drawn.labels))
         provenance[p.case.label] = drawn.record
     end
     if legend
         banks = legend_rows(length(handles) for (_, handles, _) in legends)
-        for (cell, handles, labels) in legends
-            panel_legend!(cell, handles, labels, banks)
+        for (position, handles, labels) in legends
+            grid_legend!(position, handles, labels, banks)
         end
+        # Legend rows beyond the two of the house grid lengthen each grid row by their height,
+        # so that the axes keep the height of the other grid figures.
+        banks > 2 && resize!(
+            figure,
+            GRID_WIDTH,
+            (GRID_ROW_HEIGHT + LEGEND_ROW_HEIGHT * (banks - 2)) * rows,
+        )
     end
-    rowgap!(figure.layout, 12)
-    colgap!(figure.layout, 12)
+    grid_gaps!(figure, rows; legend = legend)
 
     export_figure(figure, name, provenance)
     return nothing
@@ -1535,11 +1972,37 @@ function figure_neutron_number_yield(drawable::Vector{Case})
 end
 
 """
+    kinetic_energy_series(sets, window) -> Vector{ProductSeries}
+
+The retrieved product kinetic energies of one system in `window`, one series per author–year
+label. Where there are more series than `PRODUCT_PALETTE` has colour and marker pairs, the
+`NAMED_KINETIC_ENERGY_SETS` with the most points keep their names and the rest are pooled into
+one, labelled with their number.
+"""
+function kinetic_energy_series(sets::Vector{ProductSet}, window)
+    series = named_series(sets, window)
+    length(series) <= length(PRODUCT_PALETTE.colours) && return series
+    order = sortperm(series; by = s -> length(s.x), rev = true)
+    named = series[sort(order[1:NAMED_KINETIC_ENERGY_SETS])]
+    rest = series[order[(NAMED_KINETIC_ENERGY_SETS + 1):end]]
+    pool = ProductSeries(
+        "Other sets ($(length(rest)))",
+        reduce(vcat, (s.paths for s in rest)),
+        reduce(vcat, (s.x for s in rest)),
+        reduce(vcat, (s.y for s in rest)),
+        reduce(vcat, (s.σ for s in rest)),
+        reduce(vcat, (s.marked for s in rest)),
+    )
+    return [named; pool]
+end
+
+"""
 Draw the mean kinetic energy of the products against product mass, `E_K_p(A_p)`, of every system
 whose run tabulated it, on the shared grid: the model as the black line, the pre-neutron
 `E_K(A) = ⟨TKE⟩(A) (A₀ − A)/A₀` of the yield the run was solved with as a dashed guide, and the
-measured post-neutron kinetic energies selected in `SHOWN`, where retrieved, as markers. Masses
-whose product yield is below `MEAN_FLOOR` are not drawn.
+retrieved post-neutron kinetic energies as markers, as [`kinetic_energy_series`](@ref) groups
+them, open where a qualifier in `MARKED_QUALIFIERS` marks the set. Masses whose product yield is
+below `MEAN_FLOOR` are not drawn.
 """
 function figure_product_kinetic_energy(drawable::Vector{Case})
     panels = []
@@ -1566,8 +2029,9 @@ function figure_product_kinetic_energy(drawable::Vector{Case})
                 file,
             )
         end
-        sets = load_measured(case.label, "E_K_p_vs_A_p", window)
-        push!(panels, (; case, directory, A_p, E_K_p, guide, sets))
+        products, excluded = load_products(case.label, "E_K_p_vs_A_p")
+        series = kinetic_energy_series(products, window)
+        push!(panels, (; case, directory, A_p, E_K_p, guide, series, excluded))
     end
     isempty(panels) && return nothing
     xlimits = padded_limits(reduce(vcat, [p.A_p for p in panels]))
@@ -1594,21 +2058,38 @@ function figure_product_kinetic_energy(drawable::Vector{Case})
             append!(ordinates, E_K)
             push!(inputs, file)
         end
-        for set in p.sets
-            push!(handles, draw_measured!(axis, set))
-            push!(labels, set.label)
-            append!(ordinates, set.y)
+        for s in p.series
+            pooled = startswith(s.label, "Other sets")
+            colour, marker =
+                pooled ? (CHAIN_COLOUR, :circle) : dataset_style(PRODUCT_PALETTE, s.label)
+            push!(
+                handles,
+                draw_series!(axis, s, colour, marker; markersize = DENSE_MARKER_SIZE),
+            )
+            push!(labels, s.label)
+            append!(ordinates, s.y)
+        end
+        if any(s -> any(s.marked), p.series)
+            push!(handles, marked_key(; markersize = DENSE_MARKER_SIZE))
+            push!(labels, MARKED_LABEL)
         end
         push!(handles, lines!(axis, p.A_p, p.E_K_p; color = :black, linewidth = 3))
         push!(labels, "This model")
         # The light products are the fast ones: the lower left is clear.
+        lines = Any[p.case.notation]
+        isempty(p.series) && push!(lines, "No measured set in EXFOR")
         return (;
             handles,
             labels,
-            ylimits = banded_limits(ordinates, 1, :lower_left),
-            lines = MathText[p.case.notation],
+            ylimits = banded_limits(ordinates, length(lines), :lower_left),
+            lines,
             corner = :lower_left,
-            record = system_record(p.directory, p.sets; inputs = inputs),
+            record = system_record(
+                p.directory,
+                p.series;
+                inputs = inputs,
+                excluded = p.excluded,
+            ),
         )
     end
     figure_system_grid(
@@ -1773,15 +2254,47 @@ function figure_product_total_kinetic_energy(drawable::Vector{Case})
 end
 
 """
+    independent_series(sets, Z) -> ProductSeries
+
+The retrieved independent yields of charge `Z` at or above `YIELD_FLOOR`, every set pooled into
+one series; isomeric states as each record states them.
+"""
+function independent_series(sets::Vector{ProductSet}, Z::Integer)
+    paths = String[]
+    x = Float64[]
+    y = Float64[]
+    σ = Float64[]
+    marked = Bool[]
+    for set in sets
+        rows = (set.Z .== Z) .& (set.y .>= YIELD_FLOOR)
+        any(rows) || continue
+        push!(paths, set.path)
+        append!(x, set.A_p[rows])
+        append!(y, set.y[rows])
+        append!(σ, set.σ[rows])
+        append!(marked, fill(set.marked, count(rows)))
+    end
+    return ProductSeries(INDEPENDENT_LABEL, paths, x, y, σ, marked)
+end
+
+"""
 Draw, for one system, the isotopic distributions `Y(A_p)` at fixed `Z` of the
 `ELEMENTS_PER_SIDE` most abundant light and heavy elements as small multiples on a logarithmic
-axis: the model as the black line, the evaluated independent yields as markers. The elements
-are ranked by the mean of the evaluated elemental yields, so the panels do not move with the
-model; by the model's own where no evaluation is staged.
+axis: the model as the black line, the evaluated independent yields as markers, and the
+retrieved independent yields `IND`, all sets pooled, as a third marker family, open where a
+qualifier in `MARKED_QUALIFIERS` marks the set. The elements are ranked by the mean of the
+evaluated elemental yields, so the panels do not move with the model; by the model's own where
+no evaluation is staged.
 """
 function figure_independent_yield(case::Case)
     p = independent_yield_panel(case)
     p === nothing && return nothing
+    products, excluded = load_products(case.label, "Y_vs_Z_A_p")
+    for set in products
+        set.kind == "IND" || throw(
+            ArgumentError("$(set.path): an independent yield coded $(set.kind), not IND"),
+        )
+    end
     reference =
         isempty(p.evaluated) ? [p.model] : [yields for (_, _, yields) in p.evaluated]
     abundance = Dict{Int, Float64}()
@@ -1807,12 +2320,14 @@ function figure_independent_yield(case::Case)
         model = isotopic_yield(p.model, Z)
         evaluated =
             [(library, isotopic_yield(yields, Z)) for (library, _, yields) in p.evaluated]
-        masses = Float64[]
+        measured = independent_series(products, Z)
+        masses = copy(measured.x)
+        top = max(top, maximum(measured.y; init = 0.0))
         for (A_p, Y, _) in [model; last.(evaluated)]
             append!(masses, A_p[Y .>= YIELD_FLOOR])
             top = max(top, maximum(Y; init = 0.0))
         end
-        curves[Z] = (; model, evaluated, xlimits = padded_limits(masses))
+        curves[Z] = (; model, evaluated, measured, xlimits = padded_limits(masses))
     end
     # Two lines of annotation above the data, and a margin below the floor so that a marker
     # at the floor is drawn whole.
@@ -1825,6 +2340,7 @@ function figure_independent_yield(case::Case)
     columns = maximum(length, rows)
     figure = Figure(size = (GRID_WIDTH, 2 * 350 + 100))
     handles = Dict{String, Any}()
+    measured_paths = Set{String}()
     for (row, charges) in pairs(rows), (column, Z) in pairs(charges)
         c = curves[Z]
         axis = panel(
@@ -1847,6 +2363,23 @@ function figure_independent_yield(case::Case)
                 strokewidth = 1.5,
             )
         end
+        if !isempty(c.measured.x)
+            handle = draw_series!(
+                axis,
+                c.measured,
+                INDEPENDENT_COLOUR,
+                INDEPENDENT_MARKER;
+                floor = first(ylimits),
+            )
+            any(.!c.measured.marked) && (handles[c.measured.label] = handle)
+            any(c.measured.marked) && (
+                handles[MARKED_LABEL] = marked_key(;
+                    marker = INDEPENDENT_MARKER,
+                    colour = INDEPENDENT_COLOUR,
+                )
+            )
+            union!(measured_paths, c.measured.paths)
+        end
         A_p, Y, _ = c.model
         keep = Y .> 0
         handles["This model"] =
@@ -1857,12 +2390,31 @@ function figure_independent_yield(case::Case)
         row == 1 && column == 1 && pushfirst!(lines, case.notation)
         annotate!(axis, lines; corner = :upper_left)
     end
-    order = [[library.label for library in EVALUATED_YIELDS]; "This model"]
+    # A family drawn only open in this figure is still named in the legend, by its filled marker.
+    if any(!isempty(curves[Z].measured.x) for Z in keys(curves)) &&
+       !haskey(handles, INDEPENDENT_LABEL)
+        handles[INDEPENDENT_LABEL] = MarkerElement(;
+            marker = INDEPENDENT_MARKER,
+            markersize = 14,
+            color = INDEPENDENT_COLOUR,
+            strokecolor = darker(INDEPENDENT_COLOUR),
+            strokewidth = 1.5,
+        )
+    end
+    order = [
+        [library.label for library in EVALUATED_YIELDS]
+        INDEPENDENT_LABEL
+        MARKED_LABEL
+        "This model"
+    ]
     shown = [label for label in order if haskey(handles, label)]
+    # One row holds the model and the two evaluations; with the measured family the entries
+    # outrun the width of the figure and take two.
     Legend(
         figure[1, 1:columns],
         [handles[label] for label in shown],
         shown;
+        nbanks = length(shown) > 3 ? 2 : 1,
         tellwidth = false,
         tellheight = true,
         padding = (0, 0, 0, 0),
@@ -1874,7 +2426,14 @@ function figure_independent_yield(case::Case)
     rowgap!(figure.layout, 10)
     colgap!(figure.layout, 12)
 
-    record = system_record(p.directory, MeasuredSet[]; evaluated = evaluated_paths(p))
+    # The sets drawn, those with a point in a panel shown; the others are retrieved and read.
+    drawn = [(; paths = [path]) for path in sort!(collect(measured_paths))]
+    record = system_record(
+        p.directory,
+        drawn;
+        evaluated = evaluated_paths(p),
+        excluded = excluded,
+    )
     record["elements"] = collect(Iterators.flatten(rows))
     export_figure(
         figure,
