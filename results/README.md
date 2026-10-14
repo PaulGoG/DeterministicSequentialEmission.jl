@@ -4,10 +4,9 @@ The figures here are drawn by `plotting/figures.jl` from the tables one run per 
 under `data/sims/`, with nothing solved again and nothing fitted to the data shown. Each figure
 is exported as PDF and PNG beside a `.toml` sidecar naming, per system, the run drawn, the commit
 its metadata records, the measured files and the retrieved sets left out, so every panel traces
-to a configuration and a commit. The measured side comes from EXFOR through ExforFissionData.jl,
-v0.3.0 for the neutrons and v0.4.0 for the post-neutron products, laid out as `data/README.md`
-describes, and a dataset is drawn as its `retrieval.toml` records it; the temperature ratios the
-runs were solved with are the FissionTemperatureRatio.jl v0.3.0 trends staged beside them. The
+to a configuration and a commit. The measured side comes from EXFOR through ExforFissionData.jl
+v0.4.0, laid out as `data/README.md` describes, and a dataset is drawn as its `retrieval.toml` records it; the temperature ratios the
+runs were solved with are the FissionTemperatureRatio.jl v0.4.0 trends staged beside them. The
 two diagnostic panels the script also writes here, the residual quantities and the charge
 distribution, have no measured counterpart and are not tracked.
 
@@ -18,13 +17,14 @@ julia plotting/figures.jl                    # redraws everything here from thos
 
 | System | ⟨ν⟩ | evaluated | | ⟨E⟩ [MeV] | ν̄/ν̄(²⁵²Cf) |
 |---|---|---|---|---|---|
-| ²⁵²Cf(sf) | 3.557 | 3.757 | −5.3 % | 2.164 (measured 2.13) | 1 |
-| ²³⁵U(n_th,f) | 2.535 | 2.414 | +5.0 % | 1.954 | 0.713 (evaluated 0.643) |
-| ²³⁹Pu(n_th,f) | 2.813 | 2.875 | −2.1 % | 2.046 | 0.791 (evaluated 0.765) |
-| ²³³U(n_th,f) | 2.631 | 2.497 | +5.4 % | 2.007 | 0.740 (evaluated 0.665) |
+| ²⁵²Cf(sf) | 3.557 | 3.759 | −5.4 % | 2.164 (measured 2.13) | 1 |
+| ²³⁵U(n_th,f) | 2.535 | 2.414 | +5.0 % | 1.954 | 0.713 (evaluated 0.642) |
+| ²³⁹Pu(n_th,f) | 2.813 | 2.868 | −1.9 % | 2.046 | 0.791 (evaluated 0.763) |
+| ²³³U(n_th,f) | 2.631 | 2.479 | +6.2 % | 2.007 | 0.740 (evaluated 0.659) |
 
-The evaluated multiplicities are ENDF/B-VIII.0 for the induced systems and the Axton standard
-for ²⁵²Cf. Datasets are labelled by author and the year of their EXFOR entry; the references
+The evaluated multiplicities are the prompt ones, as the model computes: ENDF/B-VIII.0 (Brown
+et al. 2018, doi:10.1016/j.nds.2018.02.001), MF1 MT456 at 0.0253 eV for the induced systems, and
+for ²⁵²Cf(sf) the constant of its decay sublibrary, Axton's total 3.7676 less the delayed 0.0086. Datasets are labelled by author and the year of their EXFOR entry; the references
 below give the publication, which for conference proceedings can be a later year.
 
 ## Prompt neutron multiplicity against fragment mass

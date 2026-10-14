@@ -1,0 +1,8 @@
+figure = "product_independent_yield_Cf252_sf"
+
+[systems.Cf252_sf]
+elements = [41, 42, 43, 44, 54, 55, 56, 57]
+evaluated = ["Cf252_sf/Y_vs_Z_A_p/ENDF-B-VIII.0.dat", "Cf252_sf/Y_vs_Z_A_p/JEFF-3.3.dat"]
+gitcommit = "v0.1.1-9-g0fd1860"
+measured = ["Cf252_sf/Y_vs_Z_A_p/13353003_H.R.Vongunten_1969.dat", "Cf252_sf/Y_vs_Z_A_p/14547005_E.L.Reber_2005.dat", "Cf252_sf/Y_vs_Z_A_p/33028009_H.Naik_1997.dat", "Cf252_sf/Y_vs_Z_A_p/33158004_H.Naik_2021.dat", "Cf252_sf/Y_vs_Z_A_p/33158005_H.Naik_2021.dat", "Cf252_sf/Y_vs_Z_A_p/40895004_V.P.Bugrov_1985.dat"]
+run = "AHmax=174_AHmin=126_En=0_TKEmax=229.5_TKEmin=130.5_TKEstep=1_Tmax=2_Ysym=true_Ytot=200_avg=per_neutron_ldm=BSFG_nZ=5_part=temperature_ratio_pc=emission_probability_pw=multiplicity_sigma=variable_sw=emission_probability"

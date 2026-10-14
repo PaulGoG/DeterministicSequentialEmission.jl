@@ -1,0 +1,25 @@
+figure = "product_total_kinetic_energy"
+
+[systems.Cf252_sf]
+gitcommit = "v0.1.1-9-g0fd1860"
+input = ["Cf252_sf/Y_vs_A_TKE/relative/23268002_A.Goeoek_2014.dat"]
+measured = []
+run = "AHmax=174_AHmin=126_En=0_TKEmax=229.5_TKEmin=130.5_TKEstep=1_Tmax=2_Ysym=true_Ytot=200_avg=per_neutron_ldm=BSFG_nZ=5_part=temperature_ratio_pc=emission_probability_pw=multiplicity_sigma=variable_sw=emission_probability"
+
+[systems.Pu239_nth]
+gitcommit = "v0.1.1-9-g0fd1860"
+input = ["Pu239_nth/TKE_vs_A/21995038_C.Wagemans_1984.dat"]
+measured = []
+run = "AHmax=159_AHmin=120_En=2.53e-8_TKEmax=210_TKEmin=130_TKEstep=1_Tmax=2_Ysym=true_Ytot=200_avg=per_neutron_ldm=BSFG_nZ=5_part=temperature_ratio_pc=emission_probability_pw=multiplicity_sigma=variable_sw=emission_probability"
+
+[systems.U233_nth]
+gitcommit = "v0.1.1-9-g0fd1860"
+input = ["U233_nth/TKE_vs_A/21981008_P.Geltenbort_1985.dat"]
+measured = []
+run = "AHmax=159_AHmin=117_En=2.53e-8_TKEmax=200_TKEmin=100_TKEstep=1_Tmax=2_Ysym=true_Ytot=200_avg=per_neutron_ldm=BSFG_nZ=5_part=temperature_ratio_pc=emission_probability_pw=multiplicity_sigma=variable_sw=emission_probability"
+
+[systems.U235_nth]
+gitcommit = "v0.1.1-9-g0fd1860"
+input = ["U235_nth/TKE_vs_A/23164007_A.Al-adili_2016.dat"]
+measured = []
+run = "AHmax=160_AHmin=118_En=2.53e-8_TKEmax=200_TKEmin=100_TKEstep=1_Tmax=2_Ysym=true_Ytot=200_avg=per_neutron_ldm=BSFG_nZ=5_part=temperature_ratio_pc=emission_probability_pw=multiplicity_sigma=variable_sw=emission_probability"

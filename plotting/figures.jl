@@ -52,8 +52,10 @@ const MathText = typeof(L"")
 
 """
 One fissioning system: the token that names its directories, the typeset notation it is drawn
-under, the mass and charge of the compound nucleus, and the evaluated total multiplicity it is
-compared against — ENDF/B-VIII.0 for the induced systems and the Axton standard for 252-Cf.
+under, the mass and charge of the compound nucleus, and the evaluated prompt multiplicity it is
+compared against: ENDF/B-VIII.0, MF1 MT456 at 0.0253 eV for the induced systems, and for
+252-Cf(sf) the constant of the decay sublibrary (MAT 3644), Axton's total 3.7676 less the
+delayed 0.0086. The model computes prompt neutrons only, so the total would not compare.
 
 `label` is the system token, as `system_label` returns it; `notation` is the typeset form, as
 `system_notation` returns it. They are written out here rather than called, because this
@@ -68,10 +70,10 @@ struct Case
 end
 
 const CASES = [
-    Case("Cf252_sf", L"$^{252}$Cf(sf)", 252, 98, 3.7573),
+    Case("Cf252_sf", L"$^{252}$Cf(sf)", 252, 98, 3.7590),
     Case("U235_nth", L"$^{235}$U(nth,f)", 236, 92, 2.4140),
-    Case("Pu239_nth", L"$^{239}$Pu(nth,f)", 240, 94, 2.8750),
-    Case("U233_nth", L"$^{233}$U(nth,f)", 234, 92, 2.4968),
+    Case("Pu239_nth", L"$^{239}$Pu(nth,f)", 240, 94, 2.8680),
+    Case("U233_nth", L"$^{233}$U(nth,f)", 234, 92, 2.4785),
 ]
 
 # The system every spectrum ratio is taken against.

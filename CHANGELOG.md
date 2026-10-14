@@ -65,6 +65,14 @@ here.
   each legend row beyond two; the measured sets there take colours other than the vermilion and
   blue of the evaluations.
 - The figures are written to `results/`, which replaces `plots/`.
+- The evaluated multiplicities of the comparison figures are the prompt ones throughout,
+  ENDF/B-VIII.0 MF1 MT456 at 0.0253 eV and, for ²⁵²Cf(sf), its decay-sublibrary constant 3.7590:
+  ²³³U was compared with a total multiplicity (2.4968, now 2.4785) and ²³⁹Pu with 2.8750 (now
+  2.8680), and ²⁵²Cf took 3.7573 from another evaluation.
+- The staged inputs are the ExforFissionData.jl v0.4.0 retrieval and the runs of
+  FissionTemperatureRatio.jl v0.4.0 on it. Every table the shipped configurations read is the same
+  as before, byte for byte, and so is every result; only the run records and the names of the
+  temperature-ratio files change.
 
 ## [0.1.1] - 2026-10-12
 

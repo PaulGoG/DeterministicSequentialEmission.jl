@@ -192,8 +192,8 @@ The sawtooth is the signature observable, and it is not fitted: the total excita
 shared between the fragments by a temperature ratio `R_T(A_H)` extracted from measured `ν(A)` by
 a companion package, the emission chain is then solved configuration by configuration, and the
 result is contracted against the measured fragment yield `Y(A, TKE)`. Total multiplicities come
-out within 5.5 % of the evaluated values, from −5.3 % for ²⁵²Cf to +5.4 % for ²³³U, with no
-parameter adjusted per system.
+out within 6.2 % of the evaluated prompt values, from −5.4 % for ²⁵²Cf to +6.2 % for ²³³U, with
+no parameter adjusted per system.
 
 ![Prompt fission neutron spectra: 252-Cf as a ratio to a Maxwellian, the thermal systems as ratios to 252-Cf](results/prompt_neutron_spectrum.png)
 
@@ -274,7 +274,7 @@ as EXFOR codes it — and that one token names the configuration, the input tree
 the output tree under `data/sims/`. It is also what separates the thermal run of ²³⁵U from the
 resonance one, which the reaction code `n,f` alone cannot.
 
-Every fragment yield comes from EXFOR through ExforFissionData.jl v0.3.0. ²⁵²Cf takes the measured
+Every fragment yield comes from EXFOR through ExforFissionData.jl v0.4.0. ²⁵²Cf takes the measured
 `Y(A,TKE)` matrix of Göök et al. (2014). For the thermal systems the archive holds no matrix, so
 the yield is reconstructed from one experiment's `Y(A)` and `⟨TKE⟩(A)`:
 - Al-Adili et al. (2016) for ²³⁵U;
@@ -363,8 +363,8 @@ subdirectory = "U235_nth/temperature_ratio"
 curve_label = "systematic_trend"
 ```
 
-The shipped configurations read the FissionTemperatureRatio.jl v0.3.0 runs on the
-ExforFissionData v0.3.0 retrieval, staged that way for each system.
+The shipped configurations read the FissionTemperatureRatio.jl v0.4.0 runs on the
+ExforFissionData v0.4.0 retrieval, staged that way for each system.
 
 The manifest declares what its curves tabulate, and this package refuses one declaring anything
 but `R_T` against `A_H`. The run writes `R_T(A_H)` and the multiplicity ratio `r_ν(A_H)` in the

@@ -2,24 +2,26 @@ figure = "product_mass_yield"
 
 [systems.Cf252_sf]
 evaluated = ["Cf252_sf/Y_vs_A_p/ENDF-B-VIII.0.dat", "Cf252_sf/Y_vs_A_p/JEFF-3.3.dat"]
-gitcommit = "v0.1.1-6-g07bf23a-dirty"
-measured = []
+gitcommit = "v0.1.1-9-g0fd1860"
+measured = ["Cf252_sf/Y_vs_A_p/13261002_B.Srinivasan_1969.dat", "Cf252_sf/Y_vs_A_p/13283008_R.M.Harbour_1971.dat", "Cf252_sf/Y_vs_A_p/14020002_W.F.Kiker_1964.dat", "Cf252_sf/Y_vs_A_p/21531003_H.Thierens_1976.dat", "Cf252_sf/Y_vs_A_p/21592002_J.Blachot_1975.dat", "Cf252_sf/Y_vs_A_p/23557003_H.Goektuerk_1975.dat", "Cf252_sf/Y_vs_A_p/30691002_LiZe_1983.dat", "Cf252_sf/Y_vs_A_p/30793003_ChenQingjiang_1987.dat", "Cf252_sf/Y_vs_A_p/33048003_A.G.C.Nair_1984.dat", "Cf252_sf/Y_vs_A_p/33050004_A.Ramaswami_1988.dat", "Cf252_sf/Y_vs_A_p/33158006_H.Naik_2021.dat", "Cf252_sf/Y_vs_A_p/40205009_N.V.Skovorodkin_1973.dat", "Cf252_sf/Y_vs_A_p/13081002_H.W.Schmitt_1965.dat", "Cf252_sf/Y_vs_A_p/14259009_C.Romano_2010.dat", "Cf252_sf/Y_vs_A_p/14420002_K.Meierbachtol_2015.dat", "Cf252_sf/Y_vs_A_p/14652002_H.C.Britt_1964.dat", "Cf252_sf/Y_vs_A_p/14652003_H.C.Britt_1964.dat", "Cf252_sf/Y_vs_A_p/14790002_P.Gastis_2022.dat"]
 run = "AHmax=174_AHmin=126_En=0_TKEmax=229.5_TKEmin=130.5_TKEstep=1_Tmax=2_Ysym=true_Ytot=200_avg=per_neutron_ldm=BSFG_nZ=5_part=temperature_ratio_pc=emission_probability_pw=multiplicity_sigma=variable_sw=emission_probability"
 
 [systems.Pu239_nth]
 evaluated = ["Pu239_nth/Y_vs_A_p/ENDF-B-VIII.0.dat", "Pu239_nth/Y_vs_A_p/JEFF-3.3.dat"]
-gitcommit = "v0.1.1-6-g07bf23a-dirty"
-measured = []
+excluded = ["22985005: superseded by 23342002"]
+gitcommit = "v0.1.1-9-g0fd1860"
+measured = ["Pu239_nth/Y_vs_A_p/10864009_M.Shima_1978.dat", "Pu239_nth/Y_vs_A_p/13270007_F.L.Lisman_1970.dat", "Pu239_nth/Y_vs_A_p/13270008_F.L.Lisman_1970.dat", "Pu239_nth/Y_vs_A_p/13270009_F.L.Lisman_1970.dat", "Pu239_nth/Y_vs_A_p/13270010_F.L.Lisman_1970.dat", "Pu239_nth/Y_vs_A_p/13270021_F.L.Lisman_1970.dat", "Pu239_nth/Y_vs_A_p/134800021_H.R.Fickel_1959.dat", "Pu239_nth/Y_vs_A_p/134800022_H.R.Fickel_1959.dat", "Pu239_nth/Y_vs_A_p/13482002_H.R.Fickel_1959.dat", "Pu239_nth/Y_vs_A_p/21544008_M.Asghar_1978.dat", "Pu239_nth/Y_vs_A_p/23808004_W.Ditz_1988.dat", "Pu239_nth/Y_vs_A_p/30508007_C.K.Mathews_1977.dat", "Pu239_nth/Y_vs_A_p/30787002_A.Srivastava_1986.dat", "Pu239_nth/Y_vs_A_p/33178006_H.Naik_2022.dat", "Pu239_nth/Y_vs_A_p/21981013_P.Geltenbort_1985.dat", "Pu239_nth/Y_vs_A_p/222730131_P.Schillebeeckx_1992.dat", "Pu239_nth/Y_vs_A_p/222730132_P.Schillebeeckx_1992.dat", "Pu239_nth/Y_vs_A_p/22273014_P.Schillebeeckx_1992.dat", "Pu239_nth/Y_vs_A_p/23342002_Y.K.Gupta_2017.dat", "Pu239_nth/Y_vs_A_p/23342003_Y.K.Gupta_2017.dat", "Pu239_nth/Y_vs_A_p/23342004_Y.K.Gupta_2017.dat", "Pu239_nth/Y_vs_A_p/23342005_Y.K.Gupta_2017.dat", "Pu239_nth/Y_vs_A_p/23583002_N.Boucheneb_1991.dat", "Pu239_nth/Y_vs_A_p/32879002_LiuChao_2022.dat"]
 run = "AHmax=159_AHmin=120_En=2.53e-8_TKEmax=210_TKEmin=130_TKEstep=1_Tmax=2_Ysym=true_Ytot=200_avg=per_neutron_ldm=BSFG_nZ=5_part=temperature_ratio_pc=emission_probability_pw=multiplicity_sigma=variable_sw=emission_probability"
 
 [systems.U233_nth]
 evaluated = ["U233_nth/Y_vs_A_p/ENDF-B-VIII.0.dat", "U233_nth/Y_vs_A_p/JEFF-3.3.dat"]
-gitcommit = "v0.1.1-6-g07bf23a-dirty"
-measured = []
+gitcommit = "v0.1.1-9-g0fd1860"
+measured = ["U233_nth/Y_vs_A_p/10864007_M.Shima_1978.dat", "U233_nth/Y_vs_A_p/10918004_B.W.Wehring_1980.dat", "U233_nth/Y_vs_A_p/13208002_D.R.Bidinosti_1961.dat", "U233_nth/Y_vs_A_p/13208003_D.R.Bidinosti_1961.dat", "U233_nth/Y_vs_A_p/13208004_D.R.Bidinosti_1961.dat", "U233_nth/Y_vs_A_p/13213002_L.R.Bunney_1965.dat", "U233_nth/Y_vs_A_p/132700021_F.L.Lisman_1970.dat", "U233_nth/Y_vs_A_p/132700022_F.L.Lisman_1970.dat", "U233_nth/Y_vs_A_p/21771012_M.Asghar_1981.dat", "U233_nth/Y_vs_A_p/30797003_A.G.C.Nair_1985.dat", "U233_nth/Y_vs_A_p/33187006_H.Naik_2023.dat", "U233_nth/Y_vs_A_p/21981011_P.Geltenbort_1985.dat", "U233_nth/Y_vs_A_p/23784002_A.Chebboubi_2021.dat", "U233_nth/Y_vs_A_p/41496006_A.A.Aleksandrov_1994.dat"]
 run = "AHmax=159_AHmin=117_En=2.53e-8_TKEmax=200_TKEmin=100_TKEstep=1_Tmax=2_Ysym=true_Ytot=200_avg=per_neutron_ldm=BSFG_nZ=5_part=temperature_ratio_pc=emission_probability_pw=multiplicity_sigma=variable_sw=emission_probability"
 
 [systems.U235_nth]
 evaluated = ["U235_nth/Y_vs_A_p/ENDF-B-VIII.0.dat", "U235_nth/Y_vs_A_p/JEFF-3.3.dat"]
-gitcommit = "v0.1.1-6-g07bf23a-dirty"
-measured = []
+excluded = ["31738002: its heavy-product yields alone sum to 182 % per fission, where one side sums to 100 %, and it states no uncertainty"]
+gitcommit = "v0.1.1-9-g0fd1860"
+measured = ["U235_nth/Y_vs_A_p/10864008_M.Shima_1978.dat", "U235_nth/Y_vs_A_p/10865002_W.J.Maeck_1978.dat", "U235_nth/Y_vs_A_p/10937002_C.A.Fontenla_1980.dat", "U235_nth/Y_vs_A_p/13064007_H.Farrar_1962.dat", "U235_nth/Y_vs_A_p/13073004_P.O.Strom_1966.dat", "U235_nth/Y_vs_A_p/13082003_H.V.Weiss_1965.dat", "U235_nth/Y_vs_A_p/13213003_L.R.Bunney_1965.dat", "U235_nth/Y_vs_A_p/13221002_G.P.Ford_1965.dat", "U235_nth/Y_vs_A_p/13270003_F.L.Lisman_1970.dat", "U235_nth/Y_vs_A_p/13270004_F.L.Lisman_1970.dat", "U235_nth/Y_vs_A_p/13270005_F.L.Lisman_1970.dat", "U235_nth/Y_vs_A_p/13319003_M.M.Fowler_1974.dat", "U235_nth/Y_vs_A_p/13359002_G.Diiorio_1977.dat", "U235_nth/Y_vs_A_p/13412002_R.P.Metcalf_1951.dat", "U235_nth/Y_vs_A_p/21054087_H.Wohlfarth_1976.dat", "U235_nth/Y_vs_A_p/21531002_H.Thierens_1976.dat", "U235_nth/Y_vs_A_p/21543013_M.Asghar_1977.dat", "U235_nth/Y_vs_A_p/22985006_A.Bail_2009.dat", "U235_nth/Y_vs_A_p/23706004_O.Birgul_1971.dat", "U235_nth/Y_vs_A_p/23708003_P.delmarmol_1967.dat", "U235_nth/Y_vs_A_p/23806002_G.J.Littler_1955.dat", "U235_nth/Y_vs_A_p/30508006_C.K.Mathews_1977.dat", "U235_nth/Y_vs_A_p/30797005_A.G.C.Nair_1985.dat", "U235_nth/Y_vs_A_p/30797007_A.G.C.Nair_1985.dat", "U235_nth/Y_vs_A_p/30915004_M.Shmid_1983.dat", "U235_nth/Y_vs_A_p/316850021_N.N.Ajitanand_1978.dat", "U235_nth/Y_vs_A_p/316850022_N.N.Ajitanand_1978.dat", "U235_nth/Y_vs_A_p/33186006_H.Naik_2023.dat", "U235_nth/Y_vs_A_p/14208003_M.Derengowski_1970.dat", "U235_nth/Y_vs_A_p/14259005_C.Romano_2010.dat", "U235_nth/Y_vs_A_p/21752016_C.Wagemans_1981.dat", "U235_nth/Y_vs_A_p/21981012_P.Geltenbort_1985.dat", "U235_nth/Y_vs_A_p/23594002_F.Shiraishi_1968.dat", "U235_nth/Y_vs_A_p/32888002_ChaoLiu_2022.dat"]
 run = "AHmax=160_AHmin=118_En=2.53e-8_TKEmax=200_TKEmin=100_TKEstep=1_Tmax=2_Ysym=true_Ytot=200_avg=per_neutron_ldm=BSFG_nZ=5_part=temperature_ratio_pc=emission_probability_pw=multiplicity_sigma=variable_sw=emission_probability"

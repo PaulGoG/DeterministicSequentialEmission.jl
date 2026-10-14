@@ -73,7 +73,7 @@ written in floating point — some of these tables were emitted by a generator a
 where they mean `118`.
 
 The shipped configurations take their fragment yields from EXFOR through ExforFissionData.jl
-v0.3.0. For each system, `Y(A)` and `⟨TKE⟩(A)` come from one experiment, or its measured matrix
+v0.4.0. For each system, `Y(A)` and `⟨TKE⟩(A)` come from one experiment, or its measured matrix
 does. A width that experiment did not report is borrowed from another on the same system, or on
 the same compound nucleus, and the run record flags it:
 
@@ -117,7 +117,7 @@ reproduce a retrieval exactly, since EXFOR entries are immutable once published.
 The yield inputs of the shipped configurations:
 
 ```bash
-git clone --branch v0.3.0 https://github.com/PaulGoG/ExforFissionData.jl
+git clone --branch v0.4.0 https://github.com/PaulGoG/ExforFissionData.jl
 cd ExforFissionData.jl
 julia scripts/retrieve.jl config/Cf252_sf_Y_vs_A_TKE.toml
 julia scripts/retrieve.jl config/U235_nth_Y_vs_A.toml
@@ -305,8 +305,8 @@ also records the accession of each dataset curve. Copy the whole directory to
 `label`, `"systematic_trend"` for the shipped configurations. Keep one staged run per system —
 two manifests in one directory is refused, because nothing would say which run to take.
 
-The staged runs are those of the configurations FissionTemperatureRatio.jl v0.3.0 ships, on the
-ExforFissionData v0.3.0 retrieval, with each system's primary `Y(A)` and `⟨TKE⟩(A)` as above.
+The staged runs are those of the configurations FissionTemperatureRatio.jl v0.4.0 ships, on the
+ExforFissionData v0.4.0 retrieval, with each system's primary `Y(A)` and `⟨TKE⟩(A)` as above.
 `U235_nres` reads the thermal run.
 
 Copying one table by hand is what this replaces, and the reason is physical rather than tidy: the
