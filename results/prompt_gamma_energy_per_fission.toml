@@ -1,0 +1,25 @@
+figure = "prompt_gamma_energy_per_fission"
+
+[systems.Cf252_sf]
+excluded = ["231970023: one detector of Oberstedt 2015, whose average 231970093 is drawn", "231970033: one detector of Oberstedt 2015, whose average 231970093 is drawn", "231970053: one detector of Oberstedt 2015, whose average 231970093 is drawn", "231970063: one detector of Oberstedt 2015, whose average 231970093 is drawn", "231970073: one detector of Oberstedt 2015, whose average 231970093 is drawn", "231970083: one detector of Oberstedt 2015, whose average 231970093 is drawn"]
+gitcommit = "v0.1.1-15-g9140e7d"
+measured = ["Cf252_sf/E_gamma_tot/14214008_F.Pleasonton_1972.dat", "Cf252_sf/E_gamma_tot/143870062_H.R.Bowman_1958.dat", "Cf252_sf/E_gamma_tot/231970093_A.Oberstedt_2015.dat", "Cf252_sf/E_gamma_tot/232130061_G.K.Mehta_1973.dat", "Cf252_sf/E_gamma_tot/237830041_D.Gjestvang_2021.dat", "Cf252_sf/E_gamma_tot/23814004_L.Krupa_2004.dat"]
+run = "AHmax=174_AHmin=126_En=0_TKEb=mean_TKEmax=229.5_TKEmin=130.5_TKEstep=1_Tmax=2_Ysym=true_Ytot=200_avg=per_neutron_ldm=BSFG_nZ=5_part=temperature_ratio_pc=emission_probability_pw=multiplicity_sigma=variable_sw=emission_probability"
+
+[systems.Pu239_nth]
+excluded = ["31778002: one detector of Gatera 2017, whose average 31778005 is drawn", "31778003: one detector of Gatera 2017, whose average 31778005 is drawn", "31778004: one detector of Gatera 2017, whose average 31778005 is drawn"]
+gitcommit = "v0.1.1-15-g9140e7d"
+measured = ["Pu239_nth/E_gamma_tot/14214006_F.Pleasonton_1972.dat", "Pu239_nth/E_gamma_tot/31778005_A.Gatera_2017.dat"]
+run = "AHmax=159_AHmin=120_En=2.53e-8_TKEb=mean_TKEmax=216_TKEmin=130_TKEstep=1_Tmax=2_Ysym=true_Ytot=200_avg=per_neutron_ldm=BSFG_nZ=5_part=temperature_ratio_pc=emission_probability_pw=multiplicity_sigma=variable_sw=emission_probability"
+
+[systems.U233_nth]
+excluded = []
+gitcommit = "v0.1.1-15-g9140e7d"
+measured = ["U233_nth/E_gamma_tot/14214002_F.Pleasonton_1972.dat"]
+run = "AHmax=159_AHmin=117_En=2.53e-8_TKEb=mean_TKEmax=205_TKEmin=100_TKEstep=1_Tmax=2_Ysym=true_Ytot=200_avg=per_neutron_ldm=BSFG_nZ=5_part=temperature_ratio_pc=emission_probability_pw=multiplicity_sigma=variable_sw=emission_probability"
+
+[systems.U235_nth]
+excluded = ["23541005: the γ energy between 1 and 6 MeV only, not a total"]
+gitcommit = "v0.1.1-15-g9140e7d"
+measured = ["U235_nth/E_gamma_tot/14214004_F.Pleasonton_1972.dat", "U235_nth/E_gamma_tot/14735002_M.Deutsch_1944.dat", "U235_nth/E_gamma_tot/232830023_A.J.Pollitt_2015.dat", "U235_nth/E_gamma_tot/31729001_A.Oberstedt_2013.dat"]
+run = "AHmax=160_AHmin=118_En=2.53e-8_TKEb=mean_TKEmax=205_TKEmin=100_TKEstep=1_Tmax=2_Ysym=true_Ytot=200_avg=per_neutron_ldm=BSFG_nZ=5_part=temperature_ratio_pc=emission_probability_pw=multiplicity_sigma=variable_sw=emission_probability"

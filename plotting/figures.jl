@@ -17,6 +17,9 @@
 #   <data>/<system>/Y_vs_A_p/*.dat                           A_p Y Y_uncertainty
 #   <data>/<system>/Y_vs_Z_A_p/*.dat                         Z A_p Y Y_uncertainty
 #   <data>/<system>/E_K_p_vs_A_p/*.dat                       A_p E_K_p E_K_p_uncertainty
+#   <data>/<system>/E_gamma_tot/*.dat                        E_gamma_tot [E_gamma_tot_uncertainty]
+#   <data>/Cf252_sf/E_gamma_tot_vs_TKE/*.dat                 TKE E_gamma_tot [...]
+#   <data>/Cf252_sf/E_gamma_vs_A/*.dat, E_gamma_tot_vs_A/    A E_gamma [...], A E_gamma_tot [...]
 #
 # which is the layout that package writes, with a retrieval.toml beside the files that is read
 # for the orientation of a ratio, for datasets a later one supersedes, and for the unit and the
@@ -2617,6 +2620,356 @@ function figure_charge_distribution(drawable::Vector{Case})
     return nothing
 end
 
+# Prompt-γ datasets per fission left out of the summary, by accession, with the reason. The
+# members of a dependent group are left out where the group's own average is drawn.
+const GAMMA_PER_FISSION_SKIP = Dict(
+    "23541005" => "the γ energy between 1 and 6 MeV only, not a total",
+    "231970023" => "one detector of Oberstedt 2015, whose average 231970093 is drawn",
+    "231970033" => "one detector of Oberstedt 2015, whose average 231970093 is drawn",
+    "231970053" => "one detector of Oberstedt 2015, whose average 231970093 is drawn",
+    "231970063" => "one detector of Oberstedt 2015, whose average 231970093 is drawn",
+    "231970073" => "one detector of Oberstedt 2015, whose average 231970093 is drawn",
+    "231970083" => "one detector of Oberstedt 2015, whose average 231970093 is drawn",
+    "31778002" => "one detector of Gatera 2017, whose average 31778005 is drawn",
+    "31778003" => "one detector of Gatera 2017, whose average 31778005 is drawn",
+    "31778004" => "one detector of Gatera 2017, whose average 31778005 is drawn",
+)
+
+"""
+A measured prompt-γ energy per fission: the system, the author–year label, the file, the value,
+its uncertainty (zero where none is stated), and whether the record flags it — coded partial in
+γ energy (`PAR`) or marked preliminary — which the figure draws as an open marker.
+"""
+struct GammaValue
+    system::String
+    label::String
+    path::String
+    value::Float64
+    σ::Float64
+    flagged::Bool
+end
+
+"""
+    gamma_values(case) -> (values, excluded)
+
+The total prompt-γ energies per fission retrieved for one system, each file one value, less those
+in `GAMMA_PER_FISSION_SKIP`, which are returned with their reasons.
+"""
+function gamma_values(case::Case)
+    directory = joinpath(MEASURED, case.label, "E_gamma_tot")
+    values = GammaValue[]
+    excluded = Pair{String, String}[]
+    isdir(directory) || return values, excluded
+    record = retrieval_record(case.label, "E_gamma_tot")
+    path = joinpath(directory, "retrieval.toml")
+    warnings = isfile(path) ? get(TOML.parsefile(path), "datasets", Dict()) : Dict()
+    preliminary = string(get(warnings, "preliminary_warning", ""))
+    for name in sort(filter(endswith(".dat"), readdir(directory)))
+        tag = accession(name)
+        if haskey(GAMMA_PER_FISSION_SKIP, tag)
+            push!(excluded, tag => GAMMA_PER_FISSION_SKIP[tag])
+            continue
+        end
+        rows = read_rows(joinpath(directory, name))
+        length(rows) == 1 ||
+            throw(ArgumentError("$name holds $(length(rows)) values, not one"))
+        row = only(rows)
+        σ = length(row) >= 2 && isfinite(row[2]) ? row[2] : 0.0
+        entry = get(record, tag, Dict{String, Any}())
+        flagged =
+            get(entry, "gamma_range_partial", false) === true || occursin(tag, preliminary)
+        push!(
+            values,
+            GammaValue(
+                case.label,
+                author_year(name),
+                joinpath(directory, name),
+                row[1],
+                σ,
+                flagged,
+            ),
+        )
+    end
+    return values, excluded
+end
+
+"Weighted least-squares slope of `y` on `x`, weights `1/σ²` where every `σ` is positive."
+function fitted_slope(x::Vector{Float64}, y::Vector{Float64}, σ::Vector{Float64})
+    w = all(>(0), σ) ? 1 ./ σ .^ 2 : ones(length(x))
+    W = sum(w)
+    x̄ = sum(w .* x) / W
+    ȳ = sum(w .* y) / W
+    return sum(w .* (x .- x̄) .* (y .- ȳ)) / sum(w .* (x .- x̄) .^ 2)
+end
+
+"Linear interpolation of a tabulated curve at `x`, `NaN` outside it."
+function interpolate_curve(xs::Vector{Float64}, ys::Vector{Float64}, x::Real)
+    (x < first(xs) || x > last(xs)) && return NaN
+    i = searchsortedlast(xs, x)
+    i == length(xs) && return ys[end]
+    t = (x - xs[i]) / (xs[i + 1] - xs[i])
+    return (1 - t) * ys[i] + t * ys[i + 1]
+end
+
+"""
+Draw the total prompt-γ energy per fission of every system with a run against the measured
+values, one row per dataset grouped by system, the model as a black bar across its system's
+rows. What the model draws is the energy its neutrons leave, which counts conversion electrons,
+X-rays and isomers as well; the measured values are γ rays above a threshold within a time
+window, which their records state where the entry or its publication does.
+"""
+function figure_gamma_energy_per_fission(drawable::Vector{Case})
+    groups =
+        Tuple{Case, String, Float64, Vector{GammaValue}, Vector{Pair{String, String}}}[]
+    for case in drawable
+        directory = run_directory(case)
+        modelled = get(read_totals(directory), "E_gamma_per_fission", NaN)
+        isfinite(modelled) || continue
+        values, excluded = gamma_values(case)
+        isempty(values) && continue
+        push!(groups, (case, directory, modelled, values, excluded))
+        @printf("  %-10s E_γ = %.2f MeV per fission\n", case.label, modelled)
+    end
+    isempty(groups) && return nothing
+
+    rows = sum(length(g[4]) for g in groups)
+    figure = Figure(size = (1000, 140 + 46 * (rows + length(groups))))
+    axis = panel(
+        figure[2, 1];
+        xlabel = L"Prompt $\gamma$ energy per fission $E_{\gamma,\mathrm{tot}}$ [MeV]",
+        ygridvisible = false,
+        xticks = 0:1:20,
+    )
+    positions = Float64[]
+    labels = String[]
+    provenance = Dict{String, Any}()
+    position = 0.0
+    measured_handle = nothing
+    flagged_handle = nothing
+    model_handle = nothing
+    everything = Float64[]
+    system_labels = Tuple{MathText, Float64}[]
+    for (index, (case, directory, modelled, values, excluded)) in pairs(groups)
+        index > 1 && (position += 1.0)
+        # Colours are distinct within a system's rows and a label keeps its colour across them.
+        begin_panel!()
+        first_row = position + 1
+        for value in values
+            position += 1
+            push!(positions, position)
+            push!(labels, value.label)
+            colour, marker = dataset_style(value.label)
+            value.σ > 0 && rangebars!(
+                axis,
+                [position],
+                [value.value - value.σ],
+                [value.value + value.σ];
+                direction = :x,
+                color = (colour, 0.5),
+                linewidth = 1.5,
+            )
+            handle = scatter!(
+                axis,
+                [value.value],
+                [position];
+                color = value.flagged ? :transparent : colour,
+                marker = marker,
+                markersize = 16,
+                strokecolor = darker(colour),
+                strokewidth = value.flagged ? 2 : 1.5,
+            )
+            value.flagged ? (flagged_handle = handle) : (measured_handle = handle)
+            push!(everything, value.value - value.σ, value.value + value.σ)
+        end
+        model_handle = linesegments!(
+            axis,
+            [modelled, modelled],
+            [first_row - 0.45, position + 0.45];
+            color = :black,
+            linewidth = 3,
+        )
+        push!(everything, modelled)
+        push!(system_labels, (case.notation, (first_row + position) / 2))
+        provenance[case.label] = Dict{String, Any}(
+            "run" => basename(directory),
+            "gitcommit" => gitcommit(directory),
+            "measured" => [relpath(v.path, MEASURED) for v in values],
+            "excluded" => ["$tag: $reason" for (tag, reason) in excluded],
+        )
+        if index < length(groups)
+            hlines!(
+                axis,
+                [position + 1.0];
+                color = GUIDE_COLOUR,
+                linestyle = :dash,
+                linewidth = 1.0,
+            )
+        end
+    end
+    low, high = padded_limits(everything)
+    # A band on the right holds the system labels, clear of every marker and bar.
+    right = high + 0.3 * (high - low)
+    xlims!(axis, low, right)
+    # Descending limits put the first system at the top.
+    ylims!(axis, last(positions) + 0.8, first(positions) - 0.8)
+    axis.yticks = (positions, labels)
+    for (notation, middle) in system_labels
+        text!(
+            axis,
+            right - 0.015 * (right - low),
+            middle;
+            text = notation,
+            align = (:right, :center),
+            fontsize = ANNOTATION_SIZE,
+        )
+    end
+
+    handles = Any[model_handle]
+    entries = Any["This model"]
+    if measured_handle !== nothing
+        push!(
+            handles,
+            MarkerElement(;
+                marker = :circle,
+                color = GUIDE_LABEL_COLOUR,
+                strokecolor = darker(GUIDE_LABEL_COLOUR),
+                strokewidth = 1.5,
+                markersize = 14,
+            ),
+        )
+        push!(entries, "Measured")
+    end
+    if flagged_handle !== nothing
+        push!(handles, marked_key())
+        push!(entries, "Partial γ range or preliminary")
+    end
+    Legend(
+        figure[1, 1],
+        handles,
+        entries;
+        orientation = :horizontal,
+        tellwidth = false,
+        tellheight = true,
+        padding = (0, 0, 0, 0),
+        colgap = 20,
+        patchsize = (35, 20),
+    )
+    rowgap!(figure.layout, 8)
+    export_figure(figure, "prompt_gamma_energy_per_fission", provenance)
+    return nothing
+end
+
+"""
+Draw the prompt-γ energy of ²⁵²Cf(sf) against measurement, three panels: the total per fission
+against TKE with both fitted slopes, the energy of one fragment against its mass, and the total
+per fission against the mass of either fragment. Only ²⁵²Cf has these measured.
+"""
+function figure_gamma_energy_cf252(drawable::Vector{Case})
+    index = findfirst(case -> case.label == "Cf252_sf", drawable)
+    index === nothing && return nothing
+    case = drawable[index]
+    directory = run_directory(case)
+    specification = (
+        (
+            "E_gamma_tot_vs_TKE.dat",
+            "E_gamma_tot_vs_TKE",
+            "Total kinetic energy TKE [MeV]",
+            L"E_{\gamma,\mathrm{tot}}\ [\mathrm{MeV}]",
+        ),
+        (
+            "E_gamma_vs_A.dat",
+            "E_gamma_vs_A",
+            L"Fragment mass $A$",
+            L"E_{\gamma}\ [\mathrm{MeV}]",
+        ),
+        (
+            "E_gamma_tot_vs_A.dat",
+            "E_gamma_tot_vs_A",
+            L"Fragment mass $A$",
+            L"E_{\gamma,\mathrm{tot}}\ [\mathrm{MeV}]",
+        ),
+    )
+    available = [isfile(joinpath(directory, table)) for (table, _, _, _) in specification]
+    all(available) ||
+        (@warn "no prompt-γ tables to draw; re-run the system" directory; return nothing)
+
+    figure = Figure(size = (1500, 600))
+    legend_handles = Dict{String, Any}()
+    measured_sets = MeasuredSet[]
+    model_handle = nothing
+    for (column, (table, observable, xlabel, ylabel)) in pairs(specification)
+        x, y, _ = read_columns(joinpath(directory, table))
+        sets = load_measured(case.label, observable, (-Inf, Inf))
+        span = isempty(sets) ? extrema(x) : extrema(reduce(vcat, (set.x for set in sets)))
+        xlimits = padded_limits(collect(span))
+        inside = first(xlimits) .<= x .<= last(xlimits)
+        axis = panel(figure[2, column]; xlabel = xlabel, ylabel = ylabel)
+        begin_panel!()
+        if observable != "E_gamma_tot_vs_TKE"
+            symmetric = case.compound_mass / 2
+            first(xlimits) < symmetric < last(xlimits) && vlines!(
+                axis,
+                [symmetric];
+                color = GUIDE_COLOUR,
+                linestyle = :dash,
+                linewidth = 1.5,
+            )
+        end
+        for set in sets
+            legend_handles[set.label] = draw_measured!(axis, set)
+            push!(measured_sets, set)
+        end
+        model_handle = lines!(axis, x[inside], y[inside]; color = :black, linewidth = 3)
+        values = vcat(y[inside], (set.y for set in sets)...)
+        low, high = padded_limits(values)
+        lines = MathText[case.notation]
+        if observable == "E_gamma_tot_vs_TKE" && !isempty(sets)
+            set = only(sets)
+            measured_slope = fitted_slope(set.x, set.y, set.σ)
+            modelled = [interpolate_curve(x, y, e) for e in set.x]
+            model_slope = fitted_slope(set.x, modelled, zeros(length(set.x)))
+            @printf(
+                "  Cf252_sf   dE_γ,tot/dTKE: model %.3f, %s %.3f MeV/MeV\n",
+                model_slope,
+                set.label,
+                measured_slope
+            )
+            push!(
+                lines,
+                MathText(@sprintf("Slope, measured: \$%.3f\$", measured_slope)),
+                MathText(@sprintf("Slope, model: \$%.3f\$", model_slope)),
+            )
+        end
+        high += length(lines) * ANNOTATION_BAND * (high - low)
+        xlims!(axis, xlimits...)
+        ylims!(axis, low, high)
+        # Upper right against TKE, where the energy falls; upper left against mass, where the
+        # light fragments far from symmetry leave least and the A₀/2 guide is far.
+        corner = observable == "E_gamma_tot_vs_TKE" ? :upper_right : :upper_left
+        annotate!(axis, lines; corner = corner)
+    end
+    labels = sort(collect(keys(legend_handles)))
+    Legend(
+        figure[1, 1:3],
+        vcat([legend_handles[l] for l in labels], [model_handle]),
+        vcat(labels, ["This model"]);
+        orientation = :horizontal,
+        tellwidth = false,
+        tellheight = true,
+        padding = (0, 0, 0, 0),
+        colgap = 20,
+        patchsize = (35, 20),
+    )
+    rowgap!(figure.layout, 8)
+    colgap!(figure.layout, 12)
+    export_figure(
+        figure,
+        "prompt_gamma_energy_cf252",
+        Dict{String, Any}(case.label => system_record(directory, measured_sets)),
+    )
+    return nothing
+end
+
 function main()
     mkpath(FIGURES)
     isdir(RUNS) || @warn """
@@ -2640,6 +2993,8 @@ function main()
     figure_product_total_kinetic_energy(drawable)
     figure_residual_quantities(drawable)
     figure_charge_distribution(drawable)
+    figure_gamma_energy_per_fission(drawable)
+    figure_gamma_energy_cf252(drawable)
     return nothing
 end
 

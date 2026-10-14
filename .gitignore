@@ -53,6 +53,12 @@
 !/results/product_total_kinetic_energy.png
 !/results/product_total_kinetic_energy.pdf
 !/results/product_total_kinetic_energy.toml
+!/results/prompt_gamma_energy_per_fission.png
+!/results/prompt_gamma_energy_per_fission.pdf
+!/results/prompt_gamma_energy_per_fission.toml
+!/results/prompt_gamma_energy_cf252.png
+!/results/prompt_gamma_energy_cf252.pdf
+!/results/prompt_gamma_energy_cf252.toml
 
 # Libraries do not pin a manifest; each environment resolves against [compat].
 Manifest*.toml

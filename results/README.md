@@ -404,7 +404,7 @@ hump at `N_p ≈ 86`, and there too the model puts too much yield on the closure
 | ²⁵²Cf(sf) | 9.0 / 6.9 / 7.9 | 64.2, 86.4 / 63.6, 86.5 |
 | ²³⁵U(n_th,f) | 14.7 / 14.4 / 13.6 | 56.9, 84.6 / 56.9, 84.7 |
 | ²³⁹Pu(n_th,f) | 13.7 / 14.5 / 14.2 | 59.1, 84.2 / 59.1, 84.0 |
-| ²³³U(n_th,f) | 15.4 / 12.5 / 13.5 | 55.7, 83.7 / 55.6, 84.0 |
+| ²³³U(n_th,f) | 15.5 / 12.5 / 13.5 | 55.7, 83.7 / 55.6, 84.0 |
 
 ## Kinetic energy of the products
 
@@ -425,11 +425,14 @@ by ExforFissionData.jl v0.5.0 and drawn in MeV as the retrieval writes them, `un
 none for ²⁵²Cf(sf), and its panel says so. ²³⁵U has more sets than the figure can tell apart: the
 four with the most masses, Asghar (1977, 1978), Wagemans (1981) and Geltenbort (1985), are
 named, and Konecny (1970, two tables), Günther (1972), Bakhromi (1982) and Aleksandrov (1994)
-are pooled into one grey series. Bakhromi is qualified `SPA` and drawn open. Over the heavy
-products the model lies 1.0 to 1.7 MeV below each set that covers the whole heavy hump, the
-seven of Asghar, Wagemans and Geltenbort in the three systems; the sets covering part of it lie
-between 6.5 MeV above the model and 1.5 MeV below it. Over the light products the model lies
-within the spread of the sets, from 1.5 MeV below them to 1.1 MeV above.
+are pooled into one grey series. Bakhromi is qualified `SPA` and drawn open. Averaged over the
+masses each set covers, weighted by the model's product yield, the model lies 1.6 to 1.8 MeV
+below the ²³⁵U sets of Asghar (1977, 1978) and Wagemans (1981) over the heavy products and 1.5 MeV
+below Asghar's for ²³⁹Pu, while the three sets of Geltenbort (1985) lie between 0.5 MeV below the
+model and 0.2 MeV above it: the sets that cover the whole heavy hump differ among themselves by as
+much as the model differs from them. The sets covering part of it lie between 6.5 MeV above the
+model and 1.6 MeV below it. Over the light products the model lies within the spread of the
+sets, from 1.3 MeV below them to 1.7 MeV above.
 
 <details>
 <summary>The measured sets of the product kinetic energy</summary>
@@ -468,14 +471,56 @@ every cell. It has no measured or evaluated counterpart here.
 with the pre-neutron `⟨TKE⟩(A)` input as a dashed guide against the heavy fragment mass. The
 two products of a pair are taken as independent, so that `TKE_p` is the mean over both ends of
 both chains. Masses whose heavy-product yield is below 0.01 % are not drawn. Each panel states
-both means over the run: emission takes 2.1 to 2.7 MeV from the total kinetic energy.
+both means over the run: emission takes 1.9 to 2.6 MeV from the total kinetic energy.
 
 | System | ⟨TKE⟩ [MeV] | ⟨TKE_p⟩ [MeV] |
 |---|---|---|
 | ²⁵²Cf(sf) | 184.2 | 181.5 |
-| ²³⁵U(n_th,f) | 170.4 | 168.3 |
-| ²³⁹Pu(n_th,f) | 177.6 | 175.4 |
-| ²³³U(n_th,f) | 169.8 | 167.7 |
+| ²³⁵U(n_th,f) | 170.5 | 168.6 |
+| ²³⁹Pu(n_th,f) | 177.7 | 175.6 |
+| ²³³U(n_th,f) | 169.9 | 167.9 |
+
+## Prompt γ energy
+
+![Total prompt γ energy per fission of the four systems: the energy the model's neutrons leave against the measured values](prompt_gamma_energy_per_fission.png)
+
+What the model's neutrons leave of the excitation, `E_γ = E* − Σ_k P(N ≥ k)(Sₙ^(k) + ⟨ε⟩_k)`
+per fragment under the count `ν = (n+1)/2`, summed over the two fragments: 10.3, 7.0, 8.3 and
+7.6 MeV per fission for ²⁵²Cf, ²³⁵U, ²³⁹Pu and ²³³U. It counts everything the neutrons do not
+carry — γ rays, conversion electrons, X-rays, isomers — where a measurement counts γ rays above a
+threshold within a time window, which its record states where the entry or its publication does;
+the difference is about half an MeV. Against the measured values the model is high for ²⁵²Cf by
+3.3 to 3.7 MeV and for ²³⁹Pu by 1.5 to 2.0; for ²³⁵U it lies 0.1 MeV above Oberstedt (2013) and
+0.6 above Pleasonton (1972), for ²³³U 0.9 above Pleasonton. Open
+markers are the sets the archive codes partial in γ energy (`PAR`) or marks preliminary. Left out:
+Makii (2019), the γ energy between 1 and 6 MeV only, and the single detectors of Oberstedt (2015)
+and Gatera (2017), whose averages are drawn; the sidecar names them.
+
+![Prompt γ energy of 252-Cf(sf) against TKE and fragment mass](prompt_gamma_energy_cf252.png)
+
+For ²⁵²Cf(sf) the archive holds the γ energy resolved: against TKE and against fragment mass, per
+fission (Mehta 1973, binary fission), and of one fragment against its mass (Krupa 2004). Against
+TKE the model falls almost three times as fast as the measurement, −0.17 against −0.063 MeV per
+MeV of TKE: of an excitation added at fixed mass the measurement sends about one part in ten to
+γ rays, the count `ν = (n+1)/2` three in ten. The same excess shapes `E_γ(A)`, highest
+where `ν(A)` is, near symmetry and on the outer wings. It is the γ side of the multiplicity's
+weak response to excitation that the main README records.
+
+| System | Dataset | EXFOR | Reference |
+|---|---|---|---|
+| ²⁵²Cf(sf) | Pleasonton 1972 | 14214008 | ORNL-4844, p. 109 (1972); the method of Phys. Rev. C **6**, 1023 (1972), doi:10.1103/PhysRevC.6.1023 |
+| | Bowman 1958 | 143870062 | Proc. 2nd UN Conf. Peaceful Uses of Atomic Energy, Geneva 1958, vol. 15, p. 212 |
+| | Oberstedt 2015 | 231970093 | Phys. Rev. C **92**, 014618 (2015), doi:10.1103/PhysRevC.92.014618 |
+| | Mehta 1973 | 232130061, 23213018, 23213010 | Phys. Rev. C **7**, 373 (1973), doi:10.1103/PhysRevC.7.373 |
+| | Gjestvang 2021 | 237830041 | Phys. Rev. C **103**, 034609 (2021), doi:10.1103/PhysRevC.103.034609 |
+| | Krupa 2004 | 23814004, 23814006 | Proc. Int. Symp. Exotic Nuclei, Peterhof 2004, p. 343 |
+| ²³⁵U(n_th,f) | Pleasonton 1972 | 14214004 | Phys. Rev. C **6**, 1023 (1972), doi:10.1103/PhysRevC.6.1023 |
+| | Deutsch 1944 | 14735002 | Los Alamos report LA-170 (1944) |
+| | Pollitt 2015 | 232830023 | EPJ Web Conf. **93**, 02018 (2015), doi:10.1051/epjconf/20159302018, preliminary |
+| | Oberstedt 2013 | 31729001 | Phys. Rev. C **87**, 051602 (2013), doi:10.1103/PhysRevC.87.051602 |
+| ²³⁹Pu(n_th,f) | Pleasonton 1972 | 14214006 | Nucl. Phys. A **213**, 413 (1973), doi:10.1016/0375-9474(73)90161-9 |
+| | Gatera 2017 | 31778005 | Phys. Rev. C **95**, 064609 (2017), doi:10.1103/PhysRevC.95.064609 |
+| ²³³U(n_th,f) | Pleasonton 1972 | 14214002 | Nucl. Phys. A **213**, 413 (1973), doi:10.1016/0375-9474(73)90161-9 |
 
 ## Not drawn yet
 

@@ -18,6 +18,12 @@ here.
   against TKE, `E_gamma_tot_vs_A.dat` and `E_gamma_tot_vs_TKE.dat`, the names ExforFissionData.jl
   gives the measured quantities; `E_gamma_per_fragment` and `E_gamma_per_fission` in `totals.dat`
   and the run metadata. No existing table changes.
+- Two figures of the prompt γ energy against the γ observables of ExforFissionData.jl v0.5.0:
+  `results/prompt_gamma_energy_per_fission`, the total per fission of the four systems against
+  every measured value, one row per dataset, the sets coded partial in γ energy or marked
+  preliminary open, the dependent members of a group and a range-limited set left out; and
+  `results/prompt_gamma_energy_cf252`, ²⁵²Cf(sf) against TKE, with both slopes fitted, and against
+  fragment mass, per fragment and per fission.
 - `[yield] kinetic_energy_limit` and `kinetic_energy_moments`. By default (`"physical"`) each
   `P(TKE|A,Z)` is bounded at `TKE < Q + E*_CN` and the measured `⟨TKE⟩(A)` is restored over the
   retained cells (`"mean"`; `"mean_and_width"` restores `σ_TKE(A)` too, `"none"` neither),
@@ -74,6 +80,10 @@ here.
 
 ### Changed
 
+- `results/README.md` states the offset of the product kinetic energies from the measured sets
+  with its weighting, the model's product yield over the masses each set covers; the earlier
+  statement, that the model lay 1.0 to 1.7 MeV below every set covering the whole heavy hump, did
+  not hold for the three sets of Geltenbort (1985), which lie within 0.5 MeV of it.
 - The per-system comparison figures are laid out on a two-column grid rather than stacked, each
   panel with its own legend above it. In the product figures the legends of a grid row share one
   row of the layout, so that its axes align whatever the number of entries, and the row grows by

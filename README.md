@@ -245,7 +245,10 @@ Three departures from measurement are known and are not tuned away.
   `−dTKE/dν` is 11.5 MeV per neutron for ²⁵²Cf against 7.3 measured (Göök *et al.*,
   doi:10.1103/PhysRevC.90.064611), which leaves 10.3 MeV per fission for γ rays against 6.8
   (Nifenecker *et al.*, doi:10.1016/0375-9474(72)90296-5), and the distribution of the neutron
-  number is too broad in all four systems.
+  number is too broad in all four systems. The prompt-γ data of ExforFissionData.jl v0.5.0 show
+  the same from the other side: the energy the neutrons leave falls with TKE at −0.17 MeV per MeV
+  against −0.063 measured for ²⁵²Cf (Mehta *et al.*, doi:10.1103/PhysRevC.7.373), and lies
+  3.3 to 3.7 MeV above the measured totals per fission (`results/README.md`).
 - The spectra of the thermal systems relative to that of ²⁵²Cf are reproduced less well than
   under the uniform average, χ²/N of 2.5 to 5.1 against 1.9 to 4.1: the softness of the
   uniform average is nearly common to the four systems and cancels in a ratio, and the residual
