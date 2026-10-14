@@ -73,7 +73,7 @@ written in floating point — some of these tables were emitted by a generator a
 where they mean `118`.
 
 The shipped configurations take their fragment yields from EXFOR through ExforFissionData.jl
-v0.4.0. For each system, `Y(A)` and `⟨TKE⟩(A)` come from one experiment, or its measured matrix
+v0.5.0. For each system, `Y(A)` and `⟨TKE⟩(A)` come from one experiment, or its measured matrix
 does. A width that experiment did not report is borrowed from another on the same system, or on
 the same compound nucleus, and the run record flags it:
 
@@ -117,7 +117,7 @@ reproduce a retrieval exactly, since EXFOR entries are immutable once published.
 The yield inputs of the shipped configurations:
 
 ```bash
-git clone --branch v0.4.0 https://github.com/PaulGoG/ExforFissionData.jl
+git clone --branch v0.5.0 https://github.com/PaulGoG/ExforFissionData.jl
 cd ExforFissionData.jl
 julia scripts/retrieve.jl config/Cf252_sf_Y_vs_A_TKE.toml
 julia scripts/retrieve.jl config/U235_nth_Y_vs_A.toml
@@ -141,12 +141,14 @@ julia scripts/retrieve.jl config/U233_nth_nu_vs_A.toml
 julia scripts/retrieve.jl config/Cf252_sf_spectrum_maxwellian_ratio_vs_E.toml
 ```
 
-The tree held here is the retrieval of every configuration that package ships, at v0.4.0. Every
-table v0.3.0 also writes is byte-identical between the two versions, so the inputs above read the
-same numbers. v0.4.0 adds keys to every record, among them the unit of the subentry, the sum of a
-yield table and the handling of isomeric states, and the three post-neutron directories below.
-Three of the configurations, the joint `Y(A,TKE)` of ²³⁵U, ²³⁹Pu and ²³³U, find no dataset in
-the archive.
+The tree held here is the retrieval of every configuration that package ships, at v0.5.0. Every
+table v0.4.0 also writes is byte-identical between the two versions, so the inputs above read the
+same numbers, with one exception that no configuration reads: v0.4.1 removes from the ²⁵²Cf
+spectrum of Blinov (1980), 40535004, the point at 0.2209 MeV, an archive defect its record states.
+v0.4.0 added keys to every record, among them the unit of the subentry, the sum of a yield table
+and the handling of isomeric states, and the three post-neutron directories below; v0.5.0 adds the
+prompt-γ directories. Four of the configurations, the joint `Y(A,TKE)` of ²³⁵U, ²³⁹Pu and ²³³U and
+the product kinetic energies of ²⁵²Cf, find no dataset in the archive.
 
 **Evaluated product yields.** `<system>/Y_vs_A_p/` and `<system>/Y_vs_Z_A_p/` hold the
 independent fission product yields of ENDF/B-VIII.0 (Brown *et al.*, *Nucl. Data Sheets* **148**,
@@ -170,7 +172,7 @@ point. `--library` and `--system` restrict the staging; if a server refuses a sc
 fetch the file in a browser and pass it with `--file <library>=<path>`. A table that differs from
 the one in place never replaces it; the old one moves aside as `<library>#1.dat`.
 
-**Measured post-neutron products.** ExforFissionData.jl v0.4.0 retrieves three post-neutron
+**Measured post-neutron products.** ExforFissionData.jl retrieves, since v0.4.0, three post-neutron
 observables, which the figures draw as markers against the model and the evaluations:
 `Y_vs_A_p/`, the product mass yields EXFOR codes `MASS,SEC,FY` and the chain yields it codes
 `MASS,CHN,FY`, which β decay, conserving `A`, makes post-neutron mass yields up to the
@@ -184,7 +186,7 @@ per cent of the evaluations; `unit_written` in the record states the unit of eac
 are in MeV.
 
 ```bash
-git clone --branch v0.4.0 https://github.com/PaulGoG/ExforFissionData.jl
+git clone --branch v0.5.0 https://github.com/PaulGoG/ExforFissionData.jl
 cd ExforFissionData.jl
 julia scripts/retrieve.jl config/<system>_Y_vs_A_p.toml
 julia scripts/retrieve.jl config/<system>_Y_vs_Z_A_p.toml
@@ -197,6 +199,27 @@ and `subentries/` next to `<library>.dat` and `provenance.toml`, with no name in
 retrieval never writes into a directory that exists, and the staging script writes only its own
 files, so the two are merged by hand: the contents of the directory the retrieval writes are
 copied into the one holding the evaluations.
+
+**Prompt γ rays.** ExforFissionData.jl v0.5.0 retrieves the prompt γ observables: per fission,
+tabulated against nothing, the multiplicity `M_gamma_bar/`, the total energy `E_gamma_tot/` and the
+mean photon energy `eps_gamma/` of the four systems, one row to a file; for ²⁵²Cf also the energy
+of one fragment against its mass, `E_gamma_vs_A/`, the total energy against fragment mass,
+`E_gamma_tot_vs_A/`, against TKE, `E_gamma_tot_vs_TKE/`, and against the number of neutrons,
+`E_gamma_tot_vs_nu/`, and the multiplicities `M_gamma_vs_A/` (one fragment), `M_gamma_bar_vs_A/` and
+`M_gamma_bar_vs_TKE/` (per fission); for ²³⁵U `M_gamma_vs_A/`, `M_gamma_bar_vs_A/` and
+`eps_gamma_vs_A/`. A measured γ energy is defined by its γ-energy range, its time window and its
+corrections, which differ from set to set by more than the stated uncertainties; each record states
+them as the entry or its publication does, flags a set coded `PAR` (`gamma_range_partial`), and its
+`[datasets]` warnings name the sets whose definition departs. A range-limited set is not a total.
+
+```bash
+julia scripts/retrieve.jl config/<system>_M_gamma_bar.toml
+julia scripts/retrieve.jl config/<system>_E_gamma_tot.toml
+julia scripts/retrieve.jl config/<system>_eps_gamma.toml
+```
+
+for each of the four systems, and the configurations named for the directories above for ²⁵²Cf
+and ²³⁵U.
 
 Read the `retrieval.toml` it writes before using what it retrieved. It records, per dataset, the
 reaction code, the units and the qualifiers the archive attached, and those qualifiers matter:
