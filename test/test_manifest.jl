@@ -211,9 +211,11 @@ end
             load_configuration(path; data_directory = root)
         end
 
-        # The same domain loads without a word.
+        # The same domain loads without a word, whether or not it states the symmetric-split
+        # choice.
         @test_logs load_with() isa Any
         @test load_with().method isa TemperatureRatio
+        @test load_with(:zero_polarization_at_symmetry => false).method isa TemperatureRatio
 
         # Each recorded property that differs from this configuration is refused by name.
         # A Gilbert–Cameron record must say which branch it took, so that case names both.
@@ -223,6 +225,7 @@ end
             :charges_per_mass => (:charges_per_mass => 7,),
             :charge_model => (:charge_model => "Wahl1988(U235T, Z_F = 92, A_F = 236)",),
             :mass_table => (:mass_table => "mass_excess_ame2016.dat",),
+            :zero_polarization_at_symmetry => (:zero_polarization_at_symmetry => true,),
         )
             thrown = try
                 load_with(fields...)

@@ -278,6 +278,7 @@ A run writes to `data/sims/<system>/<run>`, and an output follows the same
 | `Y_vs_N_p.dat` | product yield against product neutron number |
 | `E_K_p_vs_A_p.dat`, `E_K_p_vs_Z.dat` | mean product kinetic energy against product mass and against charge |
 | `TKE_p_vs_A_p.dat` | mean post-neutron total kinetic energy against the heavy product mass |
+| `TKE_bound_vs_A.dat` | with `kinetic_energy_limit = "physical"`, the default: per fragment mass the retained `⟨TKE⟩` and `σ_TKE`, the measured ones, the Gaussian cut (`TKE_parent`, `sigma_TKE_parent`) and the share beyond `Q + E*_CN` removed |
 | `charge_distribution_vs_A.dat`, `_wahl_per_reaction`, `_wahl_systematics`, `_mean` | the charge distribution the run was weighted by and the three alternatives — Wahl's 1988 per-reaction model, the 2002 systematics, the conventional means — each reduced to effective Gaussians; the metadata records which layer the first is |
 | `totals.dat` | one row per quantity averaged over the whole run, `mean_product_mass_loss` (`⟨A − A_p⟩` per fragment) and `mean_TKE_p` among them where the products are written |
 | `metadata.toml` | how it was produced: configuration, commit, environment, machine |
@@ -288,7 +289,10 @@ A run writes to `data/sims/<system>/<run>`, and an output follows the same
 would put some two hundred characters into every directory name, so the keys are abbreviated — and
 abbreviated in one place, [`RUN_IDENTIFIER_ABBREVIATIONS`](@ref), rather than at the point of use.
 [`run_identifier`](@ref) refuses a key with no entry rather than inventing a token, and the test
-suite asserts that every token it uses has one and that no two keys share a token.
+suite asserts that every token it uses has one and that no two keys share a token. One token
+covers two keys: `TKEb` is `grid` where `[yield] kinetic_energy_limit = "grid"`, and otherwise the
+`kinetic_energy_moments` the physical bound restores, since the second key means nothing without
+the first.
 
 The identifier says which keys it covers rather than claiming all of them. What it leaves out — the
 input file paths, the spectrum grid, `significant_digits` — is written in full into the metadata

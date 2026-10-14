@@ -11,11 +11,11 @@ SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 
 [sources]
-FissionFragmentsDomain = {url = "https://github.com/PaulGoG/FissionFragmentsDomain.jl", rev = "v0.2.3"}
+FissionFragmentsDomain = {url = "https://github.com/PaulGoG/FissionFragmentsDomain.jl", rev = "v0.2.4"}
 
 [compat]
 DrWatson = "2.19"
-FissionFragmentsDomain = "0.2.3"
+FissionFragmentsDomain = "0.2.4"
 Measurements = "2"
 SpecialFunctions = "2.9.0"
 TOML = "1"

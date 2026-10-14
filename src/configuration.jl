@@ -33,6 +33,9 @@ struct Configuration
     yield_symmetrized::Bool
     yield_width::String
     yield_inputs::Dict{String, Any}
+    yield_kinetic_energy_limit::String
+    yield_kinetic_energy_moments::String
+    yield_kinetic_energy_bounds::Vector{KineticEnergyBound}
 end
 
 function Base.show(io::IO, configuration::Configuration)
@@ -90,6 +93,8 @@ const CONFIGURATION_KEYS = Dict(
         "mean_kinetic_energy_file",
         "kinetic_energy_dispersion",
         "kinetic_energy_dispersion_file",
+        "kinetic_energy_limit",
+        "kinetic_energy_moments",
     ),
     "spectrum" => (
         "enabled",
@@ -234,13 +239,20 @@ function load_configuration(
         charge_distribution = charge_distribution,
         mass_excess_table = mass_excess_table,
     )
-    fragment_yield, yield_symmetrized, yield_width, yield_inputs = _load_yield(
+    fragment_yield,
+    yield_symmetrized,
+    yield_width,
+    yield_inputs,
+    yield_kinetic_energy_limit,
+    yield_kinetic_energy_moments,
+    yield_kinetic_energy_bounds = _load_yield(
         document,
         system,
         charge_distribution,
         heavy_masses,
         charges_per_mass,
         kinetic_energies,
+        mass_excess_table,
         data_directory,
     )
     spectrum_grid,
@@ -276,6 +288,9 @@ function load_configuration(
         yield_symmetrized,
         yield_width,
         yield_inputs,
+        yield_kinetic_energy_limit,
+        yield_kinetic_energy_moments,
+        yield_kinetic_energy_bounds,
     )
 end
 
@@ -573,6 +588,16 @@ function _check_manifest_domain(
             ),
         )
     end
+    # This package centres the symmetric split's charge window on the charge model's own ΔZ, so a
+    # curve extracted with ΔZ = 0 imposed there was inverted on a different window. A record
+    # without the key leaves the choice unknown and is taken on trust.
+    domain.zero_polarization_at_symmetry === true && throw(
+        ArgumentError(
+            "partition.subdirectory: $(manifest.source) was extracted with [domain] \
+             zero_polarization_at_symmetry = true, and this package takes the charge model's \
+             ΔZ at the symmetric split; the curve does not invert this partition",
+        ),
+    )
     domain.ratio_averaging == "charge_resolved" || @warn "$(manifest.source) inverted \
         R_T(A_H) through an effective level density ratio, ratio_averaging = \
         $(repr(domain.ratio_averaging)); this partition applies it charge by charge, and the \
@@ -587,9 +612,12 @@ function _load_yield(
     heavy_masses::UnitRange{Int},
     charges_per_mass::Integer,
     kinetic_energies,
+    mass_excess_table::MassExcessTable,
     data_directory::AbstractString,
 )
-    haskey(document, "yield") || return nothing, false, "none", Dict{String, Any}()
+    absent =
+        (nothing, false, "none", Dict{String, Any}(), "grid", "none", KineticEnergyBound[])
+    haskey(document, "yield") || return absent
     section = _section(document, "yield")
     # The two fragments of a split are one event, so pre-neutron data obey
     # Y(A) = Y(A₀ − A), and likewise ⟨TKE⟩ and σ_TKE. Measured tables that break the identity are
@@ -605,7 +633,7 @@ function _load_yield(
     )
     joint = haskey(section, "mass_energy_yield_file")
     marginal = haskey(section, "mass_yield_file")
-    joint || marginal || return nothing, false, "none", Dict{String, Any}()
+    joint || marginal || return absent
     joint &&
         marginal &&
         throw(
@@ -615,9 +643,59 @@ function _load_yield(
  systems where the first does not exist",
             ),
         )
+    # Where P(TKE|A,Z) ends: at the physical limit TKE < Q + E*_CN, with the measured moments
+    # restored over what remains, or on the configured grid with the configurations at
+    # TXE <= 0 dropped, as earlier runs did.
+    limit = _choice(
+        section,
+        "kinetic_energy_limit",
+        ("physical", "grid"),
+        "yield.kinetic_energy_limit",
+        "physical",
+    )
+    moments = if limit == "physical"
+        _choice(
+            section,
+            "kinetic_energy_moments",
+            String.(KINETIC_ENERGY_MOMENTS),
+            "yield.kinetic_energy_moments",
+            "mean",
+        )
+    else
+        haskey(section, "kinetic_energy_moments") && throw(
+            ArgumentError(
+                "yield.kinetic_energy_moments applies only with yield.kinetic_energy_limit = \
+ \"physical\"; a yield bounded by the grid keeps the moments the grid leaves it",
+            ),
+        )
+        "none"
+    end
+    domain = fragmentation_domain(
+        system,
+        charge_distribution,
+        heavy_masses;
+        charges_per_mass = charges_per_mass,
+    )
+    # A reconstruction on a grid that stops short of the physical limit cuts P(TKE|A,Z) where it
+    # is physical; the bounded reconstruction refuses such a grid.
+    if limit == "physical" && marginal
+        reach = last(kinetic_energies) + step(kinetic_energies)
+        largest = maximum_kinetic_energy_limit(mass_excess_table, system, domain)
+        reach >= largest.limit || throw(
+            ArgumentError(
+                "energetics.kinetic_energy_max = $(last(kinetic_energies)) MeV stops short of \
+ the physical limit Q + E*_CN = $(round(largest.limit; digits = 3)) MeV of \
+ $(largest.fragmentation.heavy) + $(largest.fragmentation.light); with \
+ yield.kinetic_energy_limit = \"physical\" the grid must reach it, \
+ kinetic_energy_max at least \
+ $(round(largest.limit - step(kinetic_energies); digits = 3)) MeV",
+            ),
+        )
+    end
 
     width = "joint"
     inputs = Dict{String, Any}()
+    bounded = nothing
     measured = if joint
         table = read_mass_energy_yield(
             _input(
@@ -728,19 +806,40 @@ function _load_yield(
             )
             _width_provenance(basename(dispersion.source), basename(energy_path))
         end
+        if limit == "physical"
+            bounded = bounded_fragment_yield(
+                domain,
+                charge_distribution,
+                mass_excess_table,
+                mass_path,
+                energy_path,
+                kinetic_energies;
+                dispersion = dispersion,
+                symmetrize = symmetrize,
+                moments = Symbol(moments),
+                total = total,
+            )
+        end
         reconstructed
     end
 
-    domain = fragmentation_domain(
-        system,
-        charge_distribution,
-        heavy_masses;
-        charges_per_mass = charges_per_mass,
-    )
-    return build_fragment_yield(domain, charge_distribution, measured; total = total),
-    symmetrize,
-    width,
-    inputs
+    fragment_yield, bounds = if limit == "grid"
+        build_fragment_yield(domain, charge_distribution, measured; total = total),
+        KineticEnergyBound[]
+    elseif bounded !== nothing
+        bounded
+    else
+        # A measured joint row keeps its own moments.
+        bounded_fragment_yield(
+            domain,
+            charge_distribution,
+            mass_excess_table,
+            measured;
+            moments = Symbol(moments),
+            total = total,
+        )
+    end
+    return fragment_yield, symmetrize, width, inputs, limit, moments, bounds
 end
 
 # Whether a width file and a mean-TKE file come from one experiment, judged by the EXFOR entry

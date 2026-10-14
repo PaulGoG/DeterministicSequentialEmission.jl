@@ -11,6 +11,14 @@ here.
 
 ### Added
 
+- `[yield] kinetic_energy_limit` and `kinetic_energy_moments`. By default (`"physical"`) each
+  `P(TKE|A,Z)` is bounded at `TKE < Q + E*_CN` and the measured `⟨TKE⟩(A)` is restored over the
+  retained cells (`"mean"`; `"mean_and_width"` restores `σ_TKE(A)` too, `"none"` neither),
+  through `bounded_fragment_yield` of FissionFragmentsDomain.jl 0.2.4. `"grid"` reproduces the
+  earlier runs. A bounded run writes `TKE_bound_vs_A.dat`; every run records the solved `⟨TKE⟩`
+  and `σ_TKE` in its metadata. The run identifier gains the token `TKEb`.
+- The `[domain]` check of a staged temperature-ratio run refuses a curve extracted with
+  `zero_polarization_at_symmetry = true`, which FissionFragmentsDomain.jl 0.2.4 records.
 - `results/`, with a README that shows the model against measurement: every figure beside the
   datasets it draws, each with its EXFOR accession and reference, and what the runs write that
   is not drawn yet.

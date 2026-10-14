@@ -20,6 +20,10 @@ Curves are [`Curve`](@ref)s. The products, empty when `[products]` is disabled, 
 `product_kinetic_energy_by_charge` `(Z, E_K_p)` and `product_total_kinetic_energy`
 `(A_p, TKE_p)` keyed by the heavy product mass; `mean_product_mass_loss`, `⟨A − A_p⟩` per
 fragment, and `mean_product_total_kinetic_energy` are their totals, `NaN` when disabled.
+`solved_mean_kinetic_energy` and `solved_kinetic_energy_dispersion` are the mean and the pooled
+within-mass standard deviation of `TKE` over the configurations the sweep solved, the effective
+`⟨TKE⟩` and `σ_TKE` of the run; `mean_kinetic_energy` is the mean of the input yield over every
+cell it holds, solved or not.
 """
 struct RunResult
     configuration::Configuration
@@ -46,6 +50,8 @@ struct RunResult
     product_total_kinetic_energy::Curve
     mean_product_mass_loss::Float64
     mean_product_total_kinetic_energy::Float64
+    solved_mean_kinetic_energy::Float64
+    solved_kinetic_energy_dispersion::Float64
 
     # Explicit inner constructor: concrete argument types, no generic `convert` path into the
     # type.
@@ -74,6 +80,8 @@ struct RunResult
         product_total_kinetic_energy::Curve,
         mean_product_mass_loss::Real,
         mean_product_total_kinetic_energy::Real,
+        solved_mean_kinetic_energy::Real,
+        solved_kinetic_energy_dispersion::Real,
     )
         return new(
             configuration,
@@ -100,6 +108,8 @@ struct RunResult
             product_total_kinetic_energy,
             Float64(mean_product_mass_loss),
             Float64(mean_product_total_kinetic_energy),
+            Float64(solved_mean_kinetic_energy),
+            Float64(solved_kinetic_energy_dispersion),
         )
     end
 end
@@ -157,6 +167,7 @@ function run_pipeline(configuration::Configuration)
 
     attempted = 0
     solved = 0
+    solved_keys = Set{Tuple{Int, Int, Float64}}()
     for entry in domain.entries, TKE in configuration.kinetic_energies
         attempted += 1
         balance =
@@ -184,6 +195,7 @@ function run_pipeline(configuration::Configuration)
         for (fragment, energy, chain) in
             ((entry.light, split.light, light), (entry.heavy, split.heavy, heavy))
             key = (fragment.A, fragment.Z, Float64(TKE))
+            push!(solved_keys, key)
             ν[key] = neutron_multiplicity(chain)
             excitation[key] = energy
             for (store, quantity, weighting) in (
@@ -212,6 +224,7 @@ function run_pipeline(configuration::Configuration)
 
     spectrum, mean_lab = _run_spectrum(configuration, chains, weights)
     covered = segment_coverage(configuration.method, configuration.heavy_masses).covered
+    solved_mean, solved_dispersion = _solved_kinetic_energy(weights, solved_keys)
     # Guaranteed by `solved > 0` above; the check narrows the return type of the contraction.
     total = total_average(ν, weights)
     total === nothing && throw(
@@ -274,8 +287,31 @@ function run_pipeline(configuration::Configuration)
         products.total_kinetic_energy,
         products.mass_loss,
         products.mean_total_kinetic_energy,
+        solved_mean,
+        solved_dispersion,
     )
     return result
+end
+
+# Mean TKE and pooled within-mass standard deviation of TKE over the solved fragment cells,
+# weighted as `_mean_kinetic_energy` weights every cell: the moments the run's averages carry.
+function _solved_kinetic_energy(
+    weights::FragmentQuantity{W},
+    solved::Set{Tuple{Int, Int, Float64}},
+) where {W}
+    sums = Dict{Int, NTuple{3, Float64}}()
+    for (key, w) in weights.values
+        key in solved || continue
+        weight = Float64(value(w))
+        TKE = key[3]
+        S₀, S₁, S₂ = get(sums, key[1], (0.0, 0.0, 0.0))
+        sums[key[1]] = (S₀ + weight, S₁ + weight * TKE, S₂ + weight * TKE^2)
+    end
+    total = sum(first, values(sums); init = 0.0)
+    total > 0 || return NaN, NaN
+    mean = sum(S[2] for S in values(sums)) / total
+    within = sum(S[3] - S[2]^2 / S[1] for S in values(sums) if S[1] > 0) / total
+    return mean, sqrt(max(within, 0.0))
 end
 
 # Narrow a contraction to plain pairs. The return annotation fixes the type at the function
@@ -417,7 +453,9 @@ end
 
 The token each configuration key contributes to a run identifier. This table is the single
 source of abbreviations, so a directory name maps back to configuration keys.
-[`run_identifier`](@ref) throws for a key with no entry.
+[`run_identifier`](@ref) throws for a key with no entry. One entry, `kinetic_energy_bound`, is
+not a key: it stands for `kinetic_energy_limit` and `kinetic_energy_moments` of `[yield]`
+together, `"grid"` or the moments restored under the physical bound.
 """
 const RUN_IDENTIFIER_ABBREVIATIONS = Dict(
     "incident_energy" => "En",
@@ -438,6 +476,7 @@ const RUN_IDENTIFIER_ABBREVIATIONS = Dict(
     "count" => "pc",
     "total" => "Ytot",
     "symmetrize" => "Ysym",
+    "kinetic_energy_bound" => "TKEb",
 )
 
 """
@@ -448,7 +487,10 @@ run identifier.
 
 Every key is abbreviated through [`RUN_IDENTIFIER_ABBREVIATIONS`](@ref); a key with no entry
 throws. The scalar and enumerated keys are covered, including `incident_energy`;
-`deformed_branch` appears only under Gilbert-Cameron and `total` and `symmetrize` only where a yield was loaded.
+`deformed_branch` appears only under Gilbert-Cameron, and `total`, `symmetrize` and
+`kinetic_energy_bound` only where a yield was loaded. `kinetic_energy_bound` is not a key of its
+own: it is `"grid"` where `kinetic_energy_limit = "grid"`, and the `kinetic_energy_moments`
+restored where the bound is physical, so the two keys take one token.
 Not tokens, and recorded in the run metadata instead: the input files, the spectrum grid and
 `maxwellian_temperature` (which affect the tabulation, and through the grid the first moment in
 `totals.dat`, but not the solution), and `significant_digits`. The system names the directory
@@ -479,6 +521,13 @@ function run_parameters(configuration::Configuration)
     if fragment_yield !== nothing
         push!(entries, "total" => fragment_yield.total)
         push!(entries, "symmetrize" => configuration.yield_symmetrized)
+        push!(
+            entries,
+            "kinetic_energy_bound" => (
+                configuration.yield_kinetic_energy_limit == "grid" ? "grid" :
+                configuration.yield_kinetic_energy_moments
+            ),
+        )
     end
 
     parameters = Dict{String, Any}()
@@ -627,6 +676,39 @@ function write_results(result::RunResult, directory::AbstractString)
                     _significant(Float64(A_p), digits),
                     " ",
                     _significant(Y, digits),
+                )
+            end
+        end
+    end
+
+    # Where the yield is bounded at the physical limit, how each mass came out of it: the
+    # measured and retained moments, the Gaussian cut, and the share removed.
+    bounds = configuration.yield_kinetic_energy_bounds
+    if !isempty(bounds)
+        open(joinpath(directory, "TKE_bound_vs_A.dat"), "w") do io
+            println(
+                io,
+                "A TKE sigma_TKE TKE_measured sigma_TKE_measured TKE_parent sigma_TKE_parent removed",
+            )
+            for bound in bounds
+                println(
+                    io,
+                    bound.A,
+                    " ",
+                    join(
+                        (
+                            _significant(x, digits) for x in (
+                                bound.mean,
+                                bound.dispersion,
+                                bound.measured_mean,
+                                bound.measured_dispersion,
+                                bound.parent_mean,
+                                bound.parent_dispersion,
+                                bound.removed,
+                            )
+                        ),
+                        " ",
+                    ),
                 )
             end
         end
@@ -801,7 +883,14 @@ function run_metadata(result::RunResult)
         "yield_symmetrized" => configuration.yield_symmetrized,
         "yield_kinetic_energy_width" => configuration.yield_width,
         "yield_inputs" => configuration.yield_inputs,
+        "yield_kinetic_energy_limit" => configuration.yield_kinetic_energy_limit,
     )
+    configuration.yield_kinetic_energy_limit == "grid" ||
+        (model["yield_kinetic_energy_moments"] = configuration.yield_kinetic_energy_moments)
+    bounds = configuration.yield_kinetic_energy_bounds
+    if fragment_yield !== nothing && !isempty(bounds)
+        model["kinetic_energy_bound"] = _bound_summary(bounds, fragment_yield)
+    end
     # How far the input yield's mean TKE lies from the energy standard, where one exists: a
     # measured scale offset of 1 MeV moves ⟨ν⟩ by about 0.08.
     if fragment_yield !== nothing
@@ -821,12 +910,42 @@ function run_metadata(result::RunResult)
         "configurations_attempted" => result.configurations_attempted,
         "yield_reached" => result.yield_reached,
         "segment_coverage" => result.segment_coverage,
+        "solved_mean_TKE_MeV" => result.solved_mean_kinetic_energy,
+        "solved_sigma_TKE_MeV" => result.solved_kinetic_energy_dispersion,
     )
     if configuration.products_enabled
         totals["mean_product_mass_loss"] = result.mean_product_mass_loss
         totals["mean_TKE_p_MeV"] = result.mean_product_total_kinetic_energy
     end
     return Dict{String, Any}("system" => system, "model" => model, "result" => totals)
+end
+
+# The bound of a yield summarised over masses with the yield each carries: the measured and the
+# retained mean TKE, the pooled measured and retained widths (root mean square), the largest
+# per-mass miss of the mean, the share removed, and the mean shift and width ratio of the
+# Gaussians cut.
+function _bound_summary(bounds::Vector{KineticEnergyBound}, fragment_yield::FragmentYield)
+    by_mass = Dict(Int(A) => Y for (A, Y) in yield_over(fragment_yield, :mass))
+    weighted(f, keep = _ -> true) = (
+        numerator = sum((by_mass[b.A] * f(b) for b in bounds if keep(b)); init = 0.0);
+        denominator = sum((by_mass[b.A] for b in bounds if keep(b)); init = 0.0);
+        denominator > 0 ? numerator / denominator : NaN
+    )
+    widths(b) = isfinite(b.measured_dispersion)
+    gaussian(b) = isfinite(b.parent_mean) && isfinite(b.parent_dispersion)
+    return Dict{String, Any}(
+        "measured_mean_TKE_MeV" => weighted(b -> b.measured_mean),
+        "mean_TKE_MeV" => weighted(b -> b.mean),
+        "measured_sigma_TKE_MeV" => sqrt(weighted(b -> b.measured_dispersion^2, widths)),
+        "sigma_TKE_MeV" => sqrt(weighted(b -> b.dispersion^2, widths)),
+        "max_mean_TKE_deviation_by_mass_MeV" =>
+            maximum(abs(b.mean - b.measured_mean) for b in bounds),
+        "removed_share" => weighted(b -> b.removed),
+        "parent_mean_shift_MeV" => weighted(b -> b.parent_mean - b.measured_mean, gaussian),
+        "parent_sigma_ratio" =>
+            weighted(b -> b.parent_dispersion / b.measured_dispersion, gaussian),
+        "masses" => length(bounds),
+    )
 end
 
 _curve_source(method::TemperatureRatio) =

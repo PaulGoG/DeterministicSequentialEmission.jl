@@ -53,7 +53,11 @@ function main(arguments::Vector{String})
         100 * result.yield_reached
     )
     @printf("  ⟨ν⟩ = %.4f per fission\n", 2 * result.total_multiplicity)
-    @printf("  ⟨TKE⟩ = %.3f MeV\n", result.mean_kinetic_energy)
+    @printf(
+        "  ⟨TKE⟩ = %.3f MeV in the input yield, %.3f MeV over the solved configurations\n",
+        result.mean_kinetic_energy,
+        result.solved_mean_kinetic_energy
+    )
     metadata = run_metadata(result)["model"]
     if haskey(metadata, "input_mean_TKE_deviation_MeV")
         @printf(

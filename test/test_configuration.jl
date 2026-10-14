@@ -178,6 +178,66 @@ end
             @test marginal("kinetic_energy_dispersion = 9.0\n").yield_width == "stated"
             @test symmetric.yield_width == "joint"
 
+            # By default the yield is bounded at the physical limit TKE < Q + E*_CN with the
+            # measured mean restored; the grid bound of earlier runs remains a choice. Both keys
+            # enter the run identifier as one token.
+            bounded = marginal("kinetic_energy_dispersion = 9.0\n")
+            @test bounded.yield_kinetic_energy_limit == "physical"
+            @test bounded.yield_kinetic_energy_moments == "mean"
+            @test !isempty(bounded.yield_kinetic_energy_bounds)
+            @test all(
+                abs(b.mean - b.measured_mean) < 1e-9 for
+                b in bounded.yield_kinetic_energy_bounds
+            )
+            @test run_parameters(bounded)["TKEb"] == "mean"
+            plain = marginal(
+                "kinetic_energy_dispersion = 9.0\nkinetic_energy_limit = \"grid\"\n",
+            )
+            @test plain.yield_kinetic_energy_moments == "none"
+            @test isempty(plain.yield_kinetic_energy_bounds)
+            @test run_parameters(plain)["TKEb"] == "grid"
+            @test run_identifier(bounded) != run_identifier(plain)
+            rescaled = marginal(
+                "kinetic_energy_dispersion = 9.0\nkinetic_energy_moments = \"mean_and_width\"\n",
+            )
+            @test run_parameters(rescaled)["TKEb"] == "mean_and_width"
+            # A measured joint distribution keeps its own row moments.
+            @test !isempty(symmetric.yield_kinetic_energy_bounds)
+            @test run_parameters(symmetric)["TKEb"] == "mean"
+            physical_marginal(extra) =
+                "[output]" => "[yield]\nmass_yield_file = \"YA\"\nmean_kinetic_energy_file = \"TKEA\"\n$(extra)\n[output]"
+            @test _rejects(
+                directory,
+                "yield.kinetic_energy_limit",
+                physical_marginal("kinetic_energy_limit = \"measured\"\n"),
+            )
+            @test _rejects(
+                directory,
+                "yield.kinetic_energy_moments",
+                physical_marginal("kinetic_energy_moments = \"median\"\n"),
+            )
+            # The moments to restore only mean something once the bound is physical.
+            @test _rejects(
+                directory,
+                "yield.kinetic_energy_moments",
+                physical_marginal(
+                    "kinetic_energy_limit = \"grid\"\nkinetic_energy_moments = \"mean\"\n",
+                ),
+            )
+            # A grid that stops short of the limit, 236.8 MeV for ¹³⁰Sn + ¹²²Cd, is refused;
+            # the grid bound accepts it.
+            @test _rejects(
+                directory,
+                "energetics.kinetic_energy_max",
+                "kinetic_energy_max = 230.0" => "kinetic_energy_max = 220.0",
+                physical_marginal(""),
+            )
+            @test _configuration(
+                directory,
+                "kinetic_energy_max = 230.0" => "kinetic_energy_max = 220.0",
+                physical_marginal("kinetic_energy_limit = \"grid\"\n"),
+            ).yield_kinetic_energy_limit == "grid"
+
             # A spectrum grid is logarithmic and spans exactly what it was asked for.
             with_spectrum = _configuration(
                 directory,

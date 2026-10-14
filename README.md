@@ -326,6 +326,20 @@ tabulated by Bertsch et al. (2015), doi:10.1088/0954-3899/42/7/077001: 184.1 MeV
 170.1, 170.5 and 177.9 MeV for thermal ²³³U, ²³⁵U and ²³⁹Pu. A 1 MeV offset moves `⟨ν⟩` by
 about 0.08.
 
+No configuration may carry more total kinetic energy than the split releases: at `TKE ≥ Q + E*_CN`
+the fragments have no excitation energy. By default (`[yield] kinetic_energy_limit = "physical"`)
+each `P(TKE|A,Z)` is cut there and normalised per `(A, Z)`, so `Y(A)` and `p(Z|A)` keep their
+measured values, and the measured moments are restored over what remains:
+`kinetic_energy_moments = "mean"` re-centres a factorized Gaussian, its width kept, so that the
+bounded mean equals `⟨TKE⟩(A)` (a measured matrix keeps its own row means); `"mean_and_width"`
+re-scales it as well, and `"none"` leaves the bounded rows as they fall. The grid must then reach
+the largest `Q + E*_CN` of the domain, and a configuration whose `kinetic_energy_max` stops short
+is refused. `kinetic_energy_limit = "grid"` reproduces the runs before this bound: a Gaussian
+normalised over the grid, the configurations at `TXE ≤ 0` dropped, which put the solved `⟨TKE⟩`
+of the thermal systems 0.12–0.22 MeV below the measured one. Every run records the solved
+`⟨TKE⟩` and `σ_TKE` in its metadata, and a bounded run writes `TKE_bound_vs_A.dat`, the
+measured and retained moments of every mass.
+
 The isobaric charge distribution comes from Wahl's `Zₚ` model where no evaluated table is named.
 The model, with its parameters, lives in the domain package, which resolves them from the
 best-founded source the system reaches:

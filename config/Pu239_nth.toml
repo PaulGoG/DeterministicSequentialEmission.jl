@@ -15,7 +15,7 @@ charge_distribution_file = "wahl"                          # one of: "wahl" | "m
 [energetics]
 mass_excess_file = "ame2020"                               # "ame2020", the table FissionFragmentsDomain ships, or a path under the data directory
 kinetic_energy_min = 130.0                              # MeV, above 0
-kinetic_energy_max = 210.0                              # MeV, above kinetic_energy_min
+kinetic_energy_max = 216.0                              # MeV, above kinetic_energy_min; with "physical", max + step must reach the largest Q + E*_CN
 kinetic_energy_step = 1.0                               # MeV, above 0 to 50
 
 [level_density]
@@ -38,6 +38,8 @@ mean_kinetic_energy_file = "Pu239_nth/TKE_vs_A/21995038_C.Wagemans_1984.dat"    
 kinetic_energy_dispersion_file = "Pu240_sf/sigma_TKE_vs_A/22273023_P.Schillebeeckx_1992.dat"  # A sigma_TKE, MeV; borrowed from ²⁴⁰Pu(sf), Schillebeeckx (1992); Wagemans reports none
 total = 200.0                                                                                 # percent the yield sums to, above 0
 symmetrize = true                                                                             # impose Y, ⟨TKE⟩, σ_TKE equal at A and A₀ − A (pre-neutron identity)
+kinetic_energy_limit = "physical"                                                             # one of: "physical" | "grid"; P(TKE|A,Z) cut at TKE < Q + E*_CN, or on the grid with TXE ≤ 0 dropped
+kinetic_energy_moments = "mean"                                                               # "physical" only; one of: "mean" | "mean_and_width" | "none"; the measured moments restored per mass
 
 [spectrum]
 enabled = true                    # solve the laboratory prompt neutron spectrum
