@@ -9,13 +9,15 @@
 # tapes of the NEA Data Bank record doi:10.82555/nhfqy-hvz09.
 #
 # From MF8 MT454 of each material the script takes the thermal point, 0.0253 eV, or the single
-# point of spontaneous fission; sums the isomeric states of each (A_p, Z), and sums over Z for
+# point of spontaneous fission; sums the isomeric states of each (Z, A_p), and sums over Z for
 # the mass yield, adding uncertainties in quadrature. The ternary particles JEFF-3.3 lists among
 # the products are not fragments and are left out. Yields are written in per cent per fission,
 # 200 over both products, to data/<system>/Y_vs_A_p/<library>.dat (A_p Y Y_uncertainty)
-# and to data/<system>/Y_vs_A_p_Z/<library>.dat (A_p Z Y Y_uncertainty), <library> being
-# ENDF-B-VIII.0 or JEFF-3.3. A provenance.toml in each directory records, per file, the source,
-# its SHA-256, the material, the energy point and the handling of isomers and ternary particles.
+# and to data/<system>/Y_vs_Z_A_p/<library>.dat (Z A_p Y Y_uncertainty), <library> being
+# ENDF-B-VIII.0 or JEFF-3.3: the directories and headers ExforFissionData.jl writes for the
+# measured yields against the same abscissae. A provenance.toml in each directory records, per
+# file, the source, its SHA-256, the material, the energy point and the handling of isomers and
+# ternary particles.
 #
 # A table is never overwritten: one that differs from the new one moves aside as
 # <library>#1.dat, <library>#2.dat, …, and its provenance entry moves with it; an identical one
@@ -281,8 +283,9 @@ function select_point(points, system::FissioningSystem)
     return points[index]
 end
 
-# Per-cent yields per (A_p, Z): the isomeric states summed, their uncertainties in quadrature
-# (MT454 states no correlations), the ternary particles counted apart.
+# Per-cent yields per (Z, A_p), ordered by Z and then A_p: the isomeric states summed, their
+# uncertainties in quadrature (MT454 states no correlations), the ternary particles counted
+# apart.
 function charge_resolved(products)
     yields = Dict{Tuple{Int, Int}, Tuple{Float64, Float64, Int}}()
     ternary_entries = 0
@@ -297,10 +300,10 @@ function charge_resolved(products)
             ternary_yield += YI
             continue
         end
-        Y, variance, states = get(yields, (A, Z), (0.0, 0.0, 0))
-        yields[(A, Z)] = (Y + YI, variance + DYI^2, states + 1)
+        Y, variance, states = get(yields, (Z, A), (0.0, 0.0, 0))
+        yields[(Z, A)] = (Y + YI, variance + DYI^2, states + 1)
     end
-    rows = sort!([(A, Z, 100Y, 100sqrt(variance)) for ((A, Z), (Y, variance, _)) in yields])
+    rows = sort!([(Z, A, 100Y, 100sqrt(variance)) for ((Z, A), (Y, variance, _)) in yields])
     return (
         rows = rows,
         isomeric = count(entry -> entry[3] > 1, values(yields)),
@@ -311,7 +314,7 @@ end
 
 function mass_resolved(rows)
     yields = Dict{Int, Tuple{Float64, Float64}}()
-    for (A, _, Y, ΔY) in rows
+    for (_, A, Y, ΔY) in rows
         y, variance = get(yields, A, (0.0, 0.0))
         yields[A] = (y + Y, variance + ΔY^2)
     end
@@ -429,7 +432,7 @@ function stage(data::AbstractString, library, system::FissioningSystem, obtained
         "incident_energy_ev" => point.energy,
         "energy_points_in_file_ev" => [p.energy for p in points],
         "MT454_entries" => length(point.products),
-        "isomer_handling" => "the isomeric states (FPS) of each (A_p, Z) are summed, their \
+        "isomer_handling" => "the isomeric states (FPS) of each (Z, A_p) are summed, their \
                               uncertainties added in quadrature",
         "isomeric_entries_summed" => charges.isomeric,
         "ternary_handling" => "products with A_p < $(ternary_mass_limit) are ternary \
@@ -450,7 +453,7 @@ function stage(data::AbstractString, library, system::FissioningSystem, obtained
     by_charge = merge(
         common,
         Dict{String, Any}(
-            "columns" => "A_p Z Y Y_uncertainty",
+            "columns" => "Z A_p Y Y_uncertainty",
             "rows" => length(charges.rows),
             "uncertainty_zero_rows" => zero_uncertainty(charges.rows),
         ),
@@ -461,16 +464,16 @@ function stage(data::AbstractString, library, system::FissioningSystem, obtained
             "columns" => "A_p Y Y_uncertainty",
             "rows" => length(masses),
             "uncertainty_zero_rows" => zero_uncertainty(masses),
-            "charge_handling" => "Y(A_p) is the sum over Z of Y(A_p, Z), the uncertainties \
+            "charge_handling" => "Y(A_p) is the sum over Z of Y(Z, A_p), the uncertainties \
                                   added in quadrature",
         ),
     )
     name = "$(library.token).dat"
     directory = joinpath(data, system.token)
     status_charge = stage_table(
-        joinpath(directory, "Y_vs_A_p_Z"),
+        joinpath(directory, "Y_vs_Z_A_p"),
         name,
-        table_text("A_p Z Y Y_uncertainty", charges.rows),
+        table_text("Z A_p Y Y_uncertainty", charges.rows),
         by_charge,
     )
     status_mass = stage_table(
@@ -483,7 +486,7 @@ function stage(data::AbstractString, library, system::FissioningSystem, obtained
     means = mean_masses(masses, compound_mass(system))
     largest = sort(masses; by = row -> row[2], rev = true)[1:min(5, length(masses))]
     @printf(
-        "  %s, %s: MAT %d at %g eV, %d MT454 entries, %d isomeric (A_p, Z) summed\n",
+        "  %s, %s: MAT %d at %g eV, %d MT454 entries, %d isomeric (Z, A_p) summed\n",
         system.token,
         library.token,
         material.MAT,
@@ -492,7 +495,7 @@ function stage(data::AbstractString, library, system::FissioningSystem, obtained
         charges.isomeric
     )
     @printf(
-        "    %d (A_p, Z) entries, %d masses, sum of Y(A_p) = %.6f %%\n",
+        "    %d (Z, A_p) entries, %d masses, sum of Y(A_p) = %.6f %%\n",
         length(charges.rows),
         length(masses),
         total
@@ -513,7 +516,7 @@ function stage(data::AbstractString, library, system::FissioningSystem, obtained
         means.light + means.heavy
     )
     println("    ", status_mass, " ", joinpath(directory, "Y_vs_A_p", name))
-    println("    ", status_charge, " ", joinpath(directory, "Y_vs_A_p_Z", name))
+    println("    ", status_charge, " ", joinpath(directory, "Y_vs_Z_A_p", name))
     return nothing
 end
 

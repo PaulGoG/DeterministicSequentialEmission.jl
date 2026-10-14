@@ -165,10 +165,10 @@
         # normalised to 200 all the same; the product TKE, resolved in TKE, is not written.
         for (name, header) in (
             ("Y_vs_A_p.dat", "A_p Y"),
-            ("Y_vs_A_p_Z.dat", "A_p Z Y"),
+            ("Y_vs_Z_A_p.dat", "Z A_p Y"),
             ("Y_vs_N_p.dat", "N_p Y"),
-            ("KE_p_vs_A_p.dat", "A_p KE"),
-            ("KE_p_vs_Z.dat", "Z KE"),
+            ("E_K_p_vs_A_p.dat", "A_p E_K_p"),
+            ("E_K_p_vs_Z.dat", "Z E_K_p"),
         )
             path = joinpath(destination, name)
             @test isfile(path)
@@ -177,8 +177,8 @@
         @test !isfile(joinpath(destination, "TKE_p_vs_A_p.dat"))
         @test !isempty(result.product_total_kinetic_energy)
         independent = read_delimited_table(
-            joinpath(destination, "Y_vs_A_p_Z.dat"),
-            TableSpec([:A_p, :Z, :Y]; skip = 1),
+            joinpath(destination, "Y_vs_Z_A_p.dat"),
+            TableSpec([:Z, :A_p, :Y]; skip = 1),
         )
         @test sum(column(independent, :Y, Float64)) ≈ 200 rtol = 1e-6
         @test sum(last, result.product_mass_yield) ≈ 200 rtol = 1e-12

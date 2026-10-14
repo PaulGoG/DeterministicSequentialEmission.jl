@@ -15,11 +15,11 @@ and the post-neutron product distributions where they were. [`run_pipeline`](@re
 [`write_results`](@ref) writes it.
 
 Curves are [`Curve`](@ref)s. The products, empty when `[products]` is disabled, are
-`product_mass_yield` `(A_p, Y)`, `product_yield` `(A_p, Z, Y)` sorted by `A_p` and then `Z`,
-`product_neutron_yield` `(N_p, Y)`, `product_kinetic_energy` `(A_p, KE)`,
-`product_kinetic_energy_by_charge` `(Z, KE)` and `product_total_kinetic_energy` `(A_p, TKE)`
-keyed by the heavy product mass; `mean_product_mass_loss`, `⟨A − A_p⟩` per fragment, and
-`mean_product_total_kinetic_energy` are their totals, `NaN` when disabled.
+`product_mass_yield` `(A_p, Y)`, `product_yield` `(Z, A_p, Y)` sorted by `Z` and then `A_p`,
+`product_neutron_yield` `(N_p, Y)`, `product_kinetic_energy` `(A_p, E_K_p)`,
+`product_kinetic_energy_by_charge` `(Z, E_K_p)` and `product_total_kinetic_energy`
+`(A_p, TKE_p)` keyed by the heavy product mass; `mean_product_mass_loss`, `⟨A − A_p⟩` per
+fragment, and `mean_product_total_kinetic_energy` are their totals, `NaN` when disabled.
 """
 struct RunResult
     configuration::Configuration
@@ -543,7 +543,7 @@ _product_count_token(::SequenceCount) = "sequence_count"
 
 Write the tables of a run into `directory`: one two-column file per curve, the fragment yield
 projections, the post-neutron product distributions with the independent yields
-`Y_vs_A_p_Z.dat` in three columns, the charge distribution the run used beside the ones it
+`Y_vs_Z_A_p.dat` in three columns, the charge distribution the run used beside the ones it
 could have used, and a table of totals.
 
 `directory` is created. A directory already holding a run is refused, not overwritten;
@@ -572,9 +572,9 @@ function write_results(result::RunResult, directory::AbstractString)
         ("spectrum_vs_E.dat", "E spectrum", result.spectrum),
         ("Y_vs_A_p.dat", "A_p Y", result.product_mass_yield),
         ("Y_vs_N_p.dat", "N_p Y", result.product_neutron_yield),
-        ("KE_p_vs_A_p.dat", "A_p KE", result.product_kinetic_energy),
-        ("KE_p_vs_Z.dat", "Z KE", result.product_kinetic_energy_by_charge),
-        ("TKE_p_vs_A_p.dat", "A_p TKE", result.product_total_kinetic_energy),
+        ("E_K_p_vs_A_p.dat", "A_p E_K_p", result.product_kinetic_energy),
+        ("E_K_p_vs_Z.dat", "Z E_K_p", result.product_kinetic_energy_by_charge),
+        ("TKE_p_vs_A_p.dat", "A_p TKE_p", result.product_total_kinetic_energy),
     )
     # A yield placed at the mean TKE of each mass has no TKE distribution, so the tables resolved
     # in TKE would describe one it does not have; they are not written. Nor is the product TKE,
@@ -617,14 +617,14 @@ function write_results(result::RunResult, directory::AbstractString)
     end
 
     if !isempty(result.product_yield)
-        open(joinpath(directory, "Y_vs_A_p_Z.dat"), "w") do io
-            println(io, "A_p Z Y")
-            for (A_p, Z, Y) in result.product_yield
+        open(joinpath(directory, "Y_vs_Z_A_p.dat"), "w") do io
+            println(io, "Z A_p Y")
+            for (Z, A_p, Y) in result.product_yield
                 println(
                     io,
-                    _significant(Float64(A_p), digits),
-                    " ",
                     _significant(Float64(Z), digits),
+                    " ",
+                    _significant(Float64(A_p), digits),
                     " ",
                     _significant(Y, digits),
                 )

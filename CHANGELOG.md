@@ -22,10 +22,11 @@ here.
   are joined, and superseded sets are skipped, as the retrieval record states.
 - The coverage badge.
 - The post-neutron product distributions: the mass yield `Y_vs_A_p.dat`, the independent
-  yields `Y_vs_A_p_Z.dat`, `Y_vs_N_p.dat`, the product kinetic energies
-  `KE_p_vs_A_p.dat` and `KE_p_vs_Z.dat`, and `TKE_p_vs_A_p.dat` against the heavy product
+  yields `Y_vs_Z_A_p.dat` in the columns `Z A_p Y`, `Y_vs_N_p.dat`, the product kinetic energies
+  `E_K_p_vs_A_p.dat` and `E_K_p_vs_Z.dat`, and `TKE_p_vs_A_p.dat` against the heavy product
   mass, normalised to the total of the input yield; `mean_product_mass_loss` and `mean_TKE_p`
-  in `totals.dat`.
+  in `totals.dat`. A table is named, and its columns ordered, as ExforFissionData.jl names the
+  same quantity, so that model and measurement share one layout.
 - `[products]`, with `enabled` and `count`: `"emission_probability"` (the default) ends a chain of
   `n` possible sequences on each of its residuals with probability `1/n`, so that the products
   lose the multiplicity; `"sequence_count"` subtracts all `n`, the published prescription,
@@ -37,7 +38,8 @@ here.
   independent yields of ENDF/B-VIII.0 and JEFF-3.3, summed over charge, with the run's own
   pre-neutron `Y(A)` as a guide; `results/README.md` reports the hump centroids and peaks.
 - `scripts/stage_product_yields.jl`, which stages those evaluated yields from the public
-  ENDF-6 files with their provenance.
+  ENDF-6 files with their provenance, under `data/<system>/Y_vs_A_p/` and, resolved in charge,
+  `data/<system>/Y_vs_Z_A_p/` (`Z A_p Y Y_uncertainty`).
 
 ### Changed
 

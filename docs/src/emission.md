@@ -56,8 +56,8 @@ yields of both archived ²⁵²Cf(sf) runs to `1e-14`.
 The yields follow from the fragment yield `Y(A, Z, TKE)` and the product probabilities `P`,
 
 ```
-Y_p(A_p, Z) = 𝒩 Σ_{A, TKE} Y(A, Z, TKE) P(A_p | A, Z, TKE),
-Y_p(A_p) = Σ_Z Y_p(A_p, Z),    Y_p(N_p) = Σ_{A_p − Z = N_p} Y_p(A_p, Z),
+Y_p(Z, A_p) = 𝒩 Σ_{A, TKE} Y(A, Z, TKE) P(A_p | A, Z, TKE),
+Y_p(A_p) = Σ_Z Y_p(Z, A_p),    Y_p(N_p) = Σ_{A_p − Z = N_p} Y_p(Z, A_p),
 ```
 
 the sums running over the configurations solved. `𝒩` makes `Σ Y_p(A_p)` equal to the total of
@@ -72,19 +72,19 @@ from, as the input yield counts it once.
 The kinetic energies are those of eqs. (6)–(9) of [Tudora2022](@cite),
 
 ```
-KE = TKE (A₀ − A)/A₀,    KE_p = KE A_p/A,    TKE_p = KE_p,L + KE_p,H,
+E_K = TKE (A₀ − A)/A₀,    E_K_p = E_K A_p/A,    TKE_p = E_K_p,L + E_K_p,H,
 ```
 
 emission isotropic in the fragment frame leaving the fragment velocity unchanged on average.
-`KE_p(A_p)` and `KE_p(Z)` are means over `Y P`. `TKE_p` is taken over the two products of a pair,
+`E_K_p(A_p)` and `E_K_p(Z)` are means over `Y P`. `TKE_p` is taken over the two products of a pair,
 independent of each other, with the joint probability `P_L P_H` and the pair weight that halves a
 mass-symmetric split, as in the spectrum; it is written against the heavy product mass. Under the
-sequence count these are eqs. (8) and (9) of the paper; under the default the mean of `KE_p` over
+sequence count these are eqs. (8) and (9) of the paper; under the default the mean of `E_K_p` over
 the endings of a chain is its eq. (12).
 
-A run writes `Y_vs_A_p.dat`, the independent yields `Y_vs_A_p_Z.dat`,
-`Y_vs_N_p.dat`, `KE_p_vs_A_p.dat`, `KE_p_vs_Z.dat` and `TKE_p_vs_A_p.dat`, and adds
-`mean_product_mass_loss`, `⟨A − A_p⟩` per fragment, and `mean_TKE_p` to `totals.dat`.
+A run writes `Y_vs_A_p.dat`, the independent yields `Y_vs_Z_A_p.dat`, `Y_vs_N_p.dat`,
+`E_K_p_vs_A_p.dat`, `E_K_p_vs_Z.dat` and `TKE_p_vs_A_p.dat`, and adds `mean_product_mass_loss`,
+`⟨A − A_p⟩` per fragment, and `mean_TKE_p` to `totals.dat`.
 
 ```@autodocs
 Modules = [DeterministicSequentialEmission]

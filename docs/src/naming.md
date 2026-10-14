@@ -48,7 +48,7 @@ This is why the configuration key is `charge_distribution_file` while the file i
 | σ_*Z* | `sigma_Z` | `σ_Z` | charge dispersion |
 | *p*(*Z*,*A*) | `p_Z` | `p` | isobaric charge probability |
 | TKE | `TKE` | `TKE` | total kinetic energy, pre-neutron |
-| KE | `KE` | `KE` | fragment kinetic energy, pre-neutron |
+| *E*_K | `E_K` | `E_K` | fragment kinetic energy, pre-neutron |
 | TXE | `TXE` | `TXE` | total excitation energy |
 | *E** | `E_star` | `excitation` | fragment excitation energy |
 | *Q* | `Q` | `Q` | Q value |
@@ -67,11 +67,14 @@ This is why the configuration key is `charge_distribution_file` while the file i
 | *R*_T | `R_T` | `R_T` | temperature ratio, T_L/T_H |
 
 A post-neutron quantity carries the subscript p of the papers: `A_p` and `N_p` are the product
-mass and neutron number, `KE_p` and `TKE_p` the product kinetic energies, in a file name, in an
+mass and neutron number, `E_K_p` and `TKE_p` the product kinetic energies, in a file name, in an
 equation and in Julia. A yield needs no qualifier, its abscissa says which it is: `Y_vs_A.dat`
 holds the pre-neutron *Y*(*A*), `Y_vs_A_p.dat` the product *Y*(*A*_p); `TKE_p_vs_A_p.dat` holds
-*TKE*_p against the heavy product mass. The same names are the directories the retrieval and the
-staging write under `data/<system>/`.
+*TKE*_p against the heavy product mass. Where ExforFissionData.jl has a token for a quantity,
+that token is the name here too, and abscissae come in its order, charge before product mass:
+`Y_vs_Z_A_p.dat`, with the columns `Z A_p Y`. A table a run writes under `data/sims/` then reads
+like the directory the retrieval or the staging writes under `data/<system>/`. The product
+neutron number has no token there and keeps `N_p`.
 
 `rms` is retired. It named a root-mean-square of nothing stated; the quantity is the Gaussian
 dispersion of the isobaric charge distribution, and the field writes σ_Z.
@@ -269,9 +272,9 @@ A run writes to `data/sims/<system>/<run>`, and an output follows the same
 | `spectrum_vs_E.dat` | the laboratory prompt neutron spectrum |
 | `Y_vs_A.dat`, `Y_vs_Z.dat`, `Y_vs_TKE.dat` | the fragment yield projections |
 | `Y_vs_A_p.dat` | post-neutron product mass yield |
-| `Y_vs_A_p_Z.dat` | independent product yields, before β decay, in three columns `A_p Z Y` |
+| `Y_vs_Z_A_p.dat` | independent product yields, before β decay, in three columns `Z A_p Y` |
 | `Y_vs_N_p.dat` | product yield against product neutron number |
-| `KE_p_vs_A_p.dat`, `KE_p_vs_Z.dat` | mean product kinetic energy against product mass and against charge |
+| `E_K_p_vs_A_p.dat`, `E_K_p_vs_Z.dat` | mean product kinetic energy against product mass and against charge |
 | `TKE_p_vs_A_p.dat` | mean post-neutron total kinetic energy against the heavy product mass |
 | `charge_distribution_vs_A.dat`, `_wahl_per_reaction`, `_wahl_systematics`, `_mean` | the charge distribution the run was weighted by and the three alternatives — Wahl's 1988 per-reaction model, the 2002 systematics, the conventional means — each reduced to effective Gaussians; the metadata records which layer the first is |
 | `totals.dat` | one row per quantity averaged over the whole run, `mean_product_mass_loss` (`⟨A − A_p⟩` per fragment) and `mean_TKE_p` among them where the products are written |

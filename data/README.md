@@ -49,7 +49,7 @@ data/
 | `<system>/spectrum_maxwellian_ratio_vs_E/*.dat` | the spectrum as a ratio to a Maxwellian, whose temperature the record states | `E spectrum_maxwellian_ratio spectrum_maxwellian_ratio_uncertainty` |
 | `<system>/spectrum_cf252_ratio_vs_E/*.dat` | the ratio of the system's spectrum and that of ²⁵²Cf(sf) at the same outgoing energy, in the orientation the record states | `E spectrum_cf252_ratio spectrum_cf252_ratio_uncertainty` |
 | `<system>/Y_vs_A_p/<library>.dat` | evaluated post-neutron product mass yield, the independent yields summed over charge; `ENDF-B-VIII.0` and `JEFF-3.3`, staged by `scripts/stage_product_yields.jl` with a `provenance.toml` beside them | `A_p Y Y_uncertainty`, per cent per fission, 200 over both products |
-| `<system>/Y_vs_A_p_Z/<library>.dat` | the same resolved in charge: the evaluated independent yields before β decay, isomeric states summed | `A_p Z Y Y_uncertainty` |
+| `<system>/Y_vs_Z_A_p/<library>.dat` | the same resolved in charge: the evaluated independent yields before β decay, isomeric states summed | `Z A_p Y Y_uncertainty` |
 
 A file name is `<quantity>_vs_<abscissa>`, which is a statement rather than a list of symbols.
 Where a quantity was measured more than once, the directory carries the quantity and the file
@@ -141,13 +141,13 @@ julia scripts/retrieve.jl config/Cf252_sf_spectrum_maxwellian_ratio_vs_E.toml
 The tree held here is the retrieval of every configuration that package ships, at v0.3.0. Three of
 them, the joint `Y(A,TKE)` of ²³⁵U, ²³⁹Pu and ²³³U, find no dataset in the archive.
 
-**Evaluated product yields.** `<system>/Y_vs_A_p/` and `<system>/Y_vs_A_p_Z/` hold the
+**Evaluated product yields.** `<system>/Y_vs_A_p/` and `<system>/Y_vs_Z_A_p/` hold the
 independent fission product yields of ENDF/B-VIII.0 (Brown *et al.*, *Nucl. Data Sheets* **148**,
 1 (2018), doi:10.1016/j.nds.2018.02.001) and JEFF-3.3 (Plompen *et al.*, *Eur. Phys. J. A* **56**,
 181 (2020), doi:10.1140/epja/s10050-020-00141-9), which the post-neutron product yields of the
 model are compared against. Each directory has one file per library, `ENDF-B-VIII.0.dat` and
 `JEFF-3.3.dat`, in per cent per fission, 200 over both products: `A_p Y Y_uncertainty` against
-product mass, and `A_p Z Y Y_uncertainty` resolved in charge. They are taken from MF8 MT454 at
+product mass, and `Z A_p Y Y_uncertainty` resolved in charge. They are taken from MF8 MT454 at
 0.0253 eV, or at the single point of ²⁵²Cf(sf). Isomeric states are summed and uncertainties
 added in quadrature, the files stating no correlations; the ternary particles JEFF-3.3 lists
 among its products are left out. They are not measurements, and the figures draw them as lines.
@@ -163,9 +163,10 @@ point. `--library` and `--system` restrict the staging; if a server refuses a sc
 fetch the file in a browser and pass it with `--file <library>=<path>`. A table that differs from
 the one in place never replaces it; the old one moves aside as `<library>#1.dat`. The measured
 post-neutron yields — EXFOR `MASS,SEC,FY`, the independent yields `ELEM/MASS,IND,FY` and the
-product kinetic energies `MASS,SEC,KE` — are not retrieved yet; when ExforFissionData.jl writes
-them into the same directories as `<accession>_<Author>_<year>.dat`, the figure draws them as
-markers beside the evaluations.
+product kinetic energies `MASS,SEC,KE` — are not retrieved here yet. ExforFissionData.jl v0.4.0
+writes them as `<accession>_<Author>_<year>.dat` into `Y_vs_A_p/`, `Y_vs_Z_A_p/` and
+`E_K_p_vs_A_p/` (`A_p E_K_p E_K_p_uncertainty`, MeV), the first two beside the evaluations, and
+the figures draw them as markers.
 
 Read the `retrieval.toml` it writes before using what it retrieved. It records, per dataset, the
 reaction code, the units and the qualifiers the archive attached, and those qualifiers matter:

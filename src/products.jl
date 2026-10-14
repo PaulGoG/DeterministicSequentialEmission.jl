@@ -87,7 +87,7 @@ the chain its multiplicity is taken from (a later occurrence replaces an earlier
 multiplicity store), with `w p` at each product mass `(A_p, p)` of [`product_masses`](@ref):
 
 ```
-Y_p(A_p) = 𝒩 Σ w p,    Y_p(A_p, Z) = 𝒩 Σ_{Z fixed} w p,    Y_p(N_p = A_p − Z) = 𝒩 Σ w p
+Y_p(A_p) = 𝒩 Σ w p,    Y_p(Z, A_p) = 𝒩 Σ_{Z fixed} w p,    Y_p(N_p = A_p − Z) = 𝒩 Σ w p
 ```
 
 At `A₀/2` a configuration is reached from both labellings of a split, and twice from the
@@ -95,13 +95,13 @@ self-complementary one; it is counted once, as the input yield counts it. `𝒩 
 sum running over the configurations solved, so that `Σ_{A_p} Y_p(A_p) = total`: the products of
 the solved configurations stand for the whole distribution, as in the multiplicity contraction.
 
-The kinetic energies are `KE = TKE (A₀ − A)/A₀` and `KE_p = KE A_p/A`, the velocity unchanged on
-average; `KE_p(A_p)` and `KE_p(Z)` are means over `w p`. `TKE_p = KE_p,L + KE_p,H` is taken over
-the pairs, the two products independent, with weight `w_pair p_L p_H`, `w_pair` the heavy
-fragment's weight halved at mass symmetry (`_pair_weight`), and keyed by the heavy product
+The kinetic energies are `E_K = TKE (A₀ − A)/A₀` and `E_K_p = E_K A_p/A`, the velocity unchanged
+on average; `E_K_p(A_p)` and `E_K_p(Z)` are means over `w p`. `TKE_p = E_K_p,L + E_K_p,H` is
+taken over the pairs, the two products independent, with weight `w_pair p_L p_H`, `w_pair` the
+heavy fragment's weight halved at mass symmetry (`_pair_weight`), and keyed by the heavy product
 mass. Means with no positive weight are omitted.
 
-Returns `mass_yield`, `yield` (`(A_p, Z, Y)`, sorted), `neutron_yield`, `kinetic_energy`,
+Returns `mass_yield`, `yield` (`(Z, A_p, Y)`, sorted), `neutron_yield`, `kinetic_energy`,
 `kinetic_energy_by_charge`, `total_kinetic_energy`, and the totals `mass_loss`, the mean
 `⟨A − A_p⟩` per fragment over `w`, and `mean_total_kinetic_energy`, the mean `TKE_p` over the pairs.
 """
@@ -144,15 +144,15 @@ function _product_distributions(
         w = Float64(value(raw))
         A, Z, TKE = key
         weight_sum += w
-        KE = TKE * (A₀ - A) / A₀
+        E_K = TKE * (A₀ - A) / A₀
         for (A_p, p) in product_masses(chain, count)
             share = w * p
             by_mass[A_p] = get(by_mass, A_p, 0.0) + share
             by_mass_charge[(A_p, Z)] = get(by_mass_charge, (A_p, Z), 0.0) + share
             by_neutron[A_p - Z] = get(by_neutron, A_p - Z, 0.0) + share
-            KE_p = KE * A_p / A
-            _accumulate!(energy_by_mass, A_p, share, KE_p)
-            _accumulate!(energy_by_charge, Z, share, KE_p)
+            E_K_p = E_K * A_p / A
+            _accumulate!(energy_by_mass, A_p, share, E_K_p)
+            _accumulate!(energy_by_charge, Z, share, E_K_p)
             loss += share * (A - A_p)
         end
     end
@@ -166,12 +166,12 @@ function _product_distributions(
         w = _pair_weight(entry, Float64(value(raw)))
         A_L = entry.light.A
         A_H = entry.heavy.A
-        KE_L = TKE * (A₀ - A_L) / A₀
-        KE_H = TKE * (A₀ - A_H) / A₀
+        E_K_L = TKE * (A₀ - A_L) / A₀
+        E_K_H = TKE * (A₀ - A_H) / A₀
         light_products = product_masses(light, count)
         for (A_pH, p_H) in product_masses(heavy, count), (A_pL, p_L) in light_products
             share = w * p_L * p_H
-            TKE_p = KE_L * A_pL / A_L + KE_H * A_pH / A_H
+            TKE_p = E_K_L * A_pL / A_L + E_K_H * A_pH / A_H
             _accumulate!(energy_by_heavy_mass, A_pH, share, TKE_p)
             pair_sum += share
             pair_energy += share * TKE_p
@@ -179,7 +179,7 @@ function _product_distributions(
     end
 
     𝒩 = weight_sum > 0 ? Float64(total) / weight_sum : NaN
-    yields = sort!([(A_p, Z, 𝒩 * Y) for ((A_p, Z), Y) in by_mass_charge])
+    yields = sort!([(Z, A_p, 𝒩 * Y) for ((A_p, Z), Y) in by_mass_charge])
     return (
         mass_yield = _scaled_curve(by_mass, 𝒩),
         yield = yields,
