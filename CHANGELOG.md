@@ -77,6 +77,15 @@ here.
   ENDF/B-VIII.0 MF1 MT456 at 0.0253 eV and, for ²⁵²Cf(sf), its decay-sublibrary constant 3.7590:
   ²³³U was compared with a total multiplicity (2.4968, now 2.4785) and ²³⁹Pu with 2.8750 (now
   2.8680), and ²⁵²Cf took 3.7573 from another evaluation.
+- The fragment yield is bounded at the physical limit of each split by default (see Added). The
+  solved `⟨TKE⟩` now equals the measured input in every system, where it fell 0.12–0.22 MeV short
+  for the thermal ones; `⟨TXE⟩` falls by as much and `⟨ν⟩` by 0.9 % (²³⁵U, 2.5353 → 2.5129),
+  0.4 % (²³⁹Pu, 2.8132 → 2.8019) and 0.6 % (²³³U, 2.6313 → 2.6156), the mean laboratory energy
+  by 0.1–0.3 %; ²⁵²Cf, whose measured matrix keeps its own row means, moves by 2 × 10⁻⁴ in `⟨ν⟩`.
+  The thermal `kinetic_energy_max` of the shipped configurations rises to 205 and 216 MeV.
+- The staged EXFOR data are the ExforFissionData.jl v0.5.0 retrieval: every table the shipped
+  configurations read is the same, the ²⁵²Cf spectrum of Blinov (1980) loses its 0.2209 MeV point
+  (an archive defect), and the prompt-γ observables are added.
 - The staged inputs are the ExforFissionData.jl v0.4.0 retrieval and the runs of
   FissionTemperatureRatio.jl v0.4.0 on it. Every table the shipped configurations read is the same
   as before, byte for byte, and so is every result; only the run records and the names of the

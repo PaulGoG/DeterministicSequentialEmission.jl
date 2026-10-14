@@ -192,7 +192,7 @@ The sawtooth is the signature observable, and it is not fitted: the total excita
 shared between the fragments by a temperature ratio `R_T(A_H)` extracted from measured `ν(A)` by
 a companion package, the emission chain is then solved configuration by configuration, and the
 result is contracted against the measured fragment yield `Y(A, TKE)`. Total multiplicities come
-out within 6.2 % of the evaluated prompt values, from −5.4 % for ²⁵²Cf to +6.2 % for ²³³U, with
+out within 5.5 % of the evaluated prompt values, from −5.4 % for ²⁵²Cf to +5.5 % for ²³³U, with
 no parameter adjusted per system.
 
 ![Prompt fission neutron spectra: 252-Cf as a ratio to a Maxwellian, the thermal systems as ratios to 252-Cf](results/prompt_neutron_spectrum.png)
@@ -205,10 +205,10 @@ multiplicities — so nothing is scaled to anything. Each fragmentation enters t
 yield times its multiplicity, so every emitted neutron counts once, as it does in a measurement.
 Within a fragment the `k`-th neutron of a chain of `n` counts with `(n+1−k)/n`, its probability
 of emission under `ν = (n+1)/2`. The mean laboratory energy of ²⁵²Cf(sf) is 2.16 MeV against 2.13
-measured, and those of the three thermal systems lie 1 to 2.5 % below the measured values. The
+measured, and those of the three thermal systems lie 1.3 to 2.6 % below the measured values. The
 ²⁵²Cf spectrum follows the measured shape between 0.3 and 5 MeV, lies below the data under
 0.3 MeV and above them beyond 6 MeV. In the ratios to ²⁵²Cf the offset at low energy is the
-multiplicity error of the pair — `ν̄/ν̄_Cf` is 0.713 for ²³⁵U against 0.643 evaluated — and the
+multiplicity error of the pair — `ν̄/ν̄_Cf` is 0.707 for ²³⁵U against 0.642 evaluated — and the
 fall with energy, the thermal spectrum being the softer, is reproduced for the two uranium
 isotopes and is too steep beyond 5 MeV for ²³⁹Pu. The uniform average over the sequences of the
 earlier work, `[spectrum] sequence_weighting = "uniform"`, is 4 to 7 % soft.
@@ -247,7 +247,7 @@ Three departures from measurement are known and are not tuned away.
   (Nifenecker *et al.*, doi:10.1016/0375-9474(72)90296-5), and the distribution of the neutron
   number is too broad in all four systems.
 - The spectra of the thermal systems relative to that of ²⁵²Cf are reproduced less well than
-  under the uniform average, χ²/N of 2.7 to 5.0 against 2.0 to 4.1: the softness of the
+  under the uniform average, χ²/N of 2.5 to 5.1 against 1.9 to 4.1: the softness of the
   uniform average is nearly common to the four systems and cancels in a ratio, and the residual
   difference between them, 3 to 4 % in mean energy, does not.
 - `⟨ε⟩` falls too steeply with TKE at fixed mass under either weighting, −0.028 MeV⁻¹ for
@@ -274,7 +274,7 @@ as EXFOR codes it — and that one token names the configuration, the input tree
 the output tree under `data/sims/`. It is also what separates the thermal run of ²³⁵U from the
 resonance one, which the reaction code `n,f` alone cannot.
 
-Every fragment yield comes from EXFOR through ExforFissionData.jl v0.4.0. ²⁵²Cf takes the measured
+Every fragment yield comes from EXFOR through ExforFissionData.jl v0.5.0. ²⁵²Cf takes the measured
 `Y(A,TKE)` matrix of Göök et al. (2014). For the thermal systems the archive holds no matrix, so
 the yield is reconstructed from one experiment's `Y(A)` and `⟨TKE⟩(A)`:
 - Al-Adili et al. (2016) for ²³⁵U;
@@ -429,7 +429,8 @@ with. Both sequence counts match at every configuration. The fragment yield matr
 cell for cell, 48 985 of them, and its projections to double precision. The averaged observables
 close the chain: `ν(A)`, `T(A)`, `E*(A)` and `E*(TKE)` are reproduced over every mass and kinetic
 energy to between 4 × 10⁻¹⁵ and 7 × 10⁻¹⁴, and the total averages to every digit the archive's
-summary file prints.
+summary file prints. The archived runs predate the physical bound of the yield on `TKE`;
+they are reproduced with `[yield] kinetic_energy_limit = "grid"`.
 
 The prompt neutron spectrum has no archived counterpart to pin against, so it is validated
 instead against the identities its derivation implies — unit area, `⟨E⟩ = E_f + ⟨ε⟩`, and the

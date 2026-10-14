@@ -5,7 +5,7 @@ under `data/sims/`, with nothing solved again and nothing fitted to the data sho
 is exported as PDF and PNG beside a `.toml` sidecar naming, per system, the run drawn, the commit
 its metadata records, the measured files and the retrieved sets left out, so every panel traces
 to a configuration and a commit. The measured side comes from EXFOR through ExforFissionData.jl
-v0.4.0, laid out as `data/README.md` describes, and a dataset is drawn as its `retrieval.toml` records it; the temperature ratios the
+v0.5.0, laid out as `data/README.md` describes, and a dataset is drawn as its `retrieval.toml` records it; the temperature ratios the
 runs were solved with are the FissionTemperatureRatio.jl v0.4.0 trends staged beside them. The
 two diagnostic panels the script also writes here, the residual quantities and the charge
 distribution, have no measured counterpart and are not tracked.
@@ -18,9 +18,9 @@ julia plotting/figures.jl                    # redraws everything here from thos
 | System | ⟨ν⟩ | evaluated | | ⟨E⟩ [MeV] | ν̄/ν̄(²⁵²Cf) |
 |---|---|---|---|---|---|
 | ²⁵²Cf(sf) | 3.557 | 3.759 | −5.4 % | 2.164 (measured 2.13) | 1 |
-| ²³⁵U(n_th,f) | 2.535 | 2.414 | +5.0 % | 1.954 | 0.713 (evaluated 0.642) |
-| ²³⁹Pu(n_th,f) | 2.813 | 2.868 | −1.9 % | 2.046 | 0.791 (evaluated 0.763) |
-| ²³³U(n_th,f) | 2.631 | 2.479 | +6.2 % | 2.007 | 0.740 (evaluated 0.659) |
+| ²³⁵U(n_th,f) | 2.513 | 2.414 | +4.1 % | 1.949 | 0.707 (evaluated 0.642) |
+| ²³⁹Pu(n_th,f) | 2.802 | 2.868 | −2.3 % | 2.043 | 0.788 (evaluated 0.763) |
+| ²³³U(n_th,f) | 2.616 | 2.479 | +5.5 % | 2.003 | 0.735 (evaluated 0.659) |
 
 The evaluated multiplicities are the prompt ones, as the model computes: ENDF/B-VIII.0 (Brown
 et al. 2018, doi:10.1016/j.nds.2018.02.001), MF1 MT456 at 0.0253 eV for the induced systems, and
@@ -152,7 +152,7 @@ Isomeric states are summed and uncertainties added in quadrature; JEFF-3.3's ter
 are left out.
 
 The markers are the measured post-neutron mass yields of EXFOR, retrieved by
-ExforFissionData.jl v0.4.0. A set coded `MASS,SEC,FY`, the yield against the mass of the
+ExforFissionData.jl v0.5.0. A set coded `MASS,SEC,FY`, the yield against the mass of the
 products after neutron emission, is drawn under its author and year. A set coded
 `MASS,CHN,FY`, a chain yield, enters one muted series per system, *Chain yields (N sets)*: β
 decay conserves `A`, so the yield of a mass chain is the post-neutron mass yield of that mass up
@@ -317,7 +317,7 @@ by its own number of neutrons, washes it out. The far wings, below 0.01 %, are w
 libraries part from each other as well.
 
 The diamonds are the measured independent yields of EXFOR, retrieved by ExforFissionData.jl
-v0.4.0: every set coded `ELEM/MASS,IND,FY` with a point on the elements shown, pooled into one
+v0.5.0: every set coded `ELEM/MASS,IND,FY` with a point on the elements shown, pooled into one
 family, open where the set is qualified `SPA` or `DERIV`, and converted to per cent from the
 unit its record states, as for the mass yield. Yields below 0.001 % are not drawn. A nuclide the
 archive reports in several isomeric states is drawn as the retrieval writes it: the archive's
@@ -420,7 +420,7 @@ fragment's energy, and the curve is the guide moved down by 1 to 2 % and to lowe
 multiplicity. Masses whose product yield is below 0.01 % are not drawn.
 
 The markers are the measured post-neutron kinetic energies of EXFOR, `MASS,SEC,KE`, retrieved
-by ExforFissionData.jl v0.4.0 and drawn in MeV as the retrieval writes them, `unit_written =
+by ExforFissionData.jl v0.5.0 and drawn in MeV as the retrieval writes them, `unit_written =
 "MEV"` in every record: nine sets for ²³⁵U, five for ²³⁹Pu and two for ²³³U. The archive holds
 none for ²⁵²Cf(sf), and its panel says so. ²³⁵U has more sets than the figure can tell apart: the
 four with the most masses, Asghar (1977, 1978), Wagemans (1981) and Geltenbort (1985), are
