@@ -21,7 +21,7 @@ DeterministicSequentialEmission.jl/
 ├── docs/                 Documenter site, own environment
 ├── data/                 input data — see data/README.md; none of it ships
 │   └── sims/             written by a run, data/sims/<system>/<run> — not tracked
-├── results/              the model against measurement: three figures and their README; diagnostics not tracked
+├── results/              the model against measurement and evaluation: figures, sidecars, README
 ├── formatter/            pinned JuliaFormatter, so the gate cannot drift
 ├── check.jl              the gate: format, then test
 ├── activate.jl           activates and instantiates the root environment
@@ -59,7 +59,7 @@ DeterministicSequentialEmission.jl/
 │   ├── reference/            evaluations that belong to no one system; not tracked
 │   ├── <system>/             input data per fissioning system — not tracked
 │   └── sims/<system>/<run>/  tables and provenance of a run — not tracked
-├── results/                  README.md and three comparison figures with sidecars tracked; diagnostics not
+├── results/                  README.md and the comparison figures with sidecars tracked; diagnostics untracked
 ├── formatter/                activate.jl, Project.toml — pinned JuliaFormatter
 ├── .github/                  CI workflow and Dependabot configuration
 ├── .JuliaFormatter.toml
@@ -106,15 +106,16 @@ Redraw the figures from what those runs wrote, without solving anything again:
 julia plotting/figures.jl
 ```
 
-That draws the three comparison figures of `results/README.md` from every system a run has
-written — `ν(A)`, the spectra and `⟨ε⟩(A)` against the measured sets, each listed there with its
-reference — a panel of the quantities internal to the emission chain — `E*(A)`, `Ē_r(A)`, `⟨T⟩(A)`, `⟨ε⟩(A)` — and a diagnostic
+That draws the comparison figures of `results/README.md` from every system a run has written —
+`ν(A)`, the spectra and `⟨ε⟩(A)` against the measured sets, each listed there with its reference,
+and the post-neutron products against the evaluated independent yields — a panel of the
+quantities internal to the emission chain — `E*(A)`, `Ē_r(A)`, `⟨T⟩(A)`, `⟨ε⟩(A)` — and a diagnostic
 of the charge distribution each run was weighted by — Wahl's model with the reaction's own 1988
 parameters, for every shipped system — against the alternatives: the 2002 systematics and the
 conventional means. Those have no experimental counterpart, so they are diagnostics and are not
 tracked. Every figure is exported as PDF and PNG beside a `.toml` sidecar naming, per system, the
 run drawn, the commit its metadata records and the measured files, so a panel traces to a
-configuration and a commit; the three tracked figures carry their sidecars in `results/`.
+configuration and a commit; the tracked figures carry their sidecars in `results/`.
 
 The charge-distribution diagnostic is worth reading whenever a system is investigated. It shows
 where a reaction's own parameters and the systematics part company, which is the uncertainty a
@@ -143,7 +144,7 @@ julia docs/make.jl
 | Prompt fission neutron spectrum — centre-of-mass and laboratory, in closed form | done |
 | Configuration, provenance, entry point | done |
 | Figures (CairoMakie), redrawn from written tables; `results/README.md` | done |
-| Post-emission distributions — `Y_p(A_p)`, `Y_p(A_p, Z)`, `Y_p(N_p)`, `KE_p`, `TKE_p`, two product counts | done |
+| Post-emission distributions — `Y_p(A_p)`, `Y_p(Z, A_p)`, `Y_p(N_p)`, `E_K_p`, `TKE_p`, two product counts | done |
 
 ## The model
 
@@ -232,6 +233,9 @@ of both humps agree within 0.8 u in every system, and the even-`Z` structure of 
 hump — the peaks at `A_p = 134` and `138` of ²³⁵U — comes out of a pre-neutron yield that has
 none. The published prescription, which subtracts the full number of possible sequences, is
 one key away, `[products] count = "sequence_count"`, and reproduces the archived thesis run.
+`results/README.md` draws the rest of the product distributions against the same evaluations —
+the elemental yield and its even–odd effect, the isotopic distributions, the neutron-number
+distribution and its pile-up at `N_p = 82` — and the kinetic energies of the products.
 
 Three departures from measurement are known and are not tuned away.
 - The multiplicity `ν = (n+1)/2` responds to excitation energy too weakly. At fixed mass

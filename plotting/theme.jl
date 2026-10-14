@@ -130,3 +130,20 @@ function read_columns(path)
     end
     return x, y, σ
 end
+
+"""
+    read_rows(path) -> Vector{Vector{Float64}}
+
+The rows of a whitespace-separated table with a one-line header, every field parsed by position,
+`NaN` where a field is not a number.
+"""
+function read_rows(path)
+    rows = Vector{Vector{Float64}}()
+    for (index, line) in enumerate(eachline(path))
+        index == 1 && continue
+        fields = split(strip(line))
+        isempty(fields) && continue
+        push!(rows, [something(tryparse(Float64, field), NaN) for field in fields])
+    end
+    return rows
+end

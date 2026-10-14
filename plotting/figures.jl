@@ -1,6 +1,6 @@
 # Validation figures: the model against measurement.
 #
-#   julia plotting/figures.jl [runs directory] [data directory]
+#   julia plotting/figures.jl [runs directory] [data directory] [figures directory]
 #
 # Nothing is solved here. The model side is read from what scripts/run.jl wrote under
 # data/sims/, so a figure is redrawn from tables rather than by running the model again, and
@@ -14,16 +14,21 @@
 #   <data>/<system>/eps_vs_A/*.dat                           A eps eps_uncertainty
 #   <data>/<system>/spectrum_maxwellian_ratio_vs_E/*.dat     E spectrum_maxwellian_ratio [...]
 #   <data>/<system>/spectrum_cf252_ratio_vs_E/*.dat          E spectrum_cf252_ratio [...]
-#   <data>/<system>/Y_vs_A_p/*.dat                      A_p Y Y_uncertainty
+#   <data>/<system>/Y_vs_A_p/*.dat                           A_p Y Y_uncertainty
+#   <data>/<system>/Y_vs_Z_A_p/*.dat                         Z A_p Y Y_uncertainty
+#   <data>/<system>/E_K_p_vs_A_p/*.dat                       A_p E_K_p E_K_p_uncertainty
 #
 # which is the layout that package writes, with a retrieval.toml beside the files that is read
 # for the orientation of a ratio and for datasets a later one supersedes. The evaluated product
-# yields under Y_vs_A_p/ are staged by scripts/stage_product_yields.jl as <library>.dat with
-# a provenance.toml beside them. Columns are taken by position, not by header text. Both
-# directories default to data/ under the project and neither is version-controlled.
+# yields under Y_vs_A_p/ and Y_vs_Z_A_p/ are staged by scripts/stage_product_yields.jl as
+# <library>.dat with a provenance.toml beside them. The pre-neutron mean total kinetic energy a
+# run was solved with is read from the input its configuration.toml names, under the same data
+# directory. Columns are taken by position, not by header text. Both directories default to
+# data/ under the project and neither is version-controlled.
 #
-# Each figure is written to results/ as PDF and PNG, beside a TOML sidecar that names, for every
-# system drawn, the run directory, the commit recorded in its metadata, and the measured files.
+# Each figure is written to results/, or to the figures directory given, as PDF and PNG, beside
+# a TOML sidecar that names, for every system drawn, the run directory, the commit recorded in its
+# metadata, and the measured, evaluated and input files it read.
 
 include(joinpath(@__DIR__, "activate.jl"))
 include(joinpath(@__DIR__, "theme.jl"))
@@ -34,9 +39,9 @@ using TOML
 set_theme!(PUBLICATION_THEME)
 
 const ROOT = dirname(@__DIR__)
-const FIGURES = joinpath(ROOT, "results")
 const RUNS = length(ARGS) >= 1 ? ARGS[1] : joinpath(ROOT, "data", "sims")
 const MEASURED = length(ARGS) >= 2 ? ARGS[2] : joinpath(ROOT, "data")
+const FIGURES = length(ARGS) >= 3 ? ARGS[3] : joinpath(ROOT, "results")
 
 # LaTeXStrings reaches this environment only through Makie; its string type is taken from the
 # macro.
@@ -44,8 +49,8 @@ const MathText = typeof(L"")
 
 """
 One fissioning system: the token that names its directories, the typeset notation it is drawn
-under, and the evaluated total multiplicity it is compared against — ENDF/B-VIII.0 for the
-induced systems and the Axton standard for 252-Cf.
+under, the mass and charge of the compound nucleus, and the evaluated total multiplicity it is
+compared against — ENDF/B-VIII.0 for the induced systems and the Axton standard for 252-Cf.
 
 `label` is the system token, as `system_label` returns it; `notation` is the typeset form, as
 `system_notation` returns it. They are written out here rather than called, because this
@@ -55,14 +60,15 @@ struct Case
     label::String
     notation::MathText
     compound_mass::Int
+    compound_charge::Int
     evaluated::Float64
 end
 
 const CASES = [
-    Case("Cf252_sf", L"$^{252}$Cf(sf)", 252, 3.7573),
-    Case("U235_nth", L"$^{235}$U(nth,f)", 236, 2.4140),
-    Case("Pu239_nth", L"$^{239}$Pu(nth,f)", 240, 2.8750),
-    Case("U233_nth", L"$^{233}$U(nth,f)", 234, 2.4968),
+    Case("Cf252_sf", L"$^{252}$Cf(sf)", 252, 98, 3.7573),
+    Case("U235_nth", L"$^{235}$U(nth,f)", 236, 92, 2.4140),
+    Case("Pu239_nth", L"$^{239}$Pu(nth,f)", 240, 94, 2.8750),
+    Case("U233_nth", L"$^{233}$U(nth,f)", 234, 92, 2.4968),
 ]
 
 # The system every spectrum ratio is taken against.
@@ -128,17 +134,48 @@ const CHARGE_SOURCES = (
     ),
 )
 
-# Evaluated fission product yield libraries the product-yield figure draws, each `<file>` under
-# `<data>/<system>/Y_vs_A_p/`, staged by scripts/stage_product_yields.jl. Evaluations are
-# lines, not markers: they are not measurements.
+# Evaluated fission product yield libraries the product figures draw, each `<file>` under
+# `<data>/<system>/Y_vs_A_p/` and `<data>/<system>/Y_vs_Z_A_p/`, staged by
+# scripts/stage_product_yields.jl. Evaluations are lines, not markers: they are not
+# measurements. The isotopic distributions take them as markers, the one given here, so that
+# the model's line stays legible between the points of the two libraries.
 const EVALUATED_YIELDS = (
     (
         file = "ENDF-B-VIII.0.dat",
         label = "ENDF/B-VIII.0",
         linestyle = :dash,
         colour = VERMILION,
+        marker = :circle,
     ),
-    (file = "JEFF-3.3.dat", label = "JEFF-3.3", linestyle = :dashdot, colour = BLUE),
+    (
+        file = "JEFF-3.3.dat",
+        label = "JEFF-3.3",
+        linestyle = :dashdot,
+        colour = BLUE,
+        marker = :rect,
+    ),
+)
+
+# Lower limit of the logarithmic yield axes [%], below which the yield figures draw no product;
+# and the product yield [%] below which a mean kinetic energy, taken over a handful of
+# configurations, is not drawn.
+const YIELD_FLOOR = 1.0e-3
+const MEAN_FLOOR = 1.0e-2
+
+# Neutron shell closures marked in the neutron-number distribution.
+const NEUTRON_SHELLS = (50, 82)
+
+# Elements drawn per side in the isotopic distributions.
+const ELEMENTS_PER_SIDE = 4
+
+# Chemical symbols by atomic number, as far as the compound nuclei drawn.
+const ELEMENT_SYMBOLS = split(
+    """
+    H He Li Be B C N O F Ne Na Mg Al Si P S Cl Ar K Ca Sc Ti V Cr Mn Fe Co Ni Cu Zn Ga Ge As
+    Se Br Kr Rb Sr Y Zr Nb Mo Tc Ru Rh Pd Ag Cd In Sn Sb Te I Xe Cs Ba La Ce Pr Nd Pm Sm Eu
+    Gd Tb Dy Ho Er Tm Yb Lu Hf Ta W Re Os Ir Pt Au Hg Tl Pb Bi Po At Rn Fr Ra Ac Th Pa U Np
+    Pu Am Cm Bk Cf
+    """,
 )
 
 """
@@ -243,6 +280,11 @@ const SHOWN = Dict(
     ("U233_nth", "nu_vs_A") => ["14369004", "22660005", "23595005", "41397004"],
     ("Cf252_sf", "spectrum_maxwellian_ratio_vs_E") =>
         ["14278002", "30775002", "40418008", "41158003"],
+    # The measured kinetic energies of the products are retrieved by ExforFissionData.jl from
+    # v0.4.0 on; none is drawn until it is selected here. The archive holds none for 252-Cf.
+    ("U235_nth", "E_K_p_vs_A_p") => String[],
+    ("Pu239_nth", "E_K_p_vs_A_p") => String[],
+    ("U233_nth", "E_K_p_vs_A_p") => String[],
 )
 
 """
@@ -446,13 +488,14 @@ function label_guide!(slot, value::Real, label, limits::Tuple{Real, Real}; side:
 end
 
 """
-The provenance entry of one system: the run drawn, its commit, the measured files used, and the
-evaluated ones where a figure draws evaluations.
+The provenance entry of one system: the run drawn, its commit, the measured files used, the
+evaluated ones where a figure draws evaluations, and the inputs of the run a guide is read from.
 """
 function system_record(
     directory::AbstractString,
     sets::Vector{MeasuredSet};
     evaluated::Vector{String} = String[],
+    inputs::Vector{String} = String[],
 )
     measured = String[]
     for set in sets, path in set.paths
@@ -465,6 +508,7 @@ function system_record(
     )
     isempty(evaluated) ||
         (record["evaluated"] = [relpath(path, MEASURED) for path in evaluated])
+    isempty(inputs) || (record["input"] = [relpath(path, MEASURED) for path in inputs])
     return record
 end
 
@@ -484,19 +528,27 @@ function export_figure(figure::Figure, name::AbstractString, systems::Dict{Strin
 end
 
 """
-Stacked lines of in-axis annotation in one corner, `ANNOTATION_LINE` apart, read top to bottom.
+Stacked lines of in-axis annotation in one corner, `ANNOTATION_LINE` apart, read top to bottom:
+`:upper_left`, `:upper_right` or `:lower_left`.
 """
-function annotate!(axis::Axis, lines::Vector{MathText}; corner::Symbol)
+function annotate!(axis::Axis, lines::AbstractVector; corner::Symbol)
     # Lines read top to bottom in either corner: the first line is the outermost one in the
     # upper corner and the innermost one in the lower corner.
     if corner === :upper_left
         position, align = (0.03, 0.96), (:left, :top)
         step = index -> -(index - 1) * ANNOTATION_LINE
+    elseif corner === :upper_right
+        position, align = (0.97, 0.96), (:right, :top)
+        step = index -> -(index - 1) * ANNOTATION_LINE
     elseif corner === :lower_left
         position, align = (0.03, 0.04), (:left, :bottom)
         step = index -> (length(lines) - index) * ANNOTATION_LINE
     else
-        throw(ArgumentError("corner must be :upper_left or :lower_left, got :$corner"))
+        throw(
+            ArgumentError(
+                "corner must be :upper_left, :upper_right or :lower_left, got :$corner",
+            ),
+        )
     end
     for (index, line) in pairs(lines)
         text!(
@@ -1032,6 +1084,807 @@ function figure_product_yield(drawable::Vector{Case})
 end
 
 """
+    read_independent_yields(path) -> Dict{Tuple{Int, Int}, NTuple{2, Float64}}
+
+The independent yields of a table `Z A_p Y [Y_uncertainty]` — a run's `Y_vs_Z_A_p.dat` or a
+staged evaluation — keyed by `(Z, A_p)`, each with its uncertainty, zero where none is stated.
+Columns are taken by position.
+"""
+function read_independent_yields(path::AbstractString)
+    yields = Dict{Tuple{Int, Int}, NTuple{2, Float64}}()
+    for row in read_rows(path)
+        length(row) >= 3 || continue
+        σ = length(row) >= 4 && isfinite(row[4]) ? row[4] : 0.0
+        yields[(round(Int, row[1]), round(Int, row[2]))] = (row[3], σ)
+    end
+    return yields
+end
+
+"""
+    grouped_yield(yields, key) -> (x, Y, σ)
+
+The independent yields summed over the products that share `key(Z, A_p)`, in order of the key,
+the uncertainties added in quadrature: the evaluations state no correlations.
+"""
+function grouped_yield(yields::AbstractDict, key::Function)
+    sums = Dict{Int, NTuple{2, Float64}}()
+    for ((Z, A_p), (Y, σ)) in yields
+        k = key(Z, A_p)
+        total, variance = get(sums, k, (0.0, 0.0))
+        sums[k] = (total + Y, variance + σ^2)
+    end
+    ordered = sort!(collect(keys(sums)))
+    return (
+        Float64.(ordered),
+        [first(sums[k]) for k in ordered],
+        [sqrt(last(sums[k])) for k in ordered],
+    )
+end
+
+"The elemental yield `Y(Z) = Σ_{A_p} Y(Z, A_p)`."
+elemental_yield(yields::AbstractDict) = grouped_yield(yields, (Z, _) -> Z)
+
+"The yield against product neutron number, `Y(N_p) = Σ_{A_p − Z = N_p} Y(Z, A_p)`."
+neutron_number_yield(yields::AbstractDict) = grouped_yield(yields, (Z, A_p) -> A_p - Z)
+
+"The isotopic distribution `Y(A_p)` of the element of charge `Z`."
+isotopic_yield(yields::AbstractDict, Z::Integer) =
+    grouped_yield(filter(entry -> first(first(entry)) == Z, yields), (_, A_p) -> A_p)
+
+"""
+The yield of the heavy products against product mass: those of charge above `Z₀/2`, and half of
+those at `Z₀/2`. The charge of a product is that of its fragment, which places it on the heavy
+side of its split as its mass does in all but the most nearly symmetric splits.
+"""
+function heavy_product_yield(yields::AbstractDict, compound_charge::Integer)
+    heavy = Dict{Int, Float64}()
+    for ((Z, A_p), (Y, _)) in yields
+        share = 2Z > compound_charge ? 1.0 : 2Z == compound_charge ? 0.5 : 0.0
+        heavy[A_p] = get(heavy, A_p, 0.0) + share * Y
+    end
+    return heavy
+end
+
+"""
+The global proton even–odd effect of an elemental yield, `δ_p = (Y_e − Y_o)/(Y_e + Y_o)`, `Y_e`
+and `Y_o` the yields summed over the even and the odd charges.
+"""
+function even_odd_effect(Z::Vector{Float64}, Y::Vector{Float64})
+    even = sum(Y[i] for i in eachindex(Z) if iseven(round(Int, Z[i])); init = 0.0)
+    odd = sum(Y[i] for i in eachindex(Z) if isodd(round(Int, Z[i])); init = 0.0)
+    return (even - odd) / (even + odd)
+end
+
+"""
+The evaluated independent yields staged for one system, `(library, path)` for every library of
+`EVALUATED_YIELDS` whose table exists under `<data>/<system>/<observable>/`.
+"""
+function evaluated_files(system::AbstractString, observable::AbstractString)
+    files = Tuple{eltype(EVALUATED_YIELDS), String}[]
+    for library in EVALUATED_YIELDS
+        path = joinpath(MEASURED, system, observable, library.file)
+        if isfile(path)
+            push!(files, (library, path))
+        else
+            @warn "no $(library.label) independent yields to draw" expected = path
+        end
+    end
+    return files
+end
+
+"""
+Decade ticks inside `limits`, labelled as plain decimals — 0.001, 0.01, 0.1, 1, 10 — for a
+logarithmic axis spanning a few decades. Given the range of the data rather than of the axis,
+they leave the annotation band above the data unlabelled.
+"""
+function decade_ticks(limits::Tuple{Real, Real})
+    exponents = ceil(Int, log10(first(limits))):floor(Int, log10(last(limits)))
+    labels = [k < 0 ? "0." * "0"^(-k - 1) * "1" : "1" * "0"^k for k in exponents]
+    return (exp10.(exponents), labels)
+end
+
+"""
+Logarithmic ordinate limits from `floor` up to `top`, with the fraction `reserved` of the axis
+height left clear above the data for annotation.
+"""
+function log_limits(floor::Real, top::Real, reserved::Real)
+    low, high = log10(floor), log10(top)
+    return (Float64(floor), exp10(low + (high - low) / (1 - reserved)))
+end
+
+"""
+Linear ordinate limits spanning `values`, with a band of `lines` lines of annotation reserved
+above the data (`corner = :upper_left` or `:upper_right`) or below it (`:lower_left`).
+"""
+function banded_limits(values, lines::Integer, corner::Symbol)
+    low, high = padded_limits(values)
+    band = lines * ANNOTATION_BAND * (high - low)
+    corner in (:upper_left, :upper_right) && return (low, high + band)
+    corner === :lower_left && return (low - band, high)
+    throw(
+        ArgumentError(
+            "corner must be :upper_left, :upper_right or :lower_left, got :$corner",
+        ),
+    )
+end
+
+"""
+Integer mass ticks inside `limits`, every 4, or every 2 over a short range, so that the
+three-digit labels of a narrow panel stay apart.
+"""
+function mass_ticks(limits::Tuple{Real, Real})
+    step = last(limits) - first(limits) > 8 ? 4 : 2
+    return (ceil(Int, first(limits) / step) * step):step:floor(Int, last(limits))
+end
+
+"""
+    input_kinetic_energy_by_mass(directory, case) -> (A, TKE, path) or nothing
+
+The pre-neutron mean total kinetic energy `⟨TKE⟩(A)` of the yield a run was solved with, read
+from the input its `configuration.toml` names under `[yield]`: the mean over the measured matrix
+`mass_energy_yield_file`, or the measured `mean_kinetic_energy_file`. Where the run imposed the
+identity of the two fragments of a split, `symmetrize`, the complement is averaged in as the
+package does it, cell by cell for a matrix and mass by mass for a mean. `nothing` where the run
+was solved without a yield or its input is not under the data directory.
+"""
+function input_kinetic_energy_by_mass(directory::AbstractString, case::Case)
+    path = joinpath(directory, "configuration.toml")
+    isfile(path) || return nothing
+    section = get(TOML.parsefile(path), "yield", nothing)
+    section isa AbstractDict || return nothing
+    symmetrize = get(section, "symmetrize", true)
+    A₀ = case.compound_mass
+    if haskey(section, "mass_energy_yield_file")
+        file = joinpath(MEASURED, section["mass_energy_yield_file"])
+        isfile(file) || return nothing
+        cells = Dict{Tuple{Int, Float64}, Float64}()
+        for row in read_rows(file)
+            length(row) >= 3 && isfinite(row[3]) || continue
+            cells[(round(Int, row[1]), row[2])] = row[3]
+        end
+        if symmetrize
+            paired = Dict{Tuple{Int, Float64}, Float64}()
+            for ((A, TKE), Y) in cells
+                partner = get(cells, (A₀ - A, TKE), nothing)
+                paired[(A, TKE)] =
+                    paired[(A₀ - A, TKE)] = partner === nothing ? Y : (Y + partner) / 2
+            end
+            cells = paired
+        end
+        sums = Dict{Int, NTuple{2, Float64}}()
+        for ((A, TKE), Y) in cells
+            weighted, norm = get(sums, A, (0.0, 0.0))
+            sums[A] = (weighted + Y * TKE, norm + Y)
+        end
+        masses = sort!([A for (A, (_, norm)) in sums if norm > 0])
+        return (Float64.(masses), [first(sums[A]) / last(sums[A]) for A in masses], file)
+    elseif haskey(section, "mean_kinetic_energy_file")
+        file = joinpath(MEASURED, section["mean_kinetic_energy_file"])
+        isfile(file) || return nothing
+        A, TKE, _ = read_columns(file)
+        means = Dict(round(Int, a) => t for (a, t) in zip(A, TKE))
+        if symmetrize
+            paired = Dict{Int, Float64}()
+            for (a, t) in means
+                partner = get(means, A₀ - a, nothing)
+                paired[a] = paired[A₀ - a] = partner === nothing ? t : (t + partner) / 2
+            end
+            means = paired
+        end
+        masses = sort!(collect(keys(means)))
+        return (Float64.(masses), [means[a] for a in masses], file)
+    end
+    return nothing
+end
+
+"""
+    figure_system_grid(name, panels, xlimits, draw!; xlabel, ylabel, legend = true, axis...)
+
+Lay out one panel per system on the shared grid of the comparison figures — two columns, the
+legend of each panel above it unless `legend` is false, one abscissa range, its label and tick
+labels on the bottom row only — and export it. `draw!(axis, panel, slot)` draws one panel and
+returns `handles`, `labels`, `ylimits`, the `lines` of annotation and their `corner`, and the
+provenance `record`; `slot` is the layout cell of the axis, for guides labelled outside the
+frame. The legends of one grid take the same number of rows, so the axes of one row are the
+same height.
+"""
+function figure_system_grid(
+    name::AbstractString,
+    panels::AbstractVector,
+    xlimits::Tuple{Real, Real},
+    draw!::Function;
+    xlabel,
+    ylabel,
+    legend::Bool = true,
+    axis_options...,
+)
+    isempty(panels) && return nothing
+    rows = cld(length(panels), GRID_COLUMNS)
+    figure = Figure(size = (GRID_WIDTH, GRID_ROW_HEIGHT * rows))
+    provenance = Dict{String, Any}()
+    legends = []
+    for (index, p) in pairs(panels)
+        row, column = fldmod1(index, GRID_COLUMNS)
+        bottom = row == rows
+        cell = GridLayout(figure[row, column])
+        slot = cell[legend ? 2 : 1, 1]
+        axis = panel(
+            slot;
+            xlabel = xlabel,
+            ylabel = ylabel,
+            ylabelvisible = column == 1,
+            xlabelvisible = bottom,
+            xticklabelsvisible = bottom,
+            axis_options...,
+        )
+        begin_panel!()
+        drawn = draw!(axis, p, slot)
+        xlims!(axis, xlimits...)
+        ylims!(axis, drawn.ylimits...)
+        annotate!(axis, drawn.lines; corner = drawn.corner)
+        push!(legends, (cell, drawn.handles, drawn.labels))
+        provenance[p.case.label] = drawn.record
+    end
+    if legend
+        banks = legend_rows(length(handles) for (_, handles, _) in legends)
+        for (cell, handles, labels) in legends
+            panel_legend!(cell, handles, labels, banks)
+        end
+    end
+    rowgap!(figure.layout, 12)
+    colgap!(figure.layout, 12)
+
+    export_figure(figure, name, provenance)
+    return nothing
+end
+
+"""
+The run of one system and the independent yields it wrote, beside the evaluated ones staged for
+it, or `nothing` where the run wrote none.
+"""
+function independent_yield_panel(case::Case)
+    directory = run_directory(case)
+    path = joinpath(directory, "Y_vs_Z_A_p.dat")
+    if !isfile(path)
+        @warn "no Y_vs_Z_A_p.dat to draw" directory
+        return nothing
+    end
+    evaluated = [
+        (library, file, read_independent_yields(file)) for
+        (library, file) in evaluated_files(case.label, "Y_vs_Z_A_p")
+    ]
+    return (; case, directory, model = read_independent_yields(path), evaluated)
+end
+
+evaluated_paths(p) = String[file for (_, file, _) in p.evaluated]
+
+"""
+Draw the elemental yield `Y(Z)` of every system whose run tabulated its independent yields, on
+the shared grid and a logarithmic axis: the model as the black line, the evaluated independent
+yields summed over mass as coloured lines. Each legend entry carries the global proton even–odd
+effect `δ_p` of its curve.
+"""
+function figure_charge_yield(drawable::Vector{Case})
+    panels = []
+    for case in drawable
+        p = independent_yield_panel(case)
+        p === nothing && continue
+        model = elemental_yield(p.model)
+        evaluated =
+            [(library, elemental_yield(yields)) for (library, _, yields) in p.evaluated]
+        push!(panels, (; p..., curves = [(nothing, model); evaluated]))
+    end
+    isempty(panels) && return nothing
+
+    charges = Float64[]
+    top = 0.0
+    for p in panels, (_, (Z, Y, _)) in p.curves
+        append!(charges, Z[Y .>= YIELD_FLOOR])
+        top = max(top, maximum(Y))
+    end
+    xlimits = padded_limits(charges)
+    # Three lines of annotation take a third of a grid panel's height.
+    ylimits = log_limits(YIELD_FLOOR, top, 0.36)
+
+    function draw!(axis::Axis, p, _)
+        handles = Any[]
+        labels = Any[]
+        effects = String[]
+        # The evaluations first, the model on top of them.
+        for (library, (Z, Y, _)) in [p.curves[2:end]; p.curves[1:1]]
+            keep = Y .> 0
+            δ = @sprintf("%.0f %%", 100 * even_odd_effect(Z, Y))
+            if library === nothing
+                push!(
+                    handles,
+                    lines!(axis, Z[keep], Y[keep]; color = :black, linewidth = 3),
+                )
+                push!(labels, "This model")
+                pushfirst!(effects, "model $δ")
+            else
+                push!(
+                    handles,
+                    lines!(
+                        axis,
+                        Z[keep],
+                        Y[keep];
+                        color = library.colour,
+                        linestyle = library.linestyle,
+                        linewidth = 2.5,
+                    ),
+                )
+                push!(labels, library.label)
+                push!(effects, "$(library.label) $δ")
+            end
+        end
+        # A string without mathematics is set as text, not as a formula.
+        lines = Any[
+            p.case.notation,
+            MathText("Even–odd effect \$\\delta_p\$: $(first(effects))"),
+            join(effects[2:end], ", "),
+        ]
+        return (;
+            handles,
+            labels,
+            ylimits,
+            lines,
+            corner = :upper_left,
+            record = system_record(
+                p.directory,
+                MeasuredSet[];
+                evaluated = evaluated_paths(p),
+            ),
+        )
+    end
+    figure_system_grid(
+        "product_charge_yield",
+        panels,
+        xlimits,
+        draw!;
+        xlabel = L"Product charge $Z$",
+        ylabel = L"Y(Z)\ [\%]",
+        yscale = log10,
+        yticks = decade_ticks((YIELD_FLOOR, top)),
+        xticks = 20:10:80,
+    )
+    return nothing
+end
+
+"""
+Draw the yield against product neutron number, `Y(N_p)`, of every system whose run tabulated its
+independent yields, on the shared grid: the model as the black line, the evaluated independent
+yields regrouped by `N_p = A_p − Z` as coloured lines with their uncertainty as a band, and the
+closed neutron shells as labelled guides.
+"""
+function figure_neutron_number_yield(drawable::Vector{Case})
+    panels = []
+    for case in drawable
+        p = independent_yield_panel(case)
+        p === nothing && continue
+        model = neutron_number_yield(p.model)
+        evaluated = [
+            (library, neutron_number_yield(yields)) for (library, _, yields) in p.evaluated
+        ]
+        push!(panels, (; p..., model_curve = model, evaluated_curves = evaluated))
+    end
+    isempty(panels) && return nothing
+
+    neutrons = Float64[]
+    for p in panels, (N, Y, _) in [p.model_curve; last.(p.evaluated_curves)]
+        append!(neutrons, N[Y .>= MEAN_FLOOR])
+    end
+    xlimits = padded_limits(neutrons)
+
+    function draw!(axis::Axis, p, slot)
+        for shell in NEUTRON_SHELLS
+            first(xlimits) < shell < last(xlimits) || continue
+            vlines!(axis, [shell]; color = GUIDE_COLOUR, linestyle = :dash, linewidth = 1.5)
+            label_guide!(slot, shell, MathText("\$N = $(shell)\$"), xlimits; side = :top)
+        end
+        handles = Any[]
+        labels = Any[]
+        ordinates = copy(p.model_curve[2])
+        for (library, (N, Y, σ)) in p.evaluated_curves
+            keep = first(xlimits) .<= N .<= last(xlimits)
+            N, Y, σ = N[keep], Y[keep], σ[keep]
+            any(>(0), σ) && band!(axis, N, Y .- σ, Y .+ σ; color = (library.colour, 0.2))
+            push!(
+                handles,
+                lines!(
+                    axis,
+                    N,
+                    Y;
+                    color = library.colour,
+                    linestyle = library.linestyle,
+                    linewidth = 2.5,
+                ),
+            )
+            push!(labels, library.label)
+            append!(ordinates, Y .+ σ)
+        end
+        N, Y, _ = p.model_curve
+        keep = first(xlimits) .<= N .<= last(xlimits)
+        push!(handles, lines!(axis, N[keep], Y[keep]; color = :black, linewidth = 3))
+        push!(labels, "This model")
+        # The guide at N = 50 crosses the upper left; the upper right, beyond the heavy hump,
+        # is clear.
+        low, high = banded_limits(ordinates, 1, :upper_right)
+        return (;
+            handles,
+            labels,
+            ylimits = (max(low, 0.0), high),
+            lines = MathText[p.case.notation],
+            corner = :upper_right,
+            record = system_record(
+                p.directory,
+                MeasuredSet[];
+                evaluated = evaluated_paths(p),
+            ),
+        )
+    end
+    figure_system_grid(
+        "product_neutron_number_yield",
+        panels,
+        xlimits,
+        draw!;
+        xlabel = L"Product neutron number $N_p$",
+        ylabel = L"Y(N_p)\ [\%]",
+        xticks = 40:10:110,
+    )
+    return nothing
+end
+
+"""
+Draw the mean kinetic energy of the products against product mass, `E_K_p(A_p)`, of every system
+whose run tabulated it, on the shared grid: the model as the black line, the pre-neutron
+`E_K(A) = ⟨TKE⟩(A) (A₀ − A)/A₀` of the yield the run was solved with as a dashed guide, and the
+measured post-neutron kinetic energies selected in `SHOWN`, where retrieved, as markers. Masses
+whose product yield is below `MEAN_FLOOR` are not drawn.
+"""
+function figure_product_kinetic_energy(drawable::Vector{Case})
+    panels = []
+    for case in drawable
+        directory = run_directory(case)
+        path = joinpath(directory, "E_K_p_vs_A_p.dat")
+        if !isfile(path)
+            @warn "no E_K_p_vs_A_p.dat to draw" directory
+            continue
+        end
+        A_p, E_K_p, _ = read_columns(path)
+        masses, yields, _ = read_columns(joinpath(directory, "Y_vs_A_p.dat"))
+        drawn = Set(masses[yields .>= MEAN_FLOOR])
+        keep = [a in drawn for a in A_p]
+        A_p, E_K_p = A_p[keep], E_K_p[keep]
+        window = extrema(A_p)
+        guide = input_kinetic_energy_by_mass(directory, case)
+        if guide !== nothing
+            A, TKE, file = guide
+            inside = first(window) .<= A .<= last(window)
+            guide = (
+                A[inside],
+                TKE[inside] .* (case.compound_mass .- A[inside]) ./ case.compound_mass,
+                file,
+            )
+        end
+        sets = load_measured(case.label, "E_K_p_vs_A_p", window)
+        push!(panels, (; case, directory, A_p, E_K_p, guide, sets))
+    end
+    isempty(panels) && return nothing
+    xlimits = padded_limits(reduce(vcat, [p.A_p for p in panels]))
+
+    function draw!(axis::Axis, p, _)
+        handles = Any[]
+        labels = Any[]
+        ordinates = copy(p.E_K_p)
+        inputs = String[]
+        if p.guide !== nothing
+            A, E_K, file = p.guide
+            push!(
+                handles,
+                lines!(
+                    axis,
+                    A,
+                    E_K;
+                    color = GUIDE_COLOUR,
+                    linestyle = :dash,
+                    linewidth = 1.5,
+                ),
+            )
+            push!(labels, L"Pre-neutron $E_\mathrm{K}(A)$")
+            append!(ordinates, E_K)
+            push!(inputs, file)
+        end
+        for set in p.sets
+            push!(handles, draw_measured!(axis, set))
+            push!(labels, set.label)
+            append!(ordinates, set.y)
+        end
+        push!(handles, lines!(axis, p.A_p, p.E_K_p; color = :black, linewidth = 3))
+        push!(labels, "This model")
+        # The light products are the fast ones: the lower left is clear.
+        return (;
+            handles,
+            labels,
+            ylimits = banded_limits(ordinates, 1, :lower_left),
+            lines = MathText[p.case.notation],
+            corner = :lower_left,
+            record = system_record(p.directory, p.sets; inputs = inputs),
+        )
+    end
+    figure_system_grid(
+        "product_kinetic_energy",
+        panels,
+        xlimits,
+        draw!;
+        xlabel = L"Product mass $A_p$",
+        ylabel = L"E_{\mathrm{K},p}(A_p)\ [\mathrm{MeV}]",
+        xticks = 80:20:180,
+    )
+    return nothing
+end
+
+"""
+Draw the mean kinetic energy of the products against their charge, `E_K_p(Z)`, of every system
+whose run tabulated it, on the shared grid, the model as the black line. Charges whose elemental
+yield is below `MEAN_FLOOR` are not drawn.
+"""
+function figure_product_kinetic_energy_by_charge(drawable::Vector{Case})
+    panels = []
+    for case in drawable
+        directory = run_directory(case)
+        path = joinpath(directory, "E_K_p_vs_Z.dat")
+        independent = joinpath(directory, "Y_vs_Z_A_p.dat")
+        if !isfile(path) || !isfile(independent)
+            @warn "no E_K_p_vs_Z.dat or Y_vs_Z_A_p.dat to draw" directory
+            continue
+        end
+        Z, E_K_p, _ = read_columns(path)
+        charges, yields, _ = elemental_yield(read_independent_yields(independent))
+        drawn = Set(charges[yields .>= MEAN_FLOOR])
+        keep = [z in drawn for z in Z]
+        push!(panels, (; case, directory, Z = Z[keep], E_K_p = E_K_p[keep]))
+    end
+    isempty(panels) && return nothing
+    xlimits = padded_limits(reduce(vcat, [p.Z for p in panels]))
+
+    function draw!(axis::Axis, p, _)
+        handle = lines!(axis, p.Z, p.E_K_p; color = :black, linewidth = 3)
+        return (;
+            handles = Any[handle],
+            labels = Any["This model"],
+            ylimits = banded_limits(p.E_K_p, 1, :lower_left),
+            lines = MathText[p.case.notation],
+            corner = :lower_left,
+            record = system_record(p.directory, MeasuredSet[]),
+        )
+    end
+    figure_system_grid(
+        "product_kinetic_energy_by_charge",
+        panels,
+        xlimits,
+        draw!;
+        xlabel = L"Product charge $Z$",
+        ylabel = L"E_{\mathrm{K},p}(Z)\ [\mathrm{MeV}]",
+        # One curve per panel needs no legend.
+        legend = false,
+        xticks = 20:10:80,
+    )
+    return nothing
+end
+
+"""
+Draw the mean post-neutron total kinetic energy against the heavy product mass, `TKE_p(A_p)`, of
+every system whose run tabulated it, on the shared grid: the model as the black line and the
+pre-neutron `⟨TKE⟩(A)` of the yield the run was solved with as a dashed guide, over the heavy
+masses. Masses whose heavy-product yield is below `MEAN_FLOOR` are not drawn. The annotation
+states the means of both over the run.
+"""
+function figure_product_total_kinetic_energy(drawable::Vector{Case})
+    panels = []
+    for case in drawable
+        directory = run_directory(case)
+        path = joinpath(directory, "TKE_p_vs_A_p.dat")
+        independent = joinpath(directory, "Y_vs_Z_A_p.dat")
+        if !isfile(path) || !isfile(independent)
+            @warn "no TKE_p_vs_A_p.dat or Y_vs_Z_A_p.dat to draw" directory
+            continue
+        end
+        A_p, TKE_p, _ = read_columns(path)
+        heavy =
+            heavy_product_yield(read_independent_yields(independent), case.compound_charge)
+        keep = [get(heavy, round(Int, a), 0.0) >= MEAN_FLOOR for a in A_p]
+        A_p, TKE_p = A_p[keep], TKE_p[keep]
+        guide = input_kinetic_energy_by_mass(directory, case)
+        if guide !== nothing
+            A, TKE, file = guide
+            inside = (2 .* A .>= case.compound_mass) .& (A .<= last(A_p))
+            guide = (A[inside], TKE[inside], file)
+        end
+        push!(panels, (; case, directory, A_p, TKE_p, guide))
+    end
+    isempty(panels) && return nothing
+    masses = Float64[]
+    for p in panels
+        append!(masses, p.A_p)
+        p.guide === nothing || append!(masses, p.guide[1])
+    end
+    xlimits = padded_limits(masses)
+
+    function draw!(axis::Axis, p, _)
+        handles = Any[]
+        labels = Any[]
+        ordinates = copy(p.TKE_p)
+        inputs = String[]
+        if p.guide !== nothing
+            A, TKE, file = p.guide
+            push!(
+                handles,
+                lines!(
+                    axis,
+                    A,
+                    TKE;
+                    color = GUIDE_COLOUR,
+                    linestyle = :dash,
+                    linewidth = 1.5,
+                ),
+            )
+            push!(labels, L"Pre-neutron $\langle \mathrm{TKE} \rangle(A)$")
+            append!(ordinates, TKE)
+            push!(inputs, file)
+        end
+        push!(handles, lines!(axis, p.A_p, p.TKE_p; color = :black, linewidth = 3))
+        push!(labels, "This model")
+        totals = read_totals(p.directory)
+        lines = MathText[
+            p.case.notation,
+            MathText(
+                @sprintf(
+                    "\$\\langle \\mathrm{TKE}_p \\rangle = %.1f\$ MeV",
+                    get(totals, "mean_TKE_p", NaN)
+                )
+            ),
+            MathText(
+                @sprintf(
+                    "\$\\langle \\mathrm{TKE} \\rangle = %.1f\$ MeV",
+                    get(totals, "mean_TKE", NaN)
+                )
+            ),
+        ]
+        # Near symmetry the heavy products are the slow ones: the upper left is clear.
+        return (;
+            handles,
+            labels,
+            ylimits = banded_limits(ordinates, length(lines), :upper_left),
+            lines,
+            corner = :upper_left,
+            record = system_record(p.directory, MeasuredSet[]; inputs = inputs),
+        )
+    end
+    figure_system_grid(
+        "product_total_kinetic_energy",
+        panels,
+        xlimits,
+        draw!;
+        xlabel = L"Heavy product mass $A_p$",
+        ylabel = L"\mathrm{TKE}_p(A_p)\ [\mathrm{MeV}]",
+        xticks = 110:10:180,
+    )
+    return nothing
+end
+
+"""
+Draw, for one system, the isotopic distributions `Y(A_p)` at fixed `Z` of the
+`ELEMENTS_PER_SIDE` most abundant light and heavy elements as small multiples on a logarithmic
+axis: the model as the black line, the evaluated independent yields as markers. The elements
+are ranked by the mean of the evaluated elemental yields, so the panels do not move with the
+model; by the model's own where no evaluation is staged.
+"""
+function figure_independent_yield(case::Case)
+    p = independent_yield_panel(case)
+    p === nothing && return nothing
+    reference =
+        isempty(p.evaluated) ? [p.model] : [yields for (_, _, yields) in p.evaluated]
+    abundance = Dict{Int, Float64}()
+    for yields in reference, ((Z, _), (Y, _)) in yields
+        abundance[Z] = get(abundance, Z, 0.0) + Y / length(reference)
+    end
+    function most_abundant(side)
+        ranked = sort(
+            [Z for Z in keys(abundance) if side(Z)];
+            by = Z -> abundance[Z],
+            rev = true,
+        )
+        return sort(ranked[1:min(ELEMENTS_PER_SIDE, length(ranked))])
+    end
+    rows = (
+        most_abundant(Z -> 2Z < case.compound_charge),
+        most_abundant(Z -> 2Z > case.compound_charge),
+    )
+
+    curves = Dict{Int, Any}()
+    top = 0.0
+    for Z in Iterators.flatten(rows)
+        model = isotopic_yield(p.model, Z)
+        evaluated =
+            [(library, isotopic_yield(yields, Z)) for (library, _, yields) in p.evaluated]
+        masses = Float64[]
+        for (A_p, Y, _) in [model; last.(evaluated)]
+            append!(masses, A_p[Y .>= YIELD_FLOOR])
+            top = max(top, maximum(Y; init = 0.0))
+        end
+        curves[Z] = (; model, evaluated, xlimits = padded_limits(masses))
+    end
+    # Two lines of annotation above the data, and a margin below the floor so that a marker
+    # at the floor is drawn whole.
+    ylimits = log_limits(YIELD_FLOOR, top, 0.24)
+    ylimits = (
+        exp10(log10(first(ylimits)) - MARGIN * log10(last(ylimits) / first(ylimits))),
+        last(ylimits),
+    )
+
+    columns = maximum(length, rows)
+    figure = Figure(size = (GRID_WIDTH, 2 * 350 + 100))
+    handles = Dict{String, Any}()
+    for (row, charges) in pairs(rows), (column, Z) in pairs(charges)
+        c = curves[Z]
+        axis = panel(
+            figure[row + 1, column];
+            yscale = log10,
+            yticks = decade_ticks((YIELD_FLOOR, top)),
+            yticklabelsvisible = column == 1,
+            xticks = mass_ticks(c.xlimits),
+        )
+        for (library, (A_p, Y, _)) in c.evaluated
+            keep = Y .>= YIELD_FLOOR
+            handles[library.label] = scatter!(
+                axis,
+                A_p[keep],
+                Y[keep];
+                color = library.colour,
+                marker = library.marker,
+                markersize = library.marker === :circle ? 14 : 10,
+                strokecolor = darker(library.colour),
+                strokewidth = 1.5,
+            )
+        end
+        A_p, Y, _ = c.model
+        keep = Y .> 0
+        handles["This model"] =
+            lines!(axis, A_p[keep], Y[keep]; color = :black, linewidth = 3)
+        xlims!(axis, c.xlimits...)
+        ylims!(axis, ylimits...)
+        lines = MathText[MathText("\$\\mathrm{$(ELEMENT_SYMBOLS[Z])}\$, \$Z = $Z\$")]
+        row == 1 && column == 1 && pushfirst!(lines, case.notation)
+        annotate!(axis, lines; corner = :upper_left)
+    end
+    order = [[library.label for library in EVALUATED_YIELDS]; "This model"]
+    shown = [label for label in order if haskey(handles, label)]
+    Legend(
+        figure[1, 1:columns],
+        [handles[label] for label in shown],
+        shown;
+        tellwidth = false,
+        tellheight = true,
+        padding = (0, 0, 0, 0),
+        colgap = 24,
+        patchsize = (35, 20),
+    )
+    Label(figure[2:3, 0], L"Y(Z, A_p)\ [\%]"; rotation = π / 2, tellheight = false)
+    Label(figure[4, 1:columns], L"Product mass $A_p$"; tellwidth = false)
+    rowgap!(figure.layout, 10)
+    colgap!(figure.layout, 12)
+
+    record = system_record(p.directory, MeasuredSet[]; evaluated = evaluated_paths(p))
+    record["elements"] = collect(Iterators.flatten(rows))
+    export_figure(
+        figure,
+        "product_independent_yield_$(case.label)",
+        Dict{String, Any}(case.label => record),
+    )
+    return nothing
+end
+
+"""
 Draw the quantities internal to the sequential treatment against fragment mass, one panel each
 in a 2 × 2 grid, every system as a line in its fixed style. None has a measured counterpart, so
 the comparison is between systems.
@@ -1218,6 +2071,12 @@ function main()
     figure_spectra(drawable)
     figure_mean_neutron_energy(drawable)
     figure_product_yield(drawable)
+    figure_charge_yield(drawable)
+    foreach(figure_independent_yield, drawable)
+    figure_neutron_number_yield(drawable)
+    figure_product_kinetic_energy(drawable)
+    figure_product_kinetic_energy_by_charge(drawable)
+    figure_product_total_kinetic_energy(drawable)
     figure_residual_quantities(drawable)
     figure_charge_distribution(drawable)
     return nothing

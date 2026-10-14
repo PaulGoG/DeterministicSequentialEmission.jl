@@ -40,6 +40,13 @@ here.
 - `scripts/stage_product_yields.jl`, which stages those evaluated yields from the public
   ENDF-6 files with their provenance, under `data/<system>/Y_vs_A_p/` and, resolved in charge,
   `data/<system>/Y_vs_Z_A_p/` (`Z A_p Y Y_uncertainty`).
+- The figures of the post-neutron products against the same evaluations: the elemental yield
+  `Y(Z)` with the global proton even–odd effect of model and evaluations, the isotopic
+  distributions of the four most abundant light and heavy elements, one figure per system, and
+  the neutron-number distribution `Y(N_p)`; and the product kinetic energies `E_K_p(A_p)`, beside
+  the pre-neutron `E_K(A)`, `E_K_p(Z)`, and `TKE_p(A_p)`, beside the pre-neutron `⟨TKE⟩(A)`.
+  `results/README.md` documents each.
+- `plotting/figures.jl` takes the directory it writes to as an optional third argument.
 
 ### Changed
 

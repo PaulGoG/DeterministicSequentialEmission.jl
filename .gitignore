@@ -26,6 +26,33 @@
 !/results/product_mass_yield.png
 !/results/product_mass_yield.pdf
 !/results/product_mass_yield.toml
+!/results/product_charge_yield.png
+!/results/product_charge_yield.pdf
+!/results/product_charge_yield.toml
+!/results/product_independent_yield_Cf252_sf.png
+!/results/product_independent_yield_Cf252_sf.pdf
+!/results/product_independent_yield_Cf252_sf.toml
+!/results/product_independent_yield_U235_nth.png
+!/results/product_independent_yield_U235_nth.pdf
+!/results/product_independent_yield_U235_nth.toml
+!/results/product_independent_yield_Pu239_nth.png
+!/results/product_independent_yield_Pu239_nth.pdf
+!/results/product_independent_yield_Pu239_nth.toml
+!/results/product_independent_yield_U233_nth.png
+!/results/product_independent_yield_U233_nth.pdf
+!/results/product_independent_yield_U233_nth.toml
+!/results/product_neutron_number_yield.png
+!/results/product_neutron_number_yield.pdf
+!/results/product_neutron_number_yield.toml
+!/results/product_kinetic_energy.png
+!/results/product_kinetic_energy.pdf
+!/results/product_kinetic_energy.toml
+!/results/product_kinetic_energy_by_charge.png
+!/results/product_kinetic_energy_by_charge.pdf
+!/results/product_kinetic_energy_by_charge.toml
+!/results/product_total_kinetic_energy.png
+!/results/product_total_kinetic_energy.pdf
+!/results/product_total_kinetic_energy.toml
 
 # Libraries do not pin a manifest; each environment resolves against [compat].
 Manifest*.toml

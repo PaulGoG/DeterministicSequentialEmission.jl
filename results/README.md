@@ -151,15 +151,119 @@ Isomeric states are summed and uncertainties added in quadrature; JEFF-3.3's ter
 are left out. The measured post-neutron mass yields and independent yields of EXFOR are not
 retrieved yet; when they are, they enter this figure as markers.
 
+The figures below draw the independent yields `Y(Z, A_p)` the runs write as `Y_vs_Z_A_p.dat`,
+regrouped by charge, by isotope and by neutron number, against the same two evaluations,
+`Y_vs_Z_A_p/<library>.dat` summed the same way, and the kinetic energies of the products. All
+of them share the evaluations' colours and line styles, and the model is the black line.
+
+## Elemental yield of the products
+
+![Elemental yield of the post-neutron products of the four systems against the evaluated independent yields](product_charge_yield.png)
+
+`Y(Z) = Σ_{A_p} Y(Z, A_p)`, on a logarithmic axis down to 0.001 %. Emission leaves the charge
+alone, so the model's `Y(Z)` is the charge distribution of the solved configurations: the `Z_p`
+model of Wahl, At. Data Nucl. Data Tables **39**, 1 (1988), doi:10.1016/0092-640X(88)90016-2,
+with the reaction's own parameters, carried through the pre-neutron yield. Its even–odd
+staggering is that model's proton factor `F_Z`, fitted to measured independent yields, and not a
+result of the emission. Each panel states the global proton even–odd effect
+`δ_p = (Y_e − Y_o)/(Y_e + Y_o)`, `Y_e` and `Y_o` the yields summed over the even and the odd
+charges.
+
+| System | `δ_p`: model / ENDF/B-VIII.0 / JEFF-3.3 | `Y(Z₀/2)` [%]: model / ENDF/B-VIII.0 / JEFF-3.3 |
+|---|---|---|
+| ²⁵²Cf(sf) | 5 / 5 / 13 % | 0.77 / 0.073 / 0.31 |
+| ²³⁵U(n_th,f) | 23 / 24 / 28 % | 0.052 / 0.035 / 0.047 |
+| ²³⁹Pu(n_th,f) | 14 / 14 / 17 % | 0.13 / 0.071 / 0.12 |
+| ²³³U(n_th,f) | 24 / 24 / 26 % | 0.013 / 0.041 / 0.060 |
+
+The model's `Y(Z)` is symmetric about `Z₀/2`, each split giving one light and one heavy charge,
+and the evaluations nearly so. Over both humps the model lies with the two evaluations across
+three decades. The valley is where it departs: for ²⁵²Cf the model gives the symmetric charge
+`Z = 49` ten times the yield of ENDF/B-VIII.0, and for ²³³U a third of it.
+
+## Isotopic distributions
+
+![Isotopic distributions of the four most abundant light and heavy elements, 252-Cf(sf)](product_independent_yield_Cf252_sf.png)
+![Isotopic distributions of the four most abundant light and heavy elements, 235-U(nth,f)](product_independent_yield_U235_nth.png)
+![Isotopic distributions of the four most abundant light and heavy elements, 239-Pu(nth,f)](product_independent_yield_Pu239_nth.png)
+![Isotopic distributions of the four most abundant light and heavy elements, 233-U(nth,f)](product_independent_yield_U233_nth.png)
+
+One figure per system: in a 2 × 2 grid of systems the eight panels of one system would be some
+140 px wide at the 1200 px of the grid, too narrow for their tick labels. Each panel is `Y(Z, A_p)` at fixed `Z` against `A_p`,
+for the four light and the four heavy elements of largest evaluated yield, the mean of the two
+libraries, so that the choice does not move with the model. The model is the line, the
+evaluations are markers: circles ENDF/B-VIII.0, squares JEFF-3.3. The model places the centroid
+and the width of every distribution drawn and follows the evaluations over three decades. Its
+distributions are smooth where the evaluations stagger from one isotope to the next: Wahl's
+neutron factor `F_N` acts on the pre-neutron fragments, and emission, which moves each fragment
+by its own number of neutrons, washes it out. The far wings, below 0.01 %, are where the two
+libraries part from each other as well.
+
+## Neutron number distribution of the products
+
+![Yield against product neutron number of the four systems against the evaluated independent yields](product_neutron_number_yield.png)
+
+`Y(N_p) = Σ_{A_p − Z = N_p} Y(Z, A_p)`, the evaluations with their uncertainty as a band and the
+closed shells `N = 50` and `82` as guides. The heavy products of the three thermal systems pile
+up at `N_p = 82`: a heavy fragment just above the closure loses its weakly bound neutrons down to
+it, and one at the closure barely emits. The model reproduces the peak for ²³⁵U and ²³⁹Pu and
+overshoots it for ²³³U. ²⁵²Cf, whose heavy fragments lie further above the closure, has its heavy
+hump at `N_p ≈ 86`, and there too the model puts too much yield on the closure itself.
+
+| System | `Y(N_p = 82)` [%]: model / ENDF/B-VIII.0 / JEFF-3.3 | ⟨N_p⟩ light, heavy: model / ENDF/B-VIII.0 |
+|---|---|---|
+| ²⁵²Cf(sf) | 9.0 / 6.9 / 7.9 | 64.2, 86.4 / 63.6, 86.5 |
+| ²³⁵U(n_th,f) | 14.7 / 14.4 / 13.6 | 56.9, 84.6 / 56.9, 84.7 |
+| ²³⁹Pu(n_th,f) | 13.7 / 14.5 / 14.2 | 59.1, 84.2 / 59.1, 84.0 |
+| ²³³U(n_th,f) | 15.4 / 12.5 / 13.5 | 55.7, 83.7 / 55.6, 84.0 |
+
+## Kinetic energy of the products
+
+![Mean kinetic energy of the post-neutron products against product mass, four fissioning systems](product_kinetic_energy.png)
+
+`E_K_p(A_p)`, the mean over the products of mass `A_p` of `E_K_p = E_K A_p/A`,
+`E_K = TKE (A₀ − A)/A₀` being the kinetic energy of the fragment, beside the pre-neutron
+`E_K(A)` of the yield the run was solved with as a dashed guide, against the fragment mass. That
+guide is `⟨TKE⟩(A) (A₀ − A)/A₀`, `⟨TKE⟩(A)` read from the input the run's configuration names
+and averaged with its complement as the run did. Emission isotropic in the fragment frame
+leaves the velocity unchanged on average, so a product carries the fraction `A_p/A` of its
+fragment's energy, and the curve is the guide moved down by 1 to 2 % and to lower mass by the
+multiplicity. Masses whose product yield is below 0.01 % are not drawn. The measured
+post-neutron kinetic energies, EXFOR `MASS,SEC,KE`, are not retrieved yet; ExforFissionData.jl
+writes them under `E_K_p_vs_A_p/`, none for ²⁵²Cf, and `plotting/figures.jl` draws a set as
+markers once its accession is listed in `SHOWN`.
+
+![Mean kinetic energy of the post-neutron products against product charge, four fissioning systems](product_kinetic_energy_by_charge.png)
+
+`E_K_p(Z)`, the same mean over the products of charge `Z`, in a figure of its own: it would
+share the cell of each system with `E_K_p(A_p)` only with a second abscissa and its labels in
+every cell. It has no measured or evaluated counterpart here.
+
+## Total kinetic energy of the products
+
+![Mean post-neutron total kinetic energy against heavy product mass, four fissioning systems](product_total_kinetic_energy.png)
+
+`TKE_p(A_p)`, the mean total kinetic energy of the two products against the heavy product mass,
+with the pre-neutron `⟨TKE⟩(A)` input as a dashed guide against the heavy fragment mass. The
+two products of a pair are taken as independent, so that `TKE_p` is the mean over both ends of
+both chains. Masses whose heavy-product yield is below 0.01 % are not drawn. Each panel states
+both means over the run: emission takes 2.1 to 2.7 MeV from the total kinetic energy.
+
+| System | ⟨TKE⟩ [MeV] | ⟨TKE_p⟩ [MeV] |
+|---|---|---|
+| ²⁵²Cf(sf) | 184.2 | 181.5 |
+| ²³⁵U(n_th,f) | 170.4 | 168.3 |
+| ²³⁹Pu(n_th,f) | 177.6 | 175.4 |
+| ²³³U(n_th,f) | 169.8 | 167.7 |
+
 ## Not drawn yet
 
 The runs write more than the figures show, and the retrieval holds measurements the figures do
 not yet use. Each of these enters this file with its figure and its dataset table when it is
 ready.
 
-- The independent yields `Y(A_p, Z)` and the product kinetic energies `KE_p(A_p)`, `KE_p(Z)`
-  and `TKE_p`, which the runs write beside `Y(A_p)`, against the evaluations' independent yields
-  and the measured post-neutron kinetic energies.
+- The measured post-neutron yields and kinetic energies, which ExforFissionData.jl v0.4.0
+  retrieves as `Y_vs_A_p`, `Y_vs_Z_A_p` and `E_K_p_vs_A_p`.
 - The neutron number distribution `P(ν)`, against the retrieved `P_vs_nu` sets; the model's is
   known to be too broad in all four systems.
 - `ν(TKE)` and `⟨ε⟩(TKE)`, which the runs write and the retrieval holds as `nu_vs_A_TKE` and
