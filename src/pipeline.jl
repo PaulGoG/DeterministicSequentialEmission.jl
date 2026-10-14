@@ -23,7 +23,10 @@ fragment, and `mean_product_total_kinetic_energy` are their totals, `NaN` when d
 `solved_mean_kinetic_energy` and `solved_kinetic_energy_dispersion` are the mean and the pooled
 within-mass standard deviation of `TKE` over the configurations the sweep solved, the effective
 `⟨TKE⟩` and `σ_TKE` of the run; `mean_kinetic_energy` is the mean of the input yield over every
-cell it holds, solved or not.
+cell it holds, solved or not. `gamma_energy` is the energy a fragment's neutrons leave,
+[`gamma_energy`](@ref), against fragment mass; `gamma_energy_total_by_mass` and
+`gamma_energy_total_by_energy` are the sum over the two fragments of a split against the mass of
+either and against `TKE`, and `total_gamma_energy` its mean per fragment.
 """
 struct RunResult
     configuration::Configuration
@@ -52,6 +55,10 @@ struct RunResult
     mean_product_total_kinetic_energy::Float64
     solved_mean_kinetic_energy::Float64
     solved_kinetic_energy_dispersion::Float64
+    gamma_energy::Curve
+    gamma_energy_total_by_mass::Curve
+    gamma_energy_total_by_energy::Curve
+    total_gamma_energy::Float64
 
     # Explicit inner constructor: concrete argument types, no generic `convert` path into the
     # type.
@@ -82,6 +89,10 @@ struct RunResult
         mean_product_total_kinetic_energy::Real,
         solved_mean_kinetic_energy::Real,
         solved_kinetic_energy_dispersion::Real,
+        gamma_energy::Curve,
+        gamma_energy_total_by_mass::Curve,
+        gamma_energy_total_by_energy::Curve,
+        total_gamma_energy::Real,
     )
         return new(
             configuration,
@@ -110,6 +121,10 @@ struct RunResult
             Float64(mean_product_total_kinetic_energy),
             Float64(solved_mean_kinetic_energy),
             Float64(solved_kinetic_energy_dispersion),
+            gamma_energy,
+            gamma_energy_total_by_mass,
+            gamma_energy_total_by_energy,
+            Float64(total_gamma_energy),
         )
     end
 end
@@ -161,6 +176,8 @@ function run_pipeline(configuration::Configuration)
     excitation = FragmentQuantity{Float64}()
     residual = FragmentQuantity{Float64}()
     neutron_energy = FragmentQuantity{Float64}()
+    γ = FragmentQuantity{Float64}()
+    γ_pair = FragmentQuantity{Float64}()
     chains = Vector{
         Tuple{Fragmentation, Float64, EmissionChain, EmissionChain, ExcitationEnergies},
     }()
@@ -192,11 +209,16 @@ function run_pipeline(configuration::Configuration)
             maximum_temperature = configuration.maximum_temperature,
         )
         solved += 1
+        # The energy the two fragments' neutrons leave, booked against either fragment so that a
+        # contraction over the mass of one gives the sum per split.
+        pair_gamma = gamma_energy(light, split.light) + gamma_energy(heavy, split.heavy)
         for (fragment, energy, chain) in
             ((entry.light, split.light, light), (entry.heavy, split.heavy, heavy))
             key = (fragment.A, fragment.Z, Float64(TKE))
             push!(solved_keys, key)
             ν[key] = neutron_multiplicity(chain)
+            γ[key] = gamma_energy(chain, energy)
+            γ_pair[key] = pair_gamma
             excitation[key] = energy
             for (store, quantity, weighting) in (
                 (temperature, :temperature, UniformSequenceWeighting()),
@@ -233,6 +255,8 @@ function run_pipeline(configuration::Configuration)
                        multiplicity and a weight",
         ),
     )
+    # Every fragment that carries a multiplicity carries a γ energy, so this contraction exists.
+    total_γ = something(total_average(γ, weights))
 
     products = if configuration.products_enabled
         _product_distributions(
@@ -289,6 +313,10 @@ function run_pipeline(configuration::Configuration)
         products.mean_total_kinetic_energy,
         solved_mean,
         solved_dispersion,
+        curve(γ),
+        curve(γ_pair),
+        by_energy(γ_pair),
+        Float64(total_γ),
     )
     return result
 end
@@ -624,13 +652,21 @@ function write_results(result::RunResult, directory::AbstractString)
         ("E_K_p_vs_A_p.dat", "A_p E_K_p", result.product_kinetic_energy),
         ("E_K_p_vs_Z.dat", "Z E_K_p", result.product_kinetic_energy_by_charge),
         ("TKE_p_vs_A_p.dat", "A_p TKE_p", result.product_total_kinetic_energy),
+        ("E_gamma_vs_A.dat", "A E_gamma", result.gamma_energy),
+        ("E_gamma_tot_vs_A.dat", "A E_gamma_tot", result.gamma_energy_total_by_mass),
+        ("E_gamma_tot_vs_TKE.dat", "TKE E_gamma_tot", result.gamma_energy_total_by_energy),
     )
     # A yield placed at the mean TKE of each mass has no TKE distribution, so the tables resolved
     # in TKE would describe one it does not have; they are not written. Nor is the product TKE,
     # which a yield without a TKE distribution does not have either.
     distributed = configuration.yield_width != "none"
-    resolved_in_energy =
-        ("nu_vs_TKE.dat", "E_star_vs_TKE.dat", "Y_vs_TKE.dat", "TKE_p_vs_A_p.dat")
+    resolved_in_energy = (
+        "nu_vs_TKE.dat",
+        "E_star_vs_TKE.dat",
+        "Y_vs_TKE.dat",
+        "TKE_p_vs_A_p.dat",
+        "E_gamma_tot_vs_TKE.dat",
+    )
     for (name, header, values) in curves
         isempty(values) && continue
         distributed || !(name in resolved_in_energy) || continue
@@ -721,6 +757,8 @@ function write_results(result::RunResult, directory::AbstractString)
         ("nu_per_fission", 2 * result.total_multiplicity),
         ("mean_TKE", result.mean_kinetic_energy),
         ("mean_E", result.mean_neutron_lab_energy),
+        ("E_gamma_per_fragment", result.total_gamma_energy),
+        ("E_gamma_per_fission", 2 * result.total_gamma_energy),
         ("configurations_solved", Float64(result.configurations_solved)),
         ("configurations_attempted", Float64(result.configurations_attempted)),
         ("yield_reached", result.yield_reached),
@@ -906,6 +944,7 @@ function run_metadata(result::RunResult)
         "nu_per_fission" => 2 * result.total_multiplicity,
         "mean_TKE_MeV" => result.mean_kinetic_energy,
         "mean_E_MeV" => result.mean_neutron_lab_energy,
+        "E_gamma_per_fission_MeV" => 2 * result.total_gamma_energy,
         "configurations_solved" => result.configurations_solved,
         "configurations_attempted" => result.configurations_attempted,
         "yield_reached" => result.yield_reached,

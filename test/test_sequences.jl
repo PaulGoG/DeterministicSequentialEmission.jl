@@ -239,6 +239,38 @@ end
     @test issorted(solved; rev = true)
 end
 
+@testset "the energy the neutrons leave" begin
+    table = mass_table()
+    model = BackShiftedFermiGas(table)
+    chain = emission_chain(table, model, VariableCrossSection(), Nuclide(52, 134), 25.0)
+    n = chain.possible
+    @test n > chain.solved > 0
+
+    # The mean over the n equiprobable endings of what each leaves, the second stage charged
+    # its separation energies alone.
+    left(j) =
+        25.0 - sum(
+            s.separation_energy + something(s.mean_neutron_energy, 0.0) for
+            s in chain.sequences[1:j]
+        )
+    @test gamma_energy(chain, 25.0) ≈ sum(left(j) for j in 1:n) / n rtol = 1e-12
+    # Within the first stage an ending leaves the residual its sequence solved for.
+    for j in 1:(chain.solved)
+        @test left(j) ≈ chain.sequences[j].residual_energy atol = 1e-9
+    end
+    # The balance closes on the multiplicity: what the neutrons carry plus what they leave.
+    carried = sum(
+        sequence_weight(EmissionProbabilityWeighting(), chain, s) *
+        (s.separation_energy + something(s.mean_neutron_energy, 0.0)) for
+        s in chain.sequences
+    )
+    @test carried + gamma_energy(chain, 25.0) ≈ 25.0 rtol = 1e-14
+
+    # A fragment that emits nothing keeps its excitation.
+    cold = emission_chain(table, model, VariableCrossSection(), Nuclide(52, 134), 0.5)
+    @test gamma_energy(cold, 0.5) == 0.5
+end
+
 @testset "sequence weighting" begin
     table = mass_table()
     model = BackShiftedFermiGas(table)

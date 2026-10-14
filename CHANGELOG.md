@@ -11,6 +11,13 @@ here.
 
 ### Added
 
+- The energy a fragment's neutrons leave for prompt γ rays, `gamma_energy`: the excitation less
+  what the count's neutrons carry, `E* − Σ_k P(N ≥ k)(Sₙ^(k) + ⟨ε⟩_k)`, the second-stage
+  neutrons charged their separation energy alone. A run writes it against fragment mass,
+  `E_gamma_vs_A.dat`, and summed over the two fragments of a split against the mass of either and
+  against TKE, `E_gamma_tot_vs_A.dat` and `E_gamma_tot_vs_TKE.dat`, the names ExforFissionData.jl
+  gives the measured quantities; `E_gamma_per_fragment` and `E_gamma_per_fission` in `totals.dat`
+  and the run metadata. No existing table changes.
 - `[yield] kinetic_energy_limit` and `kinetic_energy_moments`. By default (`"physical"`) each
   `P(TKE|A,Z)` is bounded at `TKE < Q + E*_CN` and the measured `⟨TKE⟩(A)` is restored over the
   retained cells (`"mean"`; `"mean_and_width"` restores `σ_TKE(A)` too, `"none"` neither),

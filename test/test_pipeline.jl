@@ -190,6 +190,20 @@
         @test totals["mean_product_mass_loss"] ≈ totals["nu_per_fragment"] rtol = 1e-7
         @test totals["mean_TKE_p"] < totals["mean_TKE"]
 
+        # The energy the neutrons leave: per fragment against mass, and the sum over a split
+        # against the mass of either fragment, which is therefore the same at A and A₀ − A.
+        @test first(readlines(joinpath(destination, "E_gamma_vs_A.dat"))) == "A E_gamma"
+        @test first(readlines(joinpath(destination, "E_gamma_tot_vs_A.dat"))) ==
+              "A E_gamma_tot"
+        @test !isfile(joinpath(destination, "E_gamma_tot_vs_TKE.dat"))
+        @test totals["E_gamma_per_fission"] ≈ 2 * totals["E_gamma_per_fragment"] rtol = 1e-7
+        @test result.total_gamma_energy > 0
+        pair_sum = Dict(result.gamma_energy_total_by_mass)
+        @test all(
+            isapprox(pair_sum[A], pair_sum[252 - A]; rtol = 1e-12) for
+            A in keys(pair_sum) if haskey(pair_sum, 252 - A)
+        )
+
         # The provenance record is the script's to write, not the library's.
         @test !isfile(joinpath(destination, "metadata.toml"))
 
@@ -207,6 +221,7 @@
         @test parsed["model"]["heavy_masses"] == [126, 140]
         @test parsed["model"]["product_count"] == "emission_probability"
         @test parsed["result"]["mean_product_mass_loss"] ≈ result.mean_product_mass_loss
+        @test parsed["result"]["E_gamma_per_fission_MeV"] ≈ 2 * result.total_gamma_energy
     end
 end
 

@@ -119,6 +119,38 @@ spreads the product over the chain's `n` residuals, and the mass loss is then `�
 post_neutron_mass(chain::EmissionChain) = chain.fragment.A - chain.possible
 
 """
+    gamma_energy(chain, excitation) -> Float64
+
+The excitation energy of a fragment that its neutrons leave, in MeV: what the model has left for
+prompt γ rays, conversion electrons and isomers. Under the count of
+[`neutron_multiplicity`](@ref), the chain ending equiprobably after `1 … n` emissions, the `k`-th
+neutron is emitted with probability `P(N ≥ k) = (n+1−k)/n` and carries `Sₙ^(k) + ⟨ε⟩_k` away:
+
+```
+E_γ = E* − Σ_k P(N ≥ k) (Sₙ^(k) + ⟨ε⟩_k)
+```
+
+A sequence of the second stage carries no temperature and is charged its separation energy
+alone, `⟨ε⟩_k = 0`, as the spectrum charges it, so the balance `E* = Σ_k P(N ≥ k)(Sₙ^(k) + ⟨ε⟩_k)
++ E_γ` closes on the energies the run's neutrons are given. The endings beyond `k_max`, taken
+alone, would close below zero, since the second stage counts on `Sₙ` once the kinetic energy has
+been returned; the mean over the endings is what the count predicts. The weights are those of
+[`EmissionProbabilityWeighting`](@ref) whatever the spectrum's weighting, since they belong to the
+count. A chain that emits nothing leaves its whole excitation.
+"""
+function gamma_energy(chain::EmissionChain, excitation::Real)
+    chain.possible == 0 && return Float64(excitation)
+    carried = 0.0
+    for sequence in chain.sequences
+        ε = something(sequence.mean_neutron_energy, 0.0)
+        carried +=
+            sequence_weight(EmissionProbabilityWeighting(), chain, sequence) *
+            (sequence.separation_energy + ε)
+    end
+    return Float64(excitation) - carried
+end
+
+"""
     SequenceWeighting
 
 How the emission sequences of one fragment are weighted in a quantity carried by its neutrons:
