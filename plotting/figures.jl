@@ -2647,8 +2647,8 @@ end
 # members of a dependent group are left out where the group's own average is drawn.
 const GAMMA_PER_FISSION_SKIP = Dict(
     "23541005" => "the γ energy between 1 and 6 MeV only, not a total",
-    "231970023" => "one detector of Oberstedt 2015, whose average 231970093 is drawn",
-    "231970033" => "one detector of Oberstedt 2015, whose average 231970093 is drawn",
+    "231970023" => "a measurement of Billnert 2013 the entry reprints; the 2015 total 231970093 is drawn",
+    "231970033" => "a measurement of Billnert 2013 the entry reprints; the 2015 total 231970093 is drawn",
     "231970053" => "one detector of Oberstedt 2015, whose average 231970093 is drawn",
     "231970063" => "one detector of Oberstedt 2015, whose average 231970093 is drawn",
     "231970073" => "one detector of Oberstedt 2015, whose average 231970093 is drawn",

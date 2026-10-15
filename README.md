@@ -338,7 +338,7 @@ configurations; a run does not write them.
   doi:10.1103/PhysRevC.90.064611), and the distribution of the neutron number is too broad in
   all four systems. A ²⁵²Cf run leaves 10.3 MeV per fission for γ rays, `E_gamma_per_fission` in
   `totals.dat`, against 6.8 (Nifenecker *et al.*, doi:10.1016/0375-9474(72)90296-5). The prompt-γ
-  measurements retrieved with ExforFissionData.jl v0.5.0 show the same from the other side: the
+  measurements retrieved with ExforFissionData.jl v0.5.2 show the same from the other side: the
   energy the neutrons leave falls with TKE at −0.17 MeV per MeV against −0.063 measured for
   ²⁵²Cf (Mehta *et al.*, doi:10.1103/PhysRevC.7.373), and lies 3.3 to 3.7 MeV above the measured
   totals per fission ([results/README.md](results/README.md)).
@@ -374,7 +374,7 @@ as EXFOR codes it — and that one token names the configuration, the input tree
 the output tree under `data/sims/`. It is also what separates the thermal run of ²³⁵U from the
 resonance one, which the reaction code `n,f` alone cannot.
 
-Every fragment yield comes from EXFOR through ExforFissionData.jl v0.5.0. ²⁵²Cf takes the measured
+Every fragment yield comes from EXFOR through ExforFissionData.jl v0.5.2. ²⁵²Cf takes the measured
 `Y(A,TKE)` matrix of Göök et al. (2014). For the thermal systems the archive holds no matrix, so
 the yield is reconstructed from one experiment's `Y(A)` and `⟨TKE⟩(A)`:
 - Al-Adili et al. (2016) for ²³⁵U;
@@ -484,10 +484,9 @@ subdirectory = "U235_nth/temperature_ratio"
 curve_label = "systematic_trend"
 ```
 
-The shipped configurations read the FissionTemperatureRatio.jl v0.4.0 runs on the
-ExforFissionData.jl v0.4.0 retrieval, whose `ν(A)`, `Y(A)` and `⟨TKE⟩(A)` tables are those of
-v0.5.0, staged that way for each system; [data/README.md](data/README.md) gives the commands
-that reproduce them.
+The shipped configurations read the FissionTemperatureRatio.jl v0.4.1 runs on the
+ExforFissionData.jl v0.5.2 retrieval, staged that way for each system;
+[data/README.md](data/README.md) gives the commands that reproduce them.
 
 The manifest declares what its curves tabulate, and this package refuses one declaring anything
 but `R_T` against `A_H`. The run writes `R_T(A_H)` and the multiplicity ratio `r_ν(A_H)` in the

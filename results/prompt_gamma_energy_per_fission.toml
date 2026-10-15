@@ -1,7 +1,7 @@
 figure = "prompt_gamma_energy_per_fission"
 
 [systems.Cf252_sf]
-excluded = ["231970023: one detector of Oberstedt 2015, whose average 231970093 is drawn", "231970033: one detector of Oberstedt 2015, whose average 231970093 is drawn", "231970053: one detector of Oberstedt 2015, whose average 231970093 is drawn", "231970063: one detector of Oberstedt 2015, whose average 231970093 is drawn", "231970073: one detector of Oberstedt 2015, whose average 231970093 is drawn", "231970083: one detector of Oberstedt 2015, whose average 231970093 is drawn"]
+excluded = ["231970023: a measurement of Billnert 2013 the entry reprints; the 2015 total 231970093 is drawn", "231970033: a measurement of Billnert 2013 the entry reprints; the 2015 total 231970093 is drawn", "231970053: one detector of Oberstedt 2015, whose average 231970093 is drawn", "231970063: one detector of Oberstedt 2015, whose average 231970093 is drawn", "231970073: one detector of Oberstedt 2015, whose average 231970093 is drawn", "231970083: one detector of Oberstedt 2015, whose average 231970093 is drawn"]
 gitcommit = "v0.2.0-2-g8bf52e2"
 measured = ["Cf252_sf/E_gamma_tot/14214008_F.Pleasonton_1972.dat", "Cf252_sf/E_gamma_tot/143870062_H.R.Bowman_1958.dat", "Cf252_sf/E_gamma_tot/231970093_A.Oberstedt_2015.dat", "Cf252_sf/E_gamma_tot/232130061_G.K.Mehta_1973.dat", "Cf252_sf/E_gamma_tot/237830041_D.Gjestvang_2021.dat", "Cf252_sf/E_gamma_tot/23814004_L.Krupa_2004.dat"]
 run = "AHmax=174_AHmin=126_En=0_TKEb=mean_TKEmax=229.5_TKEmin=130.5_TKEstep=1_Tmax=2_Ysym=true_Ytot=200_avg=per_neutron_ldm=BSFG_nZ=5_part=temperature_ratio_pc=emission_probability_pw=multiplicity_sigma=variable_sw=emission_probability"

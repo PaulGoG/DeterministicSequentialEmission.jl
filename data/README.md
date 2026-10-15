@@ -83,7 +83,7 @@ written in floating point — some of these tables were emitted by a generator a
 where they mean `118`.
 
 The shipped configurations take their fragment yields from EXFOR through ExforFissionData.jl
-v0.5.0. For each system, `Y(A)` and `⟨TKE⟩(A)` come from one experiment, or its measured matrix
+v0.5.2. For each system, `Y(A)` and `⟨TKE⟩(A)` come from one experiment, or its measured matrix
 does. A width that experiment did not report is borrowed from another on the same system, or on
 the same compound nucleus, and the run record flags it:
 
@@ -130,7 +130,7 @@ second argument; the root of this repository, `julia scripts/retrieve.jl <config
 configurations:
 
 ```bash
-git clone --branch v0.5.0 https://github.com/PaulGoG/ExforFissionData.jl
+git clone --branch v0.5.2 https://github.com/PaulGoG/ExforFissionData.jl
 cd ExforFissionData.jl
 julia scripts/retrieve.jl config/Cf252_sf_Y_vs_A_TKE.toml
 julia scripts/retrieve.jl config/U235_nth_Y_vs_A.toml
@@ -161,7 +161,7 @@ julia scripts/retrieve.jl config/Pu239_nth_spectrum_cf252_ratio_vs_E.toml
 julia scripts/retrieve.jl config/U233_nth_spectrum_cf252_ratio_vs_E.toml
 ```
 
-The tree is the ExforFissionData.jl v0.5.0 retrieval of every configuration that package ships,
+The tree is the ExforFissionData.jl v0.5.2 retrieval of every configuration that package ships,
 the resonance channel of ²³⁵U and ²⁴⁰Pu(sf) included. Beyond the pre-neutron observables, it
 holds the three post-neutron directories and the prompt-γ directories described below, and its
 records state the unit of every subentry, the sum of a yield table and the handling of isomeric
@@ -206,7 +206,7 @@ per cent of the evaluations; `unit_written` in the record states the unit of eac
 are in MeV.
 
 ```bash
-git clone --branch v0.5.0 https://github.com/PaulGoG/ExforFissionData.jl
+git clone --branch v0.5.2 https://github.com/PaulGoG/ExforFissionData.jl
 cd ExforFissionData.jl
 julia scripts/retrieve.jl config/<system>_Y_vs_A_p.toml
 julia scripts/retrieve.jl config/<system>_Y_vs_Z_A_p.toml
@@ -220,7 +220,7 @@ retrieval never writes into a directory that exists, and the staging script writ
 files, so the two are merged by hand: the contents of the directory the retrieval writes are
 copied into the one holding the evaluations.
 
-**Prompt γ rays.** ExforFissionData.jl v0.5.0 retrieves the prompt γ observables: per fission,
+**Prompt γ rays.** ExforFissionData.jl v0.5.2 retrieves the prompt γ observables: per fission,
 tabulated against nothing, the multiplicity `M_gamma_bar/`, the total energy `E_gamma_tot/` and the
 mean photon energy `eps_gamma/` of the four systems, one row to a file; for ²⁵²Cf also the energy
 of one fragment against its mass, `E_gamma_vs_A/`, the total energy against fragment mass,
@@ -348,15 +348,14 @@ also records the accession of each dataset curve. Copy the whole directory to
 `label`, `"systematic_trend"` for the shipped configurations. Keep one staged run per system —
 two manifests in one directory is refused, because nothing would say which run to take.
 
-The staged runs are those of the configurations FissionTemperatureRatio.jl v0.4.0 ships, on the
-ExforFissionData.jl v0.4.0 retrieval, with each system's primary `Y(A)` and `⟨TKE⟩(A)` as above;
-the `ν(A)`, `Y(A)` and `⟨TKE⟩(A)` tables of that retrieval are identical to those of v0.5.0.
+The staged runs are those of the configurations FissionTemperatureRatio.jl v0.4.1 ships, on the
+ExforFissionData.jl v0.5.2 retrieval, with each system's primary `Y(A)` and `⟨TKE⟩(A)` as above.
 `U235_nres` reads the thermal run. Each staged directory carries the configuration and the
 metadata of its run. To produce the ²⁵²Cf(sf) run again:
 
 ```bash
-git clone --branch v0.4.0 https://github.com/PaulGoG/ExforFissionData.jl
-git clone --branch v0.4.0 https://github.com/PaulGoG/FissionTemperatureRatio.jl
+git clone --branch v0.5.2 https://github.com/PaulGoG/ExforFissionData.jl
+git clone --branch v0.4.1 https://github.com/PaulGoG/FissionTemperatureRatio.jl
 cd ExforFissionData.jl
 julia scripts/retrieve.jl config/Cf252_sf_nu_vs_A.toml ../FissionTemperatureRatio.jl
 julia scripts/retrieve.jl config/Cf252_sf_Y_vs_A.toml ../FissionTemperatureRatio.jl

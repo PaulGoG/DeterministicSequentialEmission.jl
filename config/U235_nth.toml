@@ -33,7 +33,7 @@ subdirectory = "U235_nth/temperature_ratio"                                  # r
 curve_label = "systematic_trend"                            # required by "temperature_ratio": which [[segmented_curve]] of its manifest to take
 
 [yield]
-mass_yield_file = "U235_nth/Y_vs_A/23164005_A.Al-adili_2016.dat"                     # A Y [uncertainty], pre-neutron, EXFOR via ExforFissionData.jl v0.5.0
+mass_yield_file = "U235_nth/Y_vs_A/23164005_A.Al-adili_2016.dat"                     # A Y [uncertainty], pre-neutron, EXFOR via ExforFissionData.jl v0.5.2
 mean_kinetic_energy_file = "U235_nth/TKE_vs_A/23164007_A.Al-adili_2016.dat"          # A TKE [uncertainty], MeV, the same experiment as the yield
 kinetic_energy_dispersion_file = "U235_nth/sigma_TKE_vs_A/23014003_H.Baba_1997.dat"  # A sigma_TKE, MeV; borrowed from Baba (1997); Al-Adili reports none
 total = 200.0                                                                        # percent the yield sums to, above 0

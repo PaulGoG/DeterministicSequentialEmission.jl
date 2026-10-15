@@ -21,6 +21,11 @@ here.
   own mass window, the masses where the run's `Y(A)` holds at least 0.01 % of the fissions,
   in place of the shared 76–176, each panel labelling its own mass axis; the ordinate limits of
   the ν(A) and ⟨ε⟩(A) grids ignore error bars wider than 0.5 neutrons and 0.3 MeV.
+- The staged inputs are the ExforFissionData.jl v0.5.2 retrieval, every table byte-identical to
+  v0.5.0's, the records carrying the publication windows and ranges of 0.5.1 and the stated
+  prompt-γ conventions of 0.5.2, and the FissionTemperatureRatio.jl v0.4.1 runs, whose manifests
+  record `zero_polarization_at_symmetry`. The skip reasons of the prompt-γ energy figure name the
+  two Billnert 2013 measurements the entry of Oberstedt 2015 reprints.
 
 ## [0.2.0] - 2026-10-15
 
