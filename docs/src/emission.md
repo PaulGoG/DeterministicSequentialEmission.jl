@@ -51,7 +51,7 @@ fission than its own multiplicity. Without fine-grained excitation-energy input 
 stands in for the distribution, and a chain that can emit `n` neutrons emits `(n+1)/2` of them on
 average; a product distribution that always removes `n` is that of the hottest ending alone. The
 published count stays one key away, and with it the test suite reproduces the post-neutron mass
-yields of both thesis runs to `1e-14`.
+yields of both thesis runs to within 10⁻⁸ relative.
 
 The yields follow from the fragment yield `Y(A, Z, TKE)` and the product probabilities `P`,
 
