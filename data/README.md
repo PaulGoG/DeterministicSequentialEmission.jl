@@ -1,10 +1,14 @@
 # Input data
 
-Almost nothing here is version-controlled. The files are third-party scientific data — an
-atomic mass evaluation, charge distribution and shell correction systematics, a resonance
-parameter library, and experimental fragment mass yields. None of it originates with this
-package, and the MIT licence covering the source code does not extend to it: each collection
-carries the terms and the attribution of its own source, recorded below.
+Almost nothing here is version-controlled. The files are third-party scientific data: the
+measurements retrieved from EXFOR (fragment yields and kinetic energies, prompt neutron
+multiplicities, spectra and mean energies, post-neutron product yields and kinetic energies,
+prompt γ observables), the evaluated independent fission product yields of ENDF/B-VIII.0 and
+JEFF-3.3, a resonance parameter library, ground-state deformations, the tables among the inputs
+of my 2023 MSc thesis, and the temperature-ratio runs FissionTemperatureRatio.jl extracts from the
+measured multiplicities. None of the data originates with this package, and the MIT licence
+covering the source code does not extend to it: each collection carries the terms and the
+attribution of its own source, recorded below.
 
 The atomic mass evaluation is not here: it ships with
 [FissionFragmentsDomain.jl](https://github.com/PaulGoG/FissionFragmentsDomain.jl), and a
@@ -21,11 +25,15 @@ its yields, its charge distribution and its measured multiplicities sit together
 ```
 data/
 ├── reference/                      evaluations that belong to no one system
-└── <system>/                       Cf252_sf, U235_nth, U235_nres, U233_nth, Pu239_nth
+└── <system>/                       Cf252_sf, U235_nth, U235_nres, U233_nth, Pu239_nth, Pu240_sf
     ├── <observable>/               one retrieved observable: a file per measurement, retrieval.toml
     ├── temperature_ratio/          one staged FissionTemperatureRatio.jl run: its manifest and tables
-    └── charge_distribution_vs_A.dat, Y_vs_A_TKE.dat    supplied tables of earlier work, optional
+    └── charge_distribution_vs_A.dat, Y_vs_A_TKE.dat    tables from the thesis inputs, optional
 ```
+
+`Pu240_sf/` is not a shipped system: it holds the width `σ_TKE(A)` of ²⁴⁰Pu(sf) that the
+²³⁹Pu(n_th,f) configuration borrows, and the joint `Y(A,TKE)` of Demattè (1997), EXFOR 22413013,
+which no configuration reads.
 
 | Path | Content | Header |
 |---|---|---|
@@ -38,9 +46,10 @@ data/
 | `<system>/Y_vs_A/*.dat` | pre-neutron mass yield `Y(A)`, a marginal | `A Y [Y_uncertainty]` |
 | `<system>/TKE_vs_A/*.dat` | mean total kinetic energy `⟨TKE⟩(A)`, the other marginal | `A TKE [TKE_uncertainty]` |
 | `<system>/sigma_TKE_vs_A/*.dat` | dispersion of `P(TKE|A)`, pre-neutron | `A sigma_TKE [sigma_TKE_uncertainty]`, MeV |
-| `<system>/Y_vs_A_TKE.dat`, `U235_nth/Y_vs_A_H_TKE.dat`, `Pu239_nth/Y_vs_A_TKE_chiba.dat` | staged joint tables of earlier work; no longer read by a shipped configuration | `A TKE Y Y_uncertainty` |
+| `<system>/Y_vs_A_TKE.dat`, `U235_nth/Y_vs_A_H_TKE.dat`, `Pu239_nth/Y_vs_A_TKE_chiba.dat` | joint yields from the thesis inputs; read by no shipped configuration | `A TKE Y Y_uncertainty`; `A_H TKE Y Y_uncertainty` and `A TKE Y` for the second and third |
 | `U235_nth/E_def_vs_A_Z.dat` | `ΔE_def` for the scission-modelling partition | `A Z E_def`, MeV |
 | `<system>/nu_vs_A/*.dat` | measured `ν(A)` per fragment | `A nu nu_uncertainty` |
+| `<system>/nu_vs_A_TKE/*.dat` | measured `ν` against fragment mass and total kinetic energy | `A TKE nu nu_uncertainty` |
 | `<system>/eps_vs_A/*.dat` | mean centre-of-mass energy of the prompt neutrons against pre-neutron fragment mass | `A eps eps_uncertainty`, MeV |
 | `<system>/eps_vs_A_TKE/*.dat` | the same against mass and total kinetic energy; ²⁵²Cf and ²³³U only | `A TKE eps eps_uncertainty` |
 | `Cf252_sf/T_eff_vs_A/*.dat`, `Cf252_sf/lambda_vs_A/*.dat` | effective temperature and exponent of the form fitted to the centre-of-mass spectrum of a fragment's neutrons, against fragment mass; the record states the form | `A T_eff T_eff_uncertainty`, MeV; `A lambda lambda_uncertainty` |
@@ -53,6 +62,8 @@ data/
 | `<system>/Y_vs_A_p/*.dat` | measured post-neutron product mass yield, EXFOR `MASS,SEC,FY`, and chain yields `MASS,CHN,FY`, retrieved beside the evaluations | `A_p Y Y_uncertainty`, fragments per fission, 2 over both products |
 | `<system>/Y_vs_Z_A_p/*.dat` | measured independent yields `ELEM/MASS,IND,FY`, isomeric states as the record states | `Z A_p Y Y_uncertainty`, fragments per fission |
 | `<system>/E_K_p_vs_A_p/*.dat` | measured mean kinetic energy of the products against product mass, `MASS,SEC,KE`; none for ²⁵²Cf | `A_p E_K_p E_K_p_uncertainty`, MeV |
+| `<system>/M_gamma_bar/`, `E_gamma_tot/`, `eps_gamma/` | measured prompt γ multiplicity, total γ energy and mean photon energy per fission, one row to a file | `M_gamma_bar`, `E_gamma_tot`, `eps_gamma`, each with its uncertainty where one is stated; MeV |
+| `Cf252_sf/` and `U235_nth/`: `E_gamma_vs_A/`, `E_gamma_tot_vs_A/`, `E_gamma_tot_vs_TKE/`, `E_gamma_tot_vs_nu/`, `M_gamma_vs_A/`, `M_gamma_bar_vs_A/`, `M_gamma_bar_vs_TKE/`, `eps_gamma_vs_A/` | the same resolved against fragment mass, TKE or neutron number, per fragment or per fission; *Prompt γ rays* below says which system holds which | abscissa first, e.g. `TKE E_gamma_tot E_gamma_tot_uncertainty`; MeV |
 
 A file name is `<quantity>_vs_<abscissa>`, which is a statement rather than a list of symbols.
 Where a quantity was measured more than once, the directory carries the quantity and the file
@@ -62,8 +73,7 @@ a qualifier — `Y_vs_A_TKE.dat` and `Y_vs_A_TKE_chiba.dat`.
 
 All files are whitespace-separated with a single header line, except the `.csv` tables, which are
 comma-separated. **Readers take columns by position, not by header text**, and the uncertainty
-column may be omitted rather than zero-filled. Renaming a header is therefore a no-op for code,
-which is what made this layout safe to adopt.
+column may be omitted rather than zero-filled. Renaming a header is therefore a no-op for code.
 
 Yields are taken in the normalisation the retrieval writes (per fission, percent or counts, as
 its `retrieval.toml` states) and renormalised to `[yield] total`, so only their shape enters.
@@ -87,12 +97,12 @@ the same compound nucleus, and the run record flags it:
 The ²³⁹Pu width is that of spontaneous fission of the same compound nucleus. With Wagemans's
 `Y(A)` and `⟨TKE⟩(A)` it gives a mass-integrated width of 11.79 MeV, against the 11.81 MeV measured
 for ²³⁹Pu(nth,f) itself (EXFOR 22273003). The Asghar (1981) width, EXFOR 21771014, is against
-post-neutron mass (`SEC`) and is not used for pre-neutron data. The staged tables of earlier work
-remain beside them and can still be named by path.
+post-neutron mass (`SEC`) and is not used for pre-neutron data. The joint yields from the thesis
+inputs remain beside them and can still be named by path.
 
-`U235_nres` is the same target as `U235_nth` on the resonance channel. Its evaluated charge
-distribution, its `R_T(A_H)` trend and its yield inputs are the thermal ones and are read from the
-`U235_nth` tree rather than copied; only its measured `ν(A)` is its own.
+`U235_nres` is the same target as `U235_nth` on the resonance channel. Its `R_T(A_H)` trend and
+its yield inputs are the thermal ones and are read from the `U235_nth` tree rather than copied;
+only the measurements made on the resonance beam are its own, `ν(A)`, `ν(A, TKE)` and `⟨ε⟩(A)`.
 
 ## Where to obtain it
 
@@ -114,7 +124,10 @@ IAEA EXFOR archive into `data/<system>/<observable>/` and writes them beside a `
 naming every dataset it kept or excluded, with the reason. A configuration and that package
 reproduce a retrieval exactly, since EXFOR entries are immutable once published.
 
-The yield inputs of the shipped configurations:
+Each retrieval writes into the checkout of that package unless an output root is given as the
+second argument; the root of this repository, `julia scripts/retrieve.jl <configuration>
+<this repository>`, puts the tables under `data/` here. The yield inputs of the shipped
+configurations:
 
 ```bash
 git clone --branch v0.5.0 https://github.com/PaulGoG/ExforFissionData.jl
@@ -131,24 +144,31 @@ julia scripts/retrieve.jl config/U233_nth_TKE_vs_A.toml
 julia scripts/retrieve.jl config/U233_nth_sigma_TKE_vs_A.toml
 ```
 
-The measurements the figures compare against:
+The neutron measurements the figures compare against:
 
 ```bash
 julia scripts/retrieve.jl config/Cf252_sf_nu_vs_A.toml
 julia scripts/retrieve.jl config/U235_nth_nu_vs_A.toml
 julia scripts/retrieve.jl config/Pu239_nth_nu_vs_A.toml
 julia scripts/retrieve.jl config/U233_nth_nu_vs_A.toml
+julia scripts/retrieve.jl config/Cf252_sf_eps_vs_A.toml
+julia scripts/retrieve.jl config/U235_nth_eps_vs_A.toml
+julia scripts/retrieve.jl config/Pu239_nth_eps_vs_A.toml
+julia scripts/retrieve.jl config/U233_nth_eps_vs_A.toml
 julia scripts/retrieve.jl config/Cf252_sf_spectrum_maxwellian_ratio_vs_E.toml
+julia scripts/retrieve.jl config/U235_nth_spectrum_cf252_ratio_vs_E.toml
+julia scripts/retrieve.jl config/Pu239_nth_spectrum_cf252_ratio_vs_E.toml
+julia scripts/retrieve.jl config/U233_nth_spectrum_cf252_ratio_vs_E.toml
 ```
 
-The tree held here is the retrieval of every configuration that package ships, at v0.5.0. Every
-table v0.4.0 also writes is byte-identical between the two versions, so the inputs above read the
-same numbers, with one exception that no configuration reads: v0.4.1 removes from the ²⁵²Cf
-spectrum of Blinov (1980), 40535004, the point at 0.2209 MeV, an archive defect its record states.
-v0.4.0 added keys to every record, among them the unit of the subentry, the sum of a yield table
-and the handling of isomeric states, and the three post-neutron directories below; v0.5.0 adds the
-prompt-γ directories. Four of the configurations, the joint `Y(A,TKE)` of ²³⁵U, ²³⁹Pu and ²³³U and
-the product kinetic energies of ²⁵²Cf, find no dataset in the archive.
+The tree is the ExforFissionData.jl v0.5.0 retrieval of every configuration that package ships,
+the resonance channel of ²³⁵U and ²⁴⁰Pu(sf) included. Beyond the pre-neutron observables, it
+holds the three post-neutron directories and the prompt-γ directories described below, and its
+records state the unit of every subentry, the sum of a yield table and the handling of isomeric
+states. From the ²⁵²Cf spectrum of Blinov (1980), 40535004, a ratio to a Maxwellian, the line at
+220.9 keV is left out, an archive defect its record states. Four of the configurations, the joint
+`Y(A,TKE)` of ²³⁵U, ²³⁹Pu and ²³³U and the product kinetic energies of ²⁵²Cf, find no dataset in
+the archive.
 
 **Evaluated product yields.** `<system>/Y_vs_A_p/` and `<system>/Y_vs_Z_A_p/` hold the
 independent fission product yields of ENDF/B-VIII.0 (Brown *et al.*, *Nucl. Data Sheets* **148**,
@@ -172,7 +192,7 @@ point. `--library` and `--system` restrict the staging; if a server refuses a sc
 fetch the file in a browser and pass it with `--file <library>=<path>`. A table that differs from
 the one in place never replaces it; the old one moves aside as `<library>#1.dat`.
 
-**Measured post-neutron products.** ExforFissionData.jl retrieves, since v0.4.0, three post-neutron
+**Measured post-neutron products.** ExforFissionData.jl retrieves three post-neutron
 observables, which the figures draw as markers against the model and the evaluations:
 `Y_vs_A_p/`, the product mass yields EXFOR codes `MASS,SEC,FY` and the chain yields it codes
 `MASS,CHN,FY`, which β decay, conserving `A`, makes post-neutron mass yields up to the
@@ -329,21 +349,40 @@ also records the accession of each dataset curve. Copy the whole directory to
 two manifests in one directory is refused, because nothing would say which run to take.
 
 The staged runs are those of the configurations FissionTemperatureRatio.jl v0.4.0 ships, on the
-ExforFissionData v0.4.0 retrieval, with each system's primary `Y(A)` and `⟨TKE⟩(A)` as above.
-`U235_nres` reads the thermal run.
+ExforFissionData.jl v0.4.0 retrieval, with each system's primary `Y(A)` and `⟨TKE⟩(A)` as above;
+the `ν(A)`, `Y(A)` and `⟨TKE⟩(A)` tables of that retrieval are identical to those of v0.5.0.
+`U235_nres` reads the thermal run. Each staged directory carries the configuration and the
+metadata of its run. To produce the ²⁵²Cf(sf) run again:
 
-Copying one table by hand is what this replaces, and the reason is physical rather than tidy: the
-two CSVs above hold different quantities in the same column position, `R_T ≈ 1.2` against
+```bash
+git clone --branch v0.4.0 https://github.com/PaulGoG/ExforFissionData.jl
+git clone --branch v0.4.0 https://github.com/PaulGoG/FissionTemperatureRatio.jl
+cd ExforFissionData.jl
+julia scripts/retrieve.jl config/Cf252_sf_nu_vs_A.toml ../FissionTemperatureRatio.jl
+julia scripts/retrieve.jl config/Cf252_sf_Y_vs_A.toml ../FissionTemperatureRatio.jl
+julia scripts/retrieve.jl config/Cf252_sf_TKE_vs_A.toml ../FissionTemperatureRatio.jl
+cd ../FissionTemperatureRatio.jl
+julia scripts/run.jl config/Cf252_sf.toml
+```
+
+and copy the directory it writes, `data/sims/Cf252_sf/<run>/`, whole to
+`data/Cf252_sf/temperature_ratio/` here. `U235_nth`, `Pu239_nth` and `U233_nth` follow the same
+three retrievals and their own configuration.
+
+A table copied by hand cannot be checked: the segmented `R_T` curve and the pivots file of the
+tree above hold different quantities in the same column position, `R_T ≈ 1.2` against
 `r_ν ≈ 0.5`, and both are plausible. Staging the pivots file by mistake runs to completion and
 reports a number that looks like a result. The manifest is what makes the quantity checkable —
 this package refuses a manifest that does not declare `ordinate = "R_T"` and
 `abscissa = ["A_H"]`, and resolves every curve through `temperature_ratio_file` and through no
 other field. The `columns` the manifest states are documentation: tables are read by position.
 
-Run the extraction with `ratio_averaging = "charge_resolved"` for this consumer; the reason is in
-`read_segmented_curve`'s docstring, and the manifest's `[domain]` record is checked on load.
+Run the extraction with `ratio_averaging = "charge_resolved"` and
+`zero_polarization_at_symmetry = false`, as the configurations of that package do; the reason for
+the first is in `read_segmented_curve`'s docstring, and the manifest's `[domain]` record, the
+second included, is checked on load.
 
-The remaining tables are one-off downloads:
+The remaining tables:
 
 **Gilbert–Cameron shell corrections** — Table III of A. Gilbert and A. G. W. Cameron, *Canadian
 Journal of Physics* **43**, 1446 (1965), pp. 1453–1455, doi:10.1139/p65-139. It ships with
@@ -361,8 +400,9 @@ preparation at <https://github.com/IAEA-NDS/RIPL-4>; neither changes the numbers
 `σ_Z(A)`, `A dZ sigma_Z`. The four tables of `Cf252_sf`, `U235_nth`, `Pu239_nth` and `U233_nth` are
 supplied evaluations of documented lineage: Tudora et al., *Phys. Procedia* **64**, 62 (2015),
 doi:10.1016/j.phpro.2015.04.009, applying the `Zₚ` model of Wahl, *At. Data Nucl. Data Tables*
-**39**, 1 (1988), doi:10.1016/0092-640X(88)90016-2. They are not regenerated here.
-`charge_distribution_file = "wahl"` takes Wahl's model directly instead. FissionFragmentsDomain
+**39**, 1 (1988), doi:10.1016/0092-640X(88)90016-2. They are not regenerated here. The first three
+are thesis inputs, recoverable as below; the ²³³U table is not, and is not distributed.
+`charge_distribution_file = "wahl"` takes Wahl's model directly instead. FissionFragmentsDomain.jl
 reproduces the 1988 evaluation's own tables row by row, and records in its `data/README.md` how
 far these supplied tables lie from it.
 
@@ -370,20 +410,45 @@ far these supplied tables lie from it.
 the finite-range liquid-drop model. P. Möller, J. R. Nix, W. D. Myers, W. J. Swiatecki, *Atomic
 Data and Nuclear Data Tables* **59**, 185 (1995), via RIPL.
 
-**`U235_nth/E_def_vs_A_Z.dat`** — not a source table. It is generated from the ground-state
-deformations and the deformation energies at scission, and is the input the scission-modelling
-partition needs.
+**`U235_nth/E_def_vs_A_Z.dat`** — not a source table: the extra deformation energy at scission
+`ΔE_def`, generated from the ground-state deformations above by
+`Data conversion/generateDeltaEdeformation.jl` on the `original` branch. It is the input the
+scission-modelling partition needs.
 
-**The fragment mass yields.** `U235_nth/Y_vs_A_H_TKE.dat` is the ²³⁵U(nth,f) measurement of
-C. Straede *et al.* and `Pu239_nth/Y_vs_A_TKE_chiba.dat` the ²³⁹Pu(nth,f) Chiba set, as each
-file's own header records. `Cf252_sf/Y_vs_A_TKE.dat`, `U235_nth/Y_vs_A_TKE.dat` and
-`Pu239_nth/Y_vs_A_TKE.dat` are the joint distributions on the whole `A` domain with an uncertainty
-column. `Cf252_sf/Y_vs_A_TKE.dat` is the ²⁵²Cf(SF) distribution behind every chapter 4 result of
-the thesis.
+**The fragment mass yields.** `U235_nth/Y_vs_A_H_TKE.dat` is the ²³⁵U(n_th,f) measurement of
+C. Straede *et al.*, *Nucl. Phys. A* **462**, 85 (1987), doi:10.1016/0375-9474(87)90381-2, as its
+header records, and `Pu239_nth/Y_vs_A_TKE_chiba.dat` a ²³⁹Pu(n_th,f) set its header labels Chiba,
+25 July 2023. `Cf252_sf/Y_vs_A_TKE.dat`, `U235_nth/Y_vs_A_TKE.dat` and `Pu239_nth/Y_vs_A_TKE.dat`
+are the joint distributions on the whole `A` domain with an uncertainty column;
+`Cf252_sf/Y_vs_A_TKE.dat` is the ²⁵²Cf(sf) distribution behind every result of chapter 4 of the
+thesis. No shipped configuration reads any of them, every system taking its yield from EXFOR as
+tabulated above, but a configuration can name one by path.
 
-None of these staged tables is read by a shipped configuration any longer; every system takes its
-yield from EXFOR, as tabulated above. They remain so that a configuration can still name one by
-path, for comparison with earlier results.
+**The thesis inputs.** These tables, the charge distributions of ²⁵²Cf, ²³⁵U and ²³⁹Pu, the joint
+yields, `E_def_vs_A_Z.dat`, and the deformation, shell-correction and resonance tables under
+`reference/`, are inputs of my 2023 MSc thesis, whose code and text are on the `original` branch.
+`input_data/README.md` there gives the origin of each, and the import commit `bdba1d9` holds them
+under the names the thesis code reads:
+
+| Here | `input_data/` at `bdba1d9` |
+|---|---|
+| `Cf252_sf/Y_vs_A_TKE.dat` | `Cf-252/CF52YATKE.VES` |
+| `U235_nth/Y_vs_A_TKE.dat` | `U-235/U5YATKE.ANA` |
+| `U235_nth/Y_vs_A_H_TKE.dat` | `U-235/U5YATKE.SRE` |
+| `Pu239_nth/Y_vs_A_TKE.dat` | `Pu-239/P9YATKE.ANA` |
+| `Pu239_nth/Y_vs_A_TKE_chiba.dat` | `Pu-239/P9YATKE1.CHI` |
+| `U235_nth/E_def_vs_A_Z.dat` | `U-235/EXTRADEF.U5` |
+| `Cf252_sf/`, `U235_nth/`, `Pu239_nth/charge_distribution_vs_A.dat` | `Cf-252/DeltaZ_rms_A.CF52`, `U-235/DeltaZ_rms_A.U5`, `Pu-239/DeltaZ_rms_A.PU39` |
+| `reference/ground_state_deformation_moller.dat` | `Aux files/B2MOLLER.ANA` |
+| `reference/shell_corrections_gilbert_cameron.dat` | `Aux files/SZSN.GC` |
+| `reference/s_wave_resonances_ripl3.dat` | `Aux files/resonances0.dat` |
+
+```bash
+git show "bdba1d9:input_data/Cf-252/CF52YATKE.VES" > data/Cf252_sf/Y_vs_A_TKE.dat
+```
+
+restores one. Every data row here is byte-identical to that commit's; only the header lines were
+rewritten to the names of this package, and readers take columns by position.
 
 ## Citing
 
