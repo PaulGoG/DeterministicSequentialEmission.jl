@@ -9,6 +9,8 @@ here.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-15
+
 ### Breaking
 
 - Results change by default. Each `P(TKE|A,Z)` of the fragment yield is bounded at the physical

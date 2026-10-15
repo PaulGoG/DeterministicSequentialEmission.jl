@@ -1,6 +1,6 @@
 name = "DeterministicSequentialEmission"
 uuid = "156d68c7-7ead-4df0-b5ab-777b14fcce37"
-version = "0.1.1"
+version = "0.2.0"
 authors = ["Paul-Adrian Gogîță"]
 
 [deps]
