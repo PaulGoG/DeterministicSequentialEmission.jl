@@ -9,104 +9,113 @@ here.
 
 ## [Unreleased]
 
+### Breaking
+
+- Results change by default. Each `P(TKE|A,Z)` of the fragment yield is bounded at the physical
+  limit of its split, `TKE < Q + E*_CN`, and the measured `⟨TKE⟩(A)` is restored over the
+  retained cells (`[yield] kinetic_energy_limit = "physical"`, `kinetic_energy_moments = "mean"`).
+  The solved `⟨TKE⟩` now equals the measured input in every system, where it fell 0.12–0.22 MeV
+  short for the thermal ones; `⟨TXE⟩` falls by as much and `⟨ν⟩` by 0.9 % (²³⁵U, 2.5353 →
+  2.5129), 0.4 % (²³⁹Pu, 2.8132 → 2.8019) and 0.6 % (²³³U, 2.6313 → 2.6156), the mean laboratory
+  energy by 0.1–0.3 %. ²⁵²Cf(sf), whose measured matrix keeps its own row means, moves by
+  2 × 10⁻⁴ in `⟨ν⟩`. `kinetic_energy_limit = "grid"` reproduces the 0.1.x results.
+- Under the physical bound a yield reconstructed from marginals is refused when
+  `kinetic_energy_max + kinetic_energy_step` falls short of the largest `Q + E*_CN` of the
+  domain; the error names the least `kinetic_energy_max` that suffices. The thermal
+  configurations of 0.1.1, at 200 MeV for ²³⁵U and ²³³U and 210 MeV for ²³⁹Pu, are refused: raise
+  `kinetic_energy_max`, as the shipped files do to 205 and 216 MeV, or select `"grid"`.
+- Run identifiers gain the tokens `pc`, for `[products] count`, and `TKEb`, for the bound of the
+  yield on TKE, so new runs land beside the 0.1.x runs rather than replacing them;
+  `plotting/figures.jl` draws the most recent run of each system.
+- `plotting/figures.jl` writes to `results/`, which replaces `plots/`.
+- FissionFragmentsDomain.jl 0.2.4 is required.
+
+No configuration key and no output table is renamed or removed, and a configuration without
+`[products]` takes its defaults.
+
 ### Added
 
+- The post-neutron product distributions: the mass yield `Y_vs_A_p.dat`, the independent yields
+  `Y_vs_Z_A_p.dat` in the columns `Z A_p Y`, `Y_vs_N_p.dat`, the product kinetic energies
+  `E_K_p_vs_A_p.dat` and `E_K_p_vs_Z.dat`, and `TKE_p_vs_A_p.dat` against the heavy product
+  mass, normalised to the total of the input yield; `mean_product_mass_loss` and `mean_TKE_p`
+  in `totals.dat`. A table is named, and its columns ordered, as ExforFissionData.jl names the
+  same quantity, so that model and measurement share one layout.
+- `[products]`, with `enabled` and `count`. `"emission_probability"`, the default, ends a chain of
+  `n` possible sequences on each of its residuals with probability `1/n`, so that the products
+  lose the multiplicity; `"sequence_count"` subtracts all `n`, the published prescription, and
+  reproduces the post-neutron mass yields of the two ²⁵²Cf(sf) runs of the thesis.
+  `ProductCount`, `EmissionProbabilityCount`, `SequenceCount` and `product_masses` implement it.
 - The energy a fragment's neutrons leave for prompt γ rays, `gamma_energy`: the excitation less
-  what the count's neutrons carry, `E* − Σ_k P(N ≥ k)(Sₙ^(k) + ⟨ε⟩_k)`, the second-stage
-  neutrons charged their separation energy alone. A run writes it against fragment mass,
-  `E_gamma_vs_A.dat`, and summed over the two fragments of a split against the mass of either and
-  against TKE, `E_gamma_tot_vs_A.dat` and `E_gamma_tot_vs_TKE.dat`, the names ExforFissionData.jl
-  gives the measured quantities; `E_gamma_per_fragment` and `E_gamma_per_fission` in `totals.dat`
-  and the run metadata. No existing table changes.
+  what the count's neutrons carry, `E* − Σ_k P(N ≥ k)(Sₙ^(k) + ⟨ε⟩_k)`, the emissions beyond
+  `k_max`, which carry no temperature, charged their separation energy alone. A run writes it
+  against fragment mass, `E_gamma_vs_A.dat`, and summed over the two fragments of a split against
+  the mass of either and against TKE, `E_gamma_tot_vs_A.dat` and `E_gamma_tot_vs_TKE.dat`, the
+  names ExforFissionData.jl gives the measured quantities; `E_gamma_per_fragment` and
+  `E_gamma_per_fission` go to `totals.dat` and the run metadata.
+- `[yield] kinetic_energy_limit` and `kinetic_energy_moments`: `"physical"` bounds each
+  `P(TKE|A,Z)` at `TKE < Q + E*_CN` and restores the measured moments over the retained cells,
+  `"mean"` the mean, `"mean_and_width"` `σ_TKE(A)` too and `"none"` neither, through
+  `bounded_fragment_yield` of FissionFragmentsDomain.jl 0.2.4; `"grid"` is the bound of 0.1.x. A
+  bounded run writes `TKE_bound_vs_A.dat`, and every run records the solved `⟨TKE⟩` and `σ_TKE`
+  in its metadata.
+- The `[domain]` check of a staged temperature-ratio run refuses a curve extracted with
+  `zero_polarization_at_symmetry = true`, which FissionFragmentsDomain.jl 0.2.4 records.
+- `results/`, with a README that shows the model against measurement: every figure beside the
+  datasets it draws, each with its EXFOR accession and reference, and what the runs write that
+  is not drawn yet.
+- The figures of the post-neutron products: the mass yield `Y(A_p)` of the four systems against
+  the evaluated independent yields of ENDF/B-VIII.0 and JEFF-3.3, summed over charge, with the
+  run's own pre-neutron `Y(A)` as a guide; the elemental yield `Y(Z)` with the global proton
+  even–odd effect of model and evaluations; the isotopic distributions of the four most abundant
+  light and heavy elements, one figure per system; the neutron-number distribution `Y(N_p)`; and
+  the product kinetic energies `E_K_p(A_p)`, beside the pre-neutron `E_K(A)`, `E_K_p(Z)`, and
+  `TKE_p(A_p)`, beside the pre-neutron `⟨TKE⟩(A)`.
+- The measured post-neutron products of EXFOR in those figures: the product mass yields
+  `MASS,SEC,FY` by name and the chain yields `MASS,CHN,FY` pooled in `Y(A_p)`, the independent
+  yields `ELEM/MASS,IND,FY` pooled in the isotopic distributions, and the product kinetic
+  energies `MASS,SEC,KE` in `E_K_p(A_p)`. Each table is converted from the unit its
+  `retrieval.toml` states, from fragments per fission to per cent for the yields, and a unit the
+  script does not know stops it. Sets qualified `SPA` or `DERIV` are drawn with open markers;
+  sets the record marks superseded, and the ²³⁵U mass yield of Koblik (2014), are left out, and
+  the sidecars name them.
 - Two figures of the prompt γ energy against the γ observables of ExforFissionData.jl v0.5.0:
   `results/prompt_gamma_energy_per_fission`, the total per fission of the four systems against
   every measured value, one row per dataset, the sets coded partial in γ energy or marked
   preliminary open, the dependent members of a group and a range-limited set left out; and
   `results/prompt_gamma_energy_cf252`, ²⁵²Cf(sf) against TKE, with both slopes fitted, and against
   fragment mass, per fragment and per fission.
-- `[yield] kinetic_energy_limit` and `kinetic_energy_moments`. By default (`"physical"`) each
-  `P(TKE|A,Z)` is bounded at `TKE < Q + E*_CN` and the measured `⟨TKE⟩(A)` is restored over the
-  retained cells (`"mean"`; `"mean_and_width"` restores `σ_TKE(A)` too, `"none"` neither),
-  through `bounded_fragment_yield` of FissionFragmentsDomain.jl 0.2.4. `"grid"` reproduces the
-  earlier runs. A bounded run writes `TKE_bound_vs_A.dat`; every run records the solved `⟨TKE⟩`
-  and `σ_TKE` in its metadata. The run identifier gains the token `TKEb`.
-- The `[domain]` check of a staged temperature-ratio run refuses a curve extracted with
-  `zero_polarization_at_symmetry = true`, which FissionFragmentsDomain.jl 0.2.4 records.
-- `results/`, with a README that shows the model against measurement: every figure beside the
-  datasets it draws, each with its EXFOR accession and reference, and what the runs write that
-  is not drawn yet.
 - The mean centre-of-mass neutron energy against fragment mass, `⟨ε⟩(A)`, for the four systems
   against the retrieved centre-of-mass means.
 - The spectra of the three thermal systems as ratios of the spectrum per fission to that of
   ²⁵²Cf(sf), which is how they were measured, with the model carrying its own multiplicities.
   Sets tabulated in the inverse orientation are inverted, the energy ranges of one EXFOR entry
   are joined, and superseded sets are skipped, as the retrieval record states.
-- The coverage badge.
-- The post-neutron product distributions: the mass yield `Y_vs_A_p.dat`, the independent
-  yields `Y_vs_Z_A_p.dat` in the columns `Z A_p Y`, `Y_vs_N_p.dat`, the product kinetic energies
-  `E_K_p_vs_A_p.dat` and `E_K_p_vs_Z.dat`, and `TKE_p_vs_A_p.dat` against the heavy product
-  mass, normalised to the total of the input yield; `mean_product_mass_loss` and `mean_TKE_p`
-  in `totals.dat`. A table is named, and its columns ordered, as ExforFissionData.jl names the
-  same quantity, so that model and measurement share one layout.
-- `[products]`, with `enabled` and `count`: `"emission_probability"` (the default) ends a chain of
-  `n` possible sequences on each of its residuals with probability `1/n`, so that the products
-  lose the multiplicity; `"sequence_count"` subtracts all `n`, the published prescription,
-  reproduced against the archived ²⁵²Cf(sf) post-neutron mass yields. The count is the
-  run-identifier token `pc`, so every run identifier changes.
-- `ProductCount`, `EmissionProbabilityCount`, `SequenceCount` and `product_masses`.
-
-- The product mass yield figure: `Y(A_p)` of the four systems against the evaluated
-  independent yields of ENDF/B-VIII.0 and JEFF-3.3, summed over charge, with the run's own
-  pre-neutron `Y(A)` as a guide; `results/README.md` reports the hump centroids and peaks.
-- `scripts/stage_product_yields.jl`, which stages those evaluated yields from the public
-  ENDF-6 files with their provenance, under `data/<system>/Y_vs_A_p/` and, resolved in charge,
-  `data/<system>/Y_vs_Z_A_p/` (`Z A_p Y Y_uncertainty`).
-- The figures of the post-neutron products against the same evaluations: the elemental yield
-  `Y(Z)` with the global proton even–odd effect of model and evaluations, the isotopic
-  distributions of the four most abundant light and heavy elements, one figure per system, and
-  the neutron-number distribution `Y(N_p)`; and the product kinetic energies `E_K_p(A_p)`, beside
-  the pre-neutron `E_K(A)`, `E_K_p(Z)`, and `TKE_p(A_p)`, beside the pre-neutron `⟨TKE⟩(A)`.
-  `results/README.md` documents each.
+- `scripts/stage_product_yields.jl`, which stages the evaluated independent yields of
+  ENDF/B-VIII.0 and JEFF-3.3 from the public ENDF-6 files with their provenance, under
+  `data/<system>/Y_vs_A_p/` and, resolved in charge, `data/<system>/Y_vs_Z_A_p/`
+  (`Z A_p Y Y_uncertainty`).
 - `plotting/figures.jl` takes the directory it writes to as an optional third argument.
-- The measured post-neutron products of EXFOR, retrieved by ExforFissionData.jl v0.4.0, in the
-  product figures: the product mass yields `MASS,SEC,FY` by name and the chain yields
-  `MASS,CHN,FY` pooled in `Y(A_p)`, the independent yields `ELEM/MASS,IND,FY` pooled in the
-  isotopic distributions, and the product kinetic energies `MASS,SEC,KE` in `E_K_p(A_p)`. Each
-  table is converted from the unit its `retrieval.toml` states, from fragments per fission to per
-  cent for the yields, and a unit the script does not know stops it. Sets qualified `SPA` or
-  `DERIV` are drawn with open markers; sets the record marks superseded, and the ²³⁵U mass yield
-  of Koblik (2014), are left out, and the sidecars name them. `results/README.md` lists every set
-  drawn with its accession and reference.
 
 ### Changed
 
-- `results/README.md` states the offset of the product kinetic energies from the measured sets
-  with its weighting, the model's product yield over the masses each set covers; the earlier
-  statement, that the model lay 1.0 to 1.7 MeV below every set covering the whole heavy hump, did
-  not hold for the three sets of Geltenbort (1985), which lie within 0.5 MeV of it.
+- The staged inputs are the ExforFissionData.jl v0.5.0 retrieval and the runs of
+  FissionTemperatureRatio.jl v0.4.0 on its v0.4.0 retrieval. Every table the shipped
+  configurations read holds the numbers it held in 0.1.1; the run records and the names of the
+  temperature-ratio files change, the ²⁵²Cf spectrum of Blinov (1980) loses its 0.2209 MeV point,
+  an archive defect, and the post-neutron and prompt-γ observables are added.
 - The per-system comparison figures are laid out on a two-column grid rather than stacked, each
   panel with its own legend above it. In the product figures the legends of a grid row share one
   row of the layout, so that its axes align whatever the number of entries, and the row grows by
   each legend row beyond two; the measured sets there take colours other than the vermilion and
   blue of the evaluations.
-- The figures are written to `results/`, which replaces `plots/`.
+
+### Fixed
+
 - The evaluated multiplicities of the comparison figures are the prompt ones throughout,
   ENDF/B-VIII.0 MF1 MT456 at 0.0253 eV and, for ²⁵²Cf(sf), its decay-sublibrary constant 3.7590:
   ²³³U was compared with a total multiplicity (2.4968, now 2.4785) and ²³⁹Pu with 2.8750 (now
   2.8680), and ²⁵²Cf took 3.7573 from another evaluation.
-- The fragment yield is bounded at the physical limit of each split by default (see Added). The
-  solved `⟨TKE⟩` now equals the measured input in every system, where it fell 0.12–0.22 MeV short
-  for the thermal ones; `⟨TXE⟩` falls by as much and `⟨ν⟩` by 0.9 % (²³⁵U, 2.5353 → 2.5129),
-  0.4 % (²³⁹Pu, 2.8132 → 2.8019) and 0.6 % (²³³U, 2.6313 → 2.6156), the mean laboratory energy
-  by 0.1–0.3 %; ²⁵²Cf, whose measured matrix keeps its own row means, moves by 2 × 10⁻⁴ in `⟨ν⟩`.
-  The thermal `kinetic_energy_max` of the shipped configurations rises to 205 and 216 MeV.
-- The staged EXFOR data are the ExforFissionData.jl v0.5.0 retrieval: every table the shipped
-  configurations read is the same, the ²⁵²Cf spectrum of Blinov (1980) loses its 0.2209 MeV point
-  (an archive defect), and the prompt-γ observables are added.
-- The staged inputs are the ExforFissionData.jl v0.4.0 retrieval and the runs of
-  FissionTemperatureRatio.jl v0.4.0 on it. Every table the shipped configurations read is the same
-  as before, byte for byte, and so is every result; only the run records and the names of the
-  temperature-ratio files change.
 
 ## [0.1.1] - 2026-10-12
 
