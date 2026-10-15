@@ -1,25 +1,25 @@
 figure = "product_kinetic_energy"
 
 [systems.Cf252_sf]
-gitcommit = "v0.1.1-15-g9140e7d"
+gitcommit = "v0.2.0-2-g8bf52e2"
 input = ["Cf252_sf/Y_vs_A_TKE/relative/23268002_A.Goeoek_2014.dat"]
 measured = []
 run = "AHmax=174_AHmin=126_En=0_TKEb=mean_TKEmax=229.5_TKEmin=130.5_TKEstep=1_Tmax=2_Ysym=true_Ytot=200_avg=per_neutron_ldm=BSFG_nZ=5_part=temperature_ratio_pc=emission_probability_pw=multiplicity_sigma=variable_sw=emission_probability"
 
 [systems.Pu239_nth]
-gitcommit = "v0.1.1-15-g9140e7d"
+gitcommit = "v0.2.0-2-g8bf52e2"
 input = ["Pu239_nth/TKE_vs_A/21995038_C.Wagemans_1984.dat"]
 measured = ["Pu239_nth/E_K_p_vs_A_p/21544009_M.Asghar_1978.dat", "Pu239_nth/E_K_p_vs_A_p/21981016_P.Geltenbort_1985.dat", "Pu239_nth/E_K_p_vs_A_p/235580022_H.Guenther_1972.dat", "Pu239_nth/E_K_p_vs_A_p/23583003_N.Boucheneb_1991.dat", "Pu239_nth/E_K_p_vs_A_p/416930051_A.D.Belyaev_1988.dat"]
 run = "AHmax=159_AHmin=120_En=2.53e-8_TKEb=mean_TKEmax=216_TKEmin=130_TKEstep=1_Tmax=2_Ysym=true_Ytot=200_avg=per_neutron_ldm=BSFG_nZ=5_part=temperature_ratio_pc=emission_probability_pw=multiplicity_sigma=variable_sw=emission_probability"
 
 [systems.U233_nth]
-gitcommit = "v0.1.1-15-g9140e7d"
+gitcommit = "v0.2.0-2-g8bf52e2"
 input = ["U233_nth/TKE_vs_A/21981008_P.Geltenbort_1985.dat"]
 measured = ["U233_nth/E_K_p_vs_A_p/21981014_P.Geltenbort_1985.dat", "U233_nth/E_K_p_vs_A_p/23784003_A.Chebboubi_2021.dat"]
 run = "AHmax=159_AHmin=117_En=2.53e-8_TKEb=mean_TKEmax=205_TKEmin=100_TKEstep=1_Tmax=2_Ysym=true_Ytot=200_avg=per_neutron_ldm=BSFG_nZ=5_part=temperature_ratio_pc=emission_probability_pw=multiplicity_sigma=variable_sw=emission_probability"
 
 [systems.U235_nth]
-gitcommit = "v0.1.1-15-g9140e7d"
+gitcommit = "v0.2.0-2-g8bf52e2"
 input = ["U235_nth/TKE_vs_A/23164007_A.Al-adili_2016.dat"]
 measured = ["U235_nth/E_K_p_vs_A_p/21313014_M.Asghar_1978.dat", "U235_nth/E_K_p_vs_A_p/21543017_M.Asghar_1977.dat", "U235_nth/E_K_p_vs_A_p/21752017_C.Wagemans_1981.dat", "U235_nth/E_K_p_vs_A_p/21981015_P.Geltenbort_1985.dat", "U235_nth/E_K_p_vs_A_p/41496005_A.A.Aleksandrov_1994.dat", "U235_nth/E_K_p_vs_A_p/23551003_E.Konecny_1970.dat", "U235_nth/E_K_p_vs_A_p/23551004_E.Konecny_1970.dat", "U235_nth/E_K_p_vs_A_p/31797003_I.I.Bakhromi_1982.dat", "U235_nth/E_K_p_vs_A_p/235580032_H.Guenther_1972.dat"]
 run = "AHmax=160_AHmin=118_En=2.53e-8_TKEb=mean_TKEmax=205_TKEmin=100_TKEstep=1_Tmax=2_Ysym=true_Ytot=200_avg=per_neutron_ldm=BSFG_nZ=5_part=temperature_ratio_pc=emission_probability_pw=multiplicity_sigma=variable_sw=emission_probability"
