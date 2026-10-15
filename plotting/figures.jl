@@ -1023,7 +1023,8 @@ end
 Draw a quantity against fragment mass for every panel, on the shared grid: the measured sets as
 markers, the model as the black line, the A₀/2 guide labelled above the frame, each panel's
 legend above it, and `annotate(panel)` as lines in the upper left, above the data. Each panel
-takes its own mass range, the run's yield window (`yield_window`), and its own ordinate range;
+takes its own mass range, the run's yield window (`yield_window`), labelled on every panel since
+the ranges differ, and its own ordinate range;
 error bars wider than `bar_limit` do not set the ordinate range.
 """
 function figure_mass_grid(
@@ -1041,7 +1042,6 @@ function figure_mass_grid(
     provenance = Dict{String, Any}()
     for (index, p) in pairs(panels)
         row, column = fldmod1(index, GRID_COLUMNS)
-        bottom = row == rows
         cell = GridLayout(figure[row, column])
         has_legend = !isempty(p.sets)
         slot = cell[has_legend ? 2 : 1, 1]
@@ -1056,8 +1056,6 @@ function figure_mass_grid(
             ylabel = ylabel,
             xlabel = L"Fragment mass $A$",
             ylabelvisible = column == 1,
-            xlabelvisible = bottom,
-            xticklabelsvisible = bottom,
             xticks = mass_ticks(xlimits),
         )
 
@@ -1441,7 +1439,6 @@ function figure_product_yield(drawable::Vector{Case})
     provenance = Dict{String, Any}()
     for (index, p) in pairs(panels)
         row, column = fldmod1(index, GRID_COLUMNS)
-        bottom = row == rows
         legend_slot, slot = grid_slots(figure, index)
         xlimits = padded_limits([first(p.window), last(p.window)])
         axis = panel(
@@ -1449,8 +1446,6 @@ function figure_product_yield(drawable::Vector{Case})
             ylabel = L"Y(A_p)\ [\%]",
             xlabel = L"Product mass $A_p$",
             ylabelvisible = column == 1,
-            xlabelvisible = bottom,
-            xticklabelsvisible = bottom,
             xticks = mass_ticks(xlimits),
             yticks = 0:2:12,
         )

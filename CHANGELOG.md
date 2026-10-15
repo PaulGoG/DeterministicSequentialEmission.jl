@@ -19,8 +19,8 @@ here.
 
 - `plotting/figures.jl` draws ν(A), ⟨ε⟩(A) and the product mass yield of each system over its
   own mass window, the masses where the run's `Y(A)` holds at least 0.01 % of the fissions,
-  in place of the shared 76–176; the ordinate limits of the ν(A) and ⟨ε⟩(A) grids ignore error
-  bars wider than 0.5 neutrons and 0.3 MeV.
+  in place of the shared 76–176, each panel labelling its own mass axis; the ordinate limits of
+  the ν(A) and ⟨ε⟩(A) grids ignore error bars wider than 0.5 neutrons and 0.3 MeV.
 
 ## [0.2.0] - 2026-10-15
 
