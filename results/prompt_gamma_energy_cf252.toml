@@ -1,6 +1,6 @@
 figure = "prompt_gamma_energy_cf252"
 
 [systems.Cf252_sf]
-gitcommit = "v0.2.0-2-g8bf52e2"
+gitcommit = "v0.2.0-8-g74d1360"
 measured = ["Cf252_sf/E_gamma_tot_vs_TKE/23213018_G.K.Mehta_1973.dat", "Cf252_sf/E_gamma_vs_A/23814006_L.Krupa_2004.dat", "Cf252_sf/E_gamma_tot_vs_A/23213010_G.K.Mehta_1973.dat"]
 run = "AHmax=174_AHmin=126_En=0_TKEb=mean_TKEmax=229.5_TKEmin=130.5_TKEstep=1_Tmax=2_Ysym=true_Ytot=200_avg=per_neutron_ldm=BSFG_nZ=5_part=temperature_ratio_pc=emission_probability_pw=multiplicity_sigma=variable_sw=emission_probability"

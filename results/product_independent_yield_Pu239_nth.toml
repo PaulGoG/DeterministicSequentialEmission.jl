@@ -4,6 +4,6 @@ figure = "product_independent_yield_Pu239_nth"
 elements = [38, 40, 41, 42, 52, 53, 54, 56]
 evaluated = ["Pu239_nth/Y_vs_Z_A_p/ENDF-B-VIII.0.dat", "Pu239_nth/Y_vs_Z_A_p/JEFF-3.3.dat"]
 excluded = ["41179002: superseded by 41198002"]
-gitcommit = "v0.2.0-2-g8bf52e2"
+gitcommit = "v0.2.0-8-g74d1360"
 measured = ["Pu239_nth/Y_vs_Z_A_p/13484003_K.Fritze_1958.dat", "Pu239_nth/Y_vs_Z_A_p/20589004_N.Imanishi_1976.dat", "Pu239_nth/Y_vs_Z_A_p/20848004_I.Fujiwara_1982.dat", "Pu239_nth/Y_vs_Z_A_p/20848007_I.Fujiwara_1982.dat", "Pu239_nth/Y_vs_Z_A_p/21218006_T.Kaiser_1978.dat", "Pu239_nth/Y_vs_Z_A_p/21549003_R.Brissot_1977.dat", "Pu239_nth/Y_vs_Z_A_p/21549007_R.Brissot_1977.dat", "Pu239_nth/Y_vs_Z_A_p/22985008_A.Bail_2009.dat", "Pu239_nth/Y_vs_Z_A_p/22985018_A.Bail_2009.dat", "Pu239_nth/Y_vs_Z_A_p/23558006_H.Guenther_1972.dat", "Pu239_nth/Y_vs_Z_A_p/237630052_S.Dubey_2020.dat", "Pu239_nth/Y_vs_Z_A_p/33030007_H.Naik_1993.dat", "Pu239_nth/Y_vs_Z_A_p/33178004_H.Naik_2022.dat", "Pu239_nth/Y_vs_Z_A_p/33178005_H.Naik_2022.dat", "Pu239_nth/Y_vs_Z_A_p/41198002_N.A.Gundorin_1994.dat"]
 run = "AHmax=159_AHmin=120_En=2.53e-8_TKEb=mean_TKEmax=216_TKEmin=130_TKEstep=1_Tmax=2_Ysym=true_Ytot=200_avg=per_neutron_ldm=BSFG_nZ=5_part=temperature_ratio_pc=emission_probability_pw=multiplicity_sigma=variable_sw=emission_probability"
