@@ -438,7 +438,10 @@ fall. For a yield reconstructed from marginals the grid must then reach the larg
 `Q + E*_CN` of the domain: a configuration whose `kinetic_energy_max + kinetic_energy_step` falls
 short is refused, the error naming the least `kinetic_energy_max` that suffices. A measured
 matrix is not checked, being cut where its own data end; the share of its yield a run reaches is
-`yield_reached` in `totals.dat`. `kinetic_energy_limit = "grid"` reproduces the 0.1.x results: a
+`yield_reached` in `totals.dat`. The share of the input yield whose masses lie in the domain
+`heavy_mass_min`–`heavy_mass_max` (with their complements) is `yield_within_domain`; what lies
+outside is renormalised away, 0.009 % of the ²⁵²Cf yield beyond `A_H = 174` on the shipped input.
+`kinetic_energy_limit = "grid"` reproduces the 0.1.x results: a
 Gaussian normalised over the grid, the configurations at `TXE ≤ 0` dropped, which put the solved
 `⟨TKE⟩` of the thermal systems 0.12–0.22 MeV below the measured one. Every run records the solved
 `⟨TKE⟩` and `σ_TKE` in its metadata, and a bounded run writes `TKE_bound_vs_A.dat`, the measured

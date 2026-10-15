@@ -285,7 +285,7 @@ A run writes to `data/sims/<system>/<run>`, and an output follows the same
 | `E_gamma_tot_vs_A.dat`, `E_gamma_tot_vs_TKE.dat` | the same summed over the two fragments of a split, per fission, against the mass of either fragment and against TKE |
 | `TKE_bound_vs_A.dat` | with `kinetic_energy_limit = "physical"`, the default: per fragment mass the retained `⟨TKE⟩` and `σ_TKE`, the measured ones, the Gaussian cut (`TKE_parent`, `sigma_TKE_parent`) and the share beyond `Q + E*_CN` removed |
 | `charge_distribution_vs_A.dat`, `_wahl_per_reaction`, `_wahl_systematics`, `_mean` | the charge distribution the run was weighted by and the three alternatives — Wahl's 1988 per-reaction model, the 2002 systematics, the conventional means — each reduced to effective Gaussians; the metadata records which layer the first is |
-| `totals.dat` | one row per quantity averaged over the whole run, `E_gamma_per_fragment` and `E_gamma_per_fission` among them, and `mean_product_mass_loss` (`⟨A − A_p⟩` per fragment) and `mean_TKE_p` where the products are written |
+| `totals.dat` | one row per quantity averaged over the whole run, `E_gamma_per_fragment` and `E_gamma_per_fission` among them, `yield_reached` and `yield_within_domain` (the shares of the input yield the TKE grid reaches and the mass domain keeps), and `mean_product_mass_loss` (`⟨A − A_p⟩` per fragment) and `mean_TKE_p` where the products are written |
 | `metadata.toml` | how it was produced: configuration, commit, environment, machine |
 | `configuration.toml` | the configuration the run loaded, copied |
 | `Manifest.toml` | the resolved environment the run executed in, copied |

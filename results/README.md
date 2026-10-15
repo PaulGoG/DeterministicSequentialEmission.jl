@@ -37,7 +37,11 @@ shared between the fragments by a temperature ratio `R_T(A_H)` extracted from me
 by FissionTemperatureRatio.jl, the emission chain is solved configuration by configuration, and the
 result is contracted against the measured fragment yield `Y(A, TKE)`. Each panel states the
 total multiplicity against the evaluated value. The sets drawn are a fixed selection per system,
-for legibility; [data/README.md](../data/README.md) lists the whole retrieval.
+for legibility; [data/README.md](../data/README.md) lists the whole retrieval. This figure and
+the `⟨ε⟩(A)` figure below are drawn over each run's own mass window, the masses where its `Y(A)`
+holds at least 0.01 % of the fissions, and their ordinate limits ignore error bars wider than
+0.5 neutrons (`ν`) or 0.3 MeV (`⟨ε⟩`), so the bars of poorly measured edge points may run off the
+frame.
 
 | System | Dataset | EXFOR | Reference |
 |---|---|---|---|
@@ -158,9 +162,11 @@ products after neutron emission, is drawn under its author and year. A set coded
 `MASS,CHN,FY`, a chain yield, enters one muted series per system, *Chain yields (N sets)*: β
 decay conserves `A`, so the yield of a mass chain is the post-neutron mass yield of that mass up
 to the delayed-neutron transfer between neighbouring chains, below a per cent. Many chain-yield
-sets cover a few masses, each drawn where it was measured; nothing is renormalised. Masses
-outside 76–176 are not drawn, which leaves out the chain yields of Bernas (1991, ²³⁹Pu,
-22257002, `A_p` = 68–73) and Armbruster (1987, ²³⁵U, 23586003, `A_p` = 70–71).
+sets cover a few masses, each drawn where it was measured; nothing is renormalised. Each system
+is drawn over its own mass window, the masses where the run's `Y(A)` holds at least 0.01 % of
+the fissions (`YIELD_WINDOW_FRACTION` in `plotting/figures.jl`; 81–171 for ²⁵²Cf, 76–160 for
+²³⁵U, 81–159 for ²³⁹Pu, 79–155 for ²³³U), which leaves out the chain yields of Bernas (1991,
+²³⁹Pu, 22257002, `A_p` = 68–73) and Armbruster (1987, ²³⁵U, 23586003, `A_p` = 70–71).
 
 The retrieval writes every yield in fragments per fission, 2 over both products, and the
 evaluations and the model are in per cent. Each retrieved table is converted from the unit its

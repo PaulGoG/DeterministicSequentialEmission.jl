@@ -219,9 +219,125 @@
         @test parsed["system"]["label"] == "Cf252_sf"
         @test isequal(parsed["result"]["mean_E_MeV"], metadata["result"]["mean_E_MeV"])
         @test parsed["model"]["heavy_masses"] == [126, 140]
+        @test parsed["result"]["yield_within_domain"] == 1.0
         @test parsed["model"]["product_count"] == "emission_probability"
         @test parsed["result"]["mean_product_mass_loss"] ≈ result.mean_product_mass_loss
         @test parsed["result"]["E_gamma_per_fission_MeV"] ≈ 2 * result.total_gamma_energy
+    end
+end
+
+@testset "a run records the share of the yield its mass domain keeps" begin
+    mktempdir() do root
+        data = joinpath(root, "data")
+        mkpath(joinpath(data, "Cf252_sf"))
+        cp(MASS_EXCESS_FILE, joinpath(data, "MASSES"))
+        write(
+            joinpath(data, "Cf252_sf", "R_T.csv"),
+            "A_H,R_T,R_T_uncertainty\n126,1.0,0.0\n174,0.6,0.0\n",
+        )
+        write(
+            joinpath(data, "Cf252_sf", "r_nu.csv"),
+            "A_H,r_nu,r_nu_uncertainty\n126,0.5,0.0\n174,0.5,0.0\n",
+        )
+        write(
+            joinpath(data, "Cf252_sf", "manifest_probe.toml"),
+            """
+            [system]
+            label = "Cf252_sf"
+            notation = "²⁵²Cf(sf)"
+            target_A = 252
+            target_Z = 98
+            channel = "sf"
+            reaction = "0,f"
+            incident_energy_MeV = 0.0
+            compound_A = 252
+            compound_Z = 98
+
+            [run]
+            ordinate = "R_T"
+            abscissa = ["A_H"]
+
+            [[segmented_curve]]
+            label = "systematic_trend"
+            kind = "systematic_trend"
+            temperature_ratio_file = "R_T.csv"
+            multiplicity_ratio_pivots_file = "r_nu.csv"
+            """,
+        )
+        # Fourteen units of yield, ten of them at the heavy masses 128–132 the domain keeps; the
+        # complements 120–124 are not in the table.
+        write(
+            joinpath(data, "Cf252_sf", "Y_vs_A_TKE.dat"),
+            """
+            A TKE Y
+            126 180.0 1.0
+            127 180.0 1.0
+            128 180.0 2.0
+            129 180.0 2.0
+            130 180.0 2.0
+            131 180.0 2.0
+            132 180.0 2.0
+            133 180.0 1.0
+            134 180.0 1.0
+            """,
+        )
+        write(
+            joinpath(root, "Cf252_sf.toml"),
+            """
+            [system]
+            target_A = 252
+            target_Z = 98
+            channel = "sf"
+            incident_energy = 0.0
+
+            [fragmentation]
+            charges_per_mass = 3
+            heavy_mass_min = 128
+            heavy_mass_max = 132
+            charge_distribution_file = "wahl"
+
+            [energetics]
+            mass_excess_file = "MASSES"
+            kinetic_energy_min = 170.0
+            kinetic_energy_max = 190.0
+            kinetic_energy_step = 10.0
+
+            [level_density]
+            model = "BSFG"
+
+            [evaporation]
+            cross_section = "variable"
+            maximum_temperature = 2.0
+
+            [partition]
+            method = "temperature_ratio"
+            subdirectory = "Cf252_sf"
+            curve_label = "systematic_trend"
+
+            [yield]
+            mass_energy_yield_file = "Cf252_sf/Y_vs_A_TKE.dat"
+            symmetrize = false
+            kinetic_energy_limit = "grid"
+
+            [spectrum]
+            enabled = true
+            energy_min = 0.2
+            energy_max = 20.0
+            points = 24
+
+            [output]
+            significant_digits = 8
+            """,
+        )
+
+        configuration =
+            load_configuration(joinpath(root, "Cf252_sf.toml"); data_directory = data)
+        @test configuration.yield_within_domain ≈ 5 / 7 rtol = 1e-12
+        result = run_pipeline(configuration)
+        @test run_metadata(result)["result"]["yield_within_domain"] ≈ 5 / 7 rtol = 1e-12
+        destination = write_results(result, joinpath(root, "results"))
+        @test "yield_within_domain 0.71428571" in
+              readlines(joinpath(destination, "totals.dat"))
     end
 end
 

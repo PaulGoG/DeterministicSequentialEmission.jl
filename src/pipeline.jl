@@ -153,7 +153,9 @@ no sampling. A configuration is dropped where `TXE` is non-positive, the partiti
 not cover it, or the mass table does not reach a fragment; the counts of attempted and solved
 configurations are reported with the result. The post-neutron product distributions are
 contracted from the same chains, normalised to the total of the input yield, `[yield] total`,
-or to `DEFAULT_YIELD_TOTAL` (200) where none was loaded.
+or to `DEFAULT_YIELD_TOTAL` (200) where none was loaded. `yield_within_domain`, from the
+configuration, is the share of the input yield the mass domain kept; what lies outside it was
+renormalised away.
 """
 function run_pipeline(configuration::Configuration)
     domain = fragmentation_domain(
@@ -762,6 +764,7 @@ function write_results(result::RunResult, directory::AbstractString)
         ("configurations_solved", Float64(result.configurations_solved)),
         ("configurations_attempted", Float64(result.configurations_attempted)),
         ("yield_reached", result.yield_reached),
+        ("yield_within_domain", configuration.yield_within_domain),
         ("segment_coverage", result.segment_coverage),
     ]
     if configuration.products_enabled
@@ -948,6 +951,7 @@ function run_metadata(result::RunResult)
         "configurations_solved" => result.configurations_solved,
         "configurations_attempted" => result.configurations_attempted,
         "yield_reached" => result.yield_reached,
+        "yield_within_domain" => configuration.yield_within_domain,
         "segment_coverage" => result.segment_coverage,
         "solved_mean_TKE_MeV" => result.solved_mean_kinetic_energy,
         "solved_sigma_TKE_MeV" => result.solved_kinetic_energy_dispersion,

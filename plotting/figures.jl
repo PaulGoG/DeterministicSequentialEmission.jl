@@ -82,9 +82,18 @@ const CASES = [
 # The system every spectrum ratio is taken against.
 const REFERENCE = first(CASES)
 
-# Measured masses drawn. Outside this window the yields vanish and the measured uncertainties
-# are unbounded.
-const MASS_WINDOW = (76.0, 176.0)
+# Fraction of a run's total `Y(A)` a mass must hold to be drawn: 0.01 % of the fissions per mass
+# when the total is 200. The measurement papers stop their ν(A) plots there (Göök 2014,
+# doi:10.1103/PhysRevC.90.064611, Fig. 10; Al-Adili 2020, doi:10.1103/PhysRevC.102.064610,
+# Fig. 19). On the shipped runs the windows are 81–171 (²⁵²Cf), 76–160 (²³⁵U), 81–159 (²³⁹Pu)
+# and 79–155 (²³³U).
+const YIELD_WINDOW_FRACTION = 5.0e-5
+
+# Error bars wider than this, in neutrons, do not set the ordinate limits of the ν(A) grid.
+const MULTIPLICITY_BAR_LIMIT = 0.5
+
+# Error bars wider than this, in MeV, do not set the ordinate limits of the ⟨ε⟩(A) grid.
+const NEUTRON_ENERGY_BAR_LIMIT = 0.3
 
 # Energies drawn in the spectra. Below the window the measured ratio is dominated by detector
 # thresholds, above it by counting statistics in the tail.
@@ -259,6 +268,22 @@ function read_totals(directory::AbstractString)
         totals[fields[1]] = parse(Float64, fields[2])
     end
     return totals
+end
+
+"""
+    yield_window(directory) -> Tuple{Float64, Float64}
+
+The fragment masses a run's figures are drawn over: the least and the greatest mass whose
+`Y(A)`, read from the run's `Y_vs_A.dat`, holds at least `YIELD_WINDOW_FRACTION` of the table's
+total. Throws an `ArgumentError` naming the directory when no mass qualifies.
+"""
+function yield_window(directory::AbstractString)
+    A, Y, _ = read_columns(joinpath(directory, "Y_vs_A.dat"))
+    keep = Y .>= YIELD_WINDOW_FRACTION * sum(Y)
+    any(keep) || throw(
+        ArgumentError("no mass of $directory holds $(YIELD_WINDOW_FRACTION) of the yield"),
+    )
+    return (minimum(A[keep]), maximum(A[keep]))
 end
 
 "The commit recorded in a run's `metadata.toml`, under `[run]` or at top level."
@@ -713,13 +738,16 @@ end
 Ordinate limits spanning a model curve and every measured value, and also the error bars, on
 the side `bars` (`:upper` or `:lower`), of the points whose abscissa lies in `cleared`, the
 horizontal extent of an annotation set beyond the data on that side. Elsewhere error bars may
-reach into the margins and the annotation band.
+reach into the margins and the annotation band. Bars wider than `bar_limit` are ignored when the
+limits are set, so that a few poorly measured points at the edges do not stretch the axis; the
+points themselves still count.
 """
 function ordinate_limits(
     model::AbstractVector{<:Real},
     sets::Vector{MeasuredSet};
     cleared::Union{Nothing, Tuple{Real, Real}} = nothing,
     bars::Symbol = :upper,
+    bar_limit::Real = Inf,
 )
     values = collect(Float64, model)
     sign =
@@ -729,7 +757,7 @@ function ordinate_limits(
     for set in sets
         append!(values, set.y)
         cleared === nothing && continue
-        under = first(cleared) .<= set.x .<= last(cleared)
+        under = (first(cleared) .<= set.x .<= last(cleared)) .& (set.σ .<= bar_limit)
         append!(values, set.y[under] .+ sign .* set.σ[under])
     end
     return padded_limits(values)
@@ -961,12 +989,13 @@ struct SystemPanel
     x::Vector{Float64}
     y::Vector{Float64}
     sets::Vector{MeasuredSet}
+    window::Tuple{Float64, Float64}
 end
 
 """
 The panels of one quantity against fragment mass: for every system with a run that wrote
 `table`, the model curve and the measured sets of `observable` inside the run's own mass range
-— measured points are compared only where the run solved the model — within the outer window.
+— measured points are compared only where the run solved the model — within its yield window.
 """
 function mass_panels(
     drawable::Vector{Case},
@@ -982,9 +1011,10 @@ function mass_panels(
             continue
         end
         A, value, _ = read_columns(path)
-        window = (max(first(MASS_WINDOW), minimum(A)), min(last(MASS_WINDOW), maximum(A)))
+        yielded = yield_window(directory)
+        window = (max(first(yielded), minimum(A)), min(last(yielded), maximum(A)))
         sets = load_measured(case.label, observable, window)
-        push!(panels, SystemPanel(case, directory, A, value, sets))
+        push!(panels, SystemPanel(case, directory, A, value, sets, window))
     end
     return panels
 end
@@ -992,27 +1022,18 @@ end
 """
 Draw a quantity against fragment mass for every panel, on the shared grid: the measured sets as
 markers, the model as the black line, the A₀/2 guide labelled above the frame, each panel's
-legend above it, and `annotate(panel)` as lines in the upper left, above the data. All panels
-share one mass range; ordinate ranges are each panel's own.
+legend above it, and `annotate(panel)` as lines in the upper left, above the data. Each panel
+takes its own mass range, the run's yield window (`yield_window`), and its own ordinate range;
+error bars wider than `bar_limit` do not set the ordinate range.
 """
 function figure_mass_grid(
     name::AbstractString,
     panels::Vector{SystemPanel},
     ylabel,
-    annotate::Function,
+    annotate::Function;
+    bar_limit::Real = Inf,
 )
     isempty(panels) && return nothing
-    masses = Float64[]
-    for p in panels
-        append!(masses, p.x)
-        foreach(set -> append!(masses, set.x), p.sets)
-        push!(masses, p.case.compound_mass / 2)
-    end
-    xlimits = padded_limits(masses)
-    annotated = (
-        first(xlimits),
-        first(xlimits) + ANNOTATION_EXTENT * (last(xlimits) - first(xlimits)),
-    )
 
     rows = cld(length(panels), GRID_COLUMNS)
     banks = legend_rows(length(p.sets) + 1 for p in panels)
@@ -1024,6 +1045,12 @@ function figure_mass_grid(
         cell = GridLayout(figure[row, column])
         has_legend = !isempty(p.sets)
         slot = cell[has_legend ? 2 : 1, 1]
+        symmetric = p.case.compound_mass / 2
+        xlimits = padded_limits([first(p.window), last(p.window), symmetric])
+        annotated = (
+            first(xlimits),
+            first(xlimits) + ANNOTATION_EXTENT * (last(xlimits) - first(xlimits)),
+        )
         axis = panel(
             slot;
             ylabel = ylabel,
@@ -1031,10 +1058,9 @@ function figure_mass_grid(
             ylabelvisible = column == 1,
             xlabelvisible = bottom,
             xticklabelsvisible = bottom,
-            xticks = 80:20:180,
+            xticks = mass_ticks(xlimits),
         )
 
-        symmetric = p.case.compound_mass / 2
         vlines!(axis, [symmetric]; color = GUIDE_COLOUR, linestyle = :dash, linewidth = 1.5)
         begin_panel!()
         handles = Any[]
@@ -1047,7 +1073,7 @@ function figure_mass_grid(
         push!(labels, "This model")
 
         lines = annotate(p)
-        low, high = ordinate_limits(p.y, p.sets; cleared = annotated)
+        low, high = ordinate_limits(p.y, p.sets; cleared = annotated, bar_limit = bar_limit)
         ylimits = (low, high + length(lines) * ANNOTATION_BAND * (high - low))
         xlims!(axis, xlimits...)
         ylims!(axis, ylimits...)
@@ -1097,7 +1123,13 @@ function figure_multiplicity(drawable::Vector{Case})
             MathText(@sprintf("Evaluated %.2f", evaluated)),
         ]
     end
-    figure_mass_grid("multiplicity_vs_experiment", panels, L"\nu(A)", annotate)
+    figure_mass_grid(
+        "multiplicity_vs_experiment",
+        panels,
+        L"\nu(A)",
+        annotate;
+        bar_limit = MULTIPLICITY_BAR_LIMIT,
+    )
     return nothing
 end
 
@@ -1112,7 +1144,8 @@ function figure_mean_neutron_energy(drawable::Vector{Case})
         "mean_neutron_energy_vs_experiment",
         panels,
         L"\langle \varepsilon \rangle(A)\ [\mathrm{MeV}]",
-        p -> MathText[p.case.notation],
+        p -> MathText[p.case.notation];
+        bar_limit = NEUTRON_ENERGY_BAR_LIMIT,
     )
     return nothing
 end
@@ -1344,7 +1377,8 @@ uncertainty as a band, and the retrieved post-neutron mass yields as markers —
 named, the chain yields `CHN` pooled into one muted series, which β decay, conserving `A`,
 makes post-neutron mass yields up to the delayed-neutron transfer between chains. A set that a
 qualifier in `MARKED_QUALIFIERS` marks is drawn with open markers. The annotation band above the
-data carries the system; all panels share one mass range.
+data carries the system; each panel takes its own mass range, the run's yield window
+(`yield_window`).
 """
 function figure_product_yield(drawable::Vector{Case})
     panels = []
@@ -1352,6 +1386,7 @@ function figure_product_yield(drawable::Vector{Case})
         directory = run_directory(case)
         path = joinpath(directory, "Y_vs_A_p.dat")
         isfile(path) || continue
+        window = yield_window(directory)
         A_p, Y_p, _ = read_columns(path)
         A, Y, _ = read_columns(joinpath(directory, "Y_vs_A.dat"))
         evaluated = []
@@ -1359,7 +1394,7 @@ function figure_product_yield(drawable::Vector{Case})
             file = joinpath(MEASURED, case.label, "Y_vs_A_p", library.file)
             isfile(file) || continue
             x, y, σ = read_columns(file)
-            keep = first(MASS_WINDOW) .<= x .<= last(MASS_WINDOW)
+            keep = first(window) .<= x .<= last(window)
             push!(evaluated, (library, file, x[keep], y[keep], σ[keep]))
         end
         products, excluded = load_products(case.label, "Y_vs_A_p")
@@ -1370,8 +1405,8 @@ function figure_product_yield(drawable::Vector{Case})
                 ),
             )
         end
-        named = named_series(filter(set -> set.kind == "SEC", products), MASS_WINDOW)
-        pool = pooled_series("", filter(set -> set.kind == "CHN", products), MASS_WINDOW)
+        named = named_series(filter(set -> set.kind == "SEC", products), window)
+        pool = pooled_series("", filter(set -> set.kind == "CHN", products), window)
         n = length(pool.paths)
         chain = ProductSeries(
             "Chain yields ($n set$(n == 1 ? "" : "s"))",
@@ -1383,19 +1418,10 @@ function figure_product_yield(drawable::Vector{Case})
         )
         push!(
             panels,
-            (; case, directory, A_p, Y_p, A, Y, evaluated, named, chain, excluded),
+            (; case, directory, A_p, Y_p, A, Y, evaluated, named, chain, excluded, window),
         )
     end
     isempty(panels) && return nothing
-
-    masses = Float64[]
-    for p in panels
-        append!(masses, p.A_p)
-        append!(masses, p.A)
-        foreach(e -> append!(masses, e[3]), p.evaluated)
-        foreach(s -> append!(masses, s.x), [p.named; p.chain])
-    end
-    xlimits = padded_limits(masses)
 
     # Entries per legend: the guide, the evaluations, the named sets, the chain yields where
     # any are drawn, the key to the open markers where any set is marked, and the model.
@@ -1410,13 +1436,14 @@ function figure_product_yield(drawable::Vector{Case})
     # Each legend row beyond the two of the house grid lengthens the row by its own height, so
     # that the axes keep the height of the other grid figures.
     height = GRID_ROW_HEIGHT + LEGEND_ROW_HEIGHT * max(banks - 2, 0)
-    # The tick label at A_p = 180 reaches past the right spine; the right padding holds it.
+    # The last tick label may reach past the right spine; the right padding holds it.
     figure = Figure(size = (GRID_WIDTH, height * rows), figure_padding = (10, 24, 10, 10))
     provenance = Dict{String, Any}()
     for (index, p) in pairs(panels)
         row, column = fldmod1(index, GRID_COLUMNS)
         bottom = row == rows
         legend_slot, slot = grid_slots(figure, index)
+        xlimits = padded_limits([first(p.window), last(p.window)])
         axis = panel(
             slot;
             ylabel = L"Y(A_p)\ [\%]",
@@ -1424,7 +1451,7 @@ function figure_product_yield(drawable::Vector{Case})
             ylabelvisible = column == 1,
             xlabelvisible = bottom,
             xticklabelsvisible = bottom,
-            xticks = 80:20:180,
+            xticks = mass_ticks(xlimits),
             yticks = 0:2:12,
         )
         begin_panel!()
@@ -1646,11 +1673,12 @@ function banded_limits(values, lines::Integer, corner::Symbol)
 end
 
 """
-Integer mass ticks inside `limits`, every 4, or every 2 over a short range, so that the
-three-digit labels of a narrow panel stay apart.
+Integer mass ticks inside `limits`: every 10 over a full yield window, every 4 over a range of
+some tens of masses, every 2 over a short one, so that the three-digit labels stay apart.
 """
 function mass_ticks(limits::Tuple{Real, Real})
-    step = last(limits) - first(limits) > 8 ? 4 : 2
+    span = last(limits) - first(limits)
+    step = span > 40 ? 10 : span > 8 ? 4 : 2
     return (ceil(Int, first(limits) / step) * step):step:floor(Int, last(limits))
 end
 

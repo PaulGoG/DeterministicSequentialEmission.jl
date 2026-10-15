@@ -6,7 +6,9 @@ evaporation models, the TXE partition, and the yield weights. Built by
 [`load_configuration`](@ref) from a TOML file; every field is validated on load, and a section or
 key outside [`CONFIGURATION_KEYS`](@ref) is refused. The output location is not a field: a run
 writes to the directory named by [`system_label`](@ref), under the identifier built by
-[`run_identifier`](@ref).
+[`run_identifier`](@ref). `yield_within_domain` is the share of the loaded yield whose fragment
+masses lie in the mass domain (`heavy_masses` and their complements), before the renormalisation
+to `[yield] total`; `1.0` where no yield was loaded.
 """
 struct Configuration
     system::FissioningSystem
@@ -36,6 +38,7 @@ struct Configuration
     yield_kinetic_energy_limit::String
     yield_kinetic_energy_moments::String
     yield_kinetic_energy_bounds::Vector{KineticEnergyBound}
+    yield_within_domain::Float64
 end
 
 function Base.show(io::IO, configuration::Configuration)
@@ -245,7 +248,8 @@ function load_configuration(
     yield_inputs,
     yield_kinetic_energy_limit,
     yield_kinetic_energy_moments,
-    yield_kinetic_energy_bounds = _load_yield(
+    yield_kinetic_energy_bounds,
+    yield_within_domain = _load_yield(
         document,
         system,
         charge_distribution,
@@ -291,6 +295,7 @@ function load_configuration(
         yield_kinetic_energy_limit,
         yield_kinetic_energy_moments,
         yield_kinetic_energy_bounds,
+        yield_within_domain,
     )
 end
 
@@ -615,8 +620,16 @@ function _load_yield(
     mass_excess_table::MassExcessTable,
     data_directory::AbstractString,
 )
-    absent =
-        (nothing, false, "none", Dict{String, Any}(), "grid", "none", KineticEnergyBound[])
+    absent = (
+        nothing,
+        false,
+        "none",
+        Dict{String, Any}(),
+        "grid",
+        "none",
+        KineticEnergyBound[],
+        1.0,
+    )
     haskey(document, "yield") || return absent
     section = _section(document, "yield")
     # The two fragments of a split are one event, so pre-neutron data obey
@@ -822,6 +835,7 @@ function _load_yield(
         end
         reconstructed
     end
+    within = _yield_within_domain(measured, heavy_masses, system.compound.A)
 
     fragment_yield, bounds = if limit == "grid"
         build_fragment_yield(domain, charge_distribution, measured; total = total),
@@ -839,7 +853,26 @@ function _load_yield(
             total = total,
         )
     end
-    return fragment_yield, symmetrize, width, inputs, limit, moments, bounds
+    return fragment_yield, symmetrize, width, inputs, limit, moments, bounds, within
+end
+
+# The share of the measured yield whose fragment masses the domain keeps: a cell at mass `A`
+# counts when `A` or its complement `A₀ − A` is a heavy mass of the domain. The symmetric split
+# `A = A₀/2` is its own complement and counts once. Taken before the renormalisation to
+# `[yield] total`, so a run records what its mass domain cut.
+function _yield_within_domain(
+    measured::MassEnergyYield,
+    heavy_masses::UnitRange{Int},
+    compound_mass::Integer,
+)
+    inside = 0.0
+    whole = 0.0
+    for ((A, _), Y) in measured.values
+        whole += Y
+        (A in heavy_masses || compound_mass - A in heavy_masses) && (inside += Y)
+    end
+    whole > 0 || throw(ArgumentError("the measured yield sums to $whole"))
+    return inside / whole
 end
 
 # Whether a width file and a mean-TKE file come from one experiment, judged by the EXFOR entry
