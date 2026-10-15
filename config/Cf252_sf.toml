@@ -15,7 +15,7 @@ charge_distribution_file = "wahl"                          # one of: "wahl" | "m
 [energetics]
 mass_excess_file = "ame2020"                               # "ame2020", the table FissionFragmentsDomain ships, or a path under the data directory
 kinetic_energy_min = 130.5                              # MeV, above 0
-kinetic_energy_max = 229.5                              # MeV, above kinetic_energy_min
+kinetic_energy_max = 229.5                              # MeV, above kinetic_energy_min; with "physical" and a reconstructed yield, max + step must reach the largest Q + E*_CN; a measured matrix is cut where it ends
 kinetic_energy_step = 1.0                               # MeV, above 0 to 50
 
 [level_density]
