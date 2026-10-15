@@ -5,10 +5,13 @@ abstract: >-
   The deterministic sequential emission treatment of prompt neutron emission from fission
   fragments: the energy conservation equation of every emission sequence is solved separately,
   with Weisskopf-Ewing evaporation spectra in the centre-of-mass system and fragment level
-  densities in the Fermi-gas regime. Because the number of sequences is an integer at every
-  fragment configuration, the post-neutron fragment mass is an integer without rounding.
-  Multiplicities, residual quantities and the laboratory prompt neutron spectrum are contracted
-  against measured fragment yields.
+  densities in the Fermi-gas regime. Because the number of sequences n is an integer at every
+  fragment configuration, every product mass A − 1 … A − n is an integer, so the post-neutron
+  products are distributed without rounding: by default a chain ends on each of its n residuals
+  with probability 1/n, so that the products lose the multiplicity, and the published count,
+  A_p = A − n, is an option. Multiplicities, residual quantities, the laboratory prompt neutron
+  spectrum, the post-neutron product yields and kinetic energies, and the excitation energy left
+  for prompt γ rays are contracted against measured fragment yields.
 type: software
 authors:
   - family-names: Gogîță
