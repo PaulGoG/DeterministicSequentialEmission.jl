@@ -46,7 +46,7 @@ which no configuration reads.
 | `<system>/Y_vs_A/*.dat` | pre-neutron mass yield `Y(A)`, a marginal | `A Y [Y_uncertainty]` |
 | `<system>/TKE_vs_A/*.dat` | mean total kinetic energy `⟨TKE⟩(A)`, the other marginal | `A TKE [TKE_uncertainty]` |
 | `<system>/sigma_TKE_vs_A/*.dat` | dispersion of `P(TKE|A)`, pre-neutron | `A sigma_TKE [sigma_TKE_uncertainty]`, MeV |
-| `<system>/Y_vs_A_TKE.dat`, `U235_nth/Y_vs_A_H_TKE.dat`, `Pu239_nth/Y_vs_A_TKE_chiba.dat` | joint yields from the thesis inputs; read by no shipped configuration | `A TKE Y Y_uncertainty`; `A_H TKE Y Y_uncertainty` and `A TKE Y` for the second and third |
+| `<system>/Y_vs_A_TKE.dat`, `U235_nth/Y_vs_A_H_TKE.dat` | joint yields from the thesis inputs; read by no shipped configuration | `A TKE Y Y_uncertainty`; `A_H TKE Y Y_uncertainty` for the second |
 | `U235_nth/E_def_vs_A_Z.dat` | `ΔE_def` for the scission-modelling partition | `A Z E_def`, MeV |
 | `<system>/nu_vs_A/*.dat` | measured `ν(A)` per fragment | `A nu nu_uncertainty` |
 | `<system>/nu_vs_A_TKE/*.dat` | measured `ν` against fragment mass and total kinetic energy | `A TKE nu nu_uncertainty` |
@@ -69,7 +69,7 @@ A file name is `<quantity>_vs_<abscissa>`, which is a statement rather than a li
 Where a quantity was measured more than once, the directory carries the quantity and the file
 carries the provenance, `<accession>_<Author>_<year>.dat`. Where one table of a quantity is
 authoritative and another is an alternative, the first takes the plain name and the second carries
-a qualifier — `Y_vs_A_TKE.dat` and `Y_vs_A_TKE_chiba.dat`.
+a qualifier.
 
 All files are whitespace-separated with a single header line, except the `.csv` tables, which are
 comma-separated. **Readers take columns by position, not by header text**, and the uncertainty
@@ -417,8 +417,7 @@ scission-modelling partition needs.
 
 **The fragment mass yields.** `U235_nth/Y_vs_A_H_TKE.dat` is the ²³⁵U(n_th,f) measurement of
 C. Straede *et al.*, *Nucl. Phys. A* **462**, 85 (1987), doi:10.1016/0375-9474(87)90381-2, as its
-header records, and `Pu239_nth/Y_vs_A_TKE_chiba.dat` a ²³⁹Pu(n_th,f) set its header labels Chiba,
-25 July 2023. `Cf252_sf/Y_vs_A_TKE.dat`, `U235_nth/Y_vs_A_TKE.dat` and `Pu239_nth/Y_vs_A_TKE.dat`
+header records. `Cf252_sf/Y_vs_A_TKE.dat`, `U235_nth/Y_vs_A_TKE.dat` and `Pu239_nth/Y_vs_A_TKE.dat`
 are the joint distributions on the whole `A` domain with an uncertainty column;
 `Cf252_sf/Y_vs_A_TKE.dat` is the ²⁵²Cf(sf) distribution behind every result of chapter 4 of the
 thesis. No shipped configuration reads any of them, every system taking its yield from EXFOR as
@@ -436,7 +435,6 @@ under the names the thesis code reads:
 | `U235_nth/Y_vs_A_TKE.dat` | `U-235/U5YATKE.ANA` |
 | `U235_nth/Y_vs_A_H_TKE.dat` | `U-235/U5YATKE.SRE` |
 | `Pu239_nth/Y_vs_A_TKE.dat` | `Pu-239/P9YATKE.ANA` |
-| `Pu239_nth/Y_vs_A_TKE_chiba.dat` | `Pu-239/P9YATKE1.CHI` |
 | `U235_nth/E_def_vs_A_Z.dat` | `U-235/EXTRADEF.U5` |
 | `Cf252_sf/`, `U235_nth/`, `Pu239_nth/charge_distribution_vs_A.dat` | `Cf-252/DeltaZ_rms_A.CF52`, `U-235/DeltaZ_rms_A.U5`, `Pu-239/DeltaZ_rms_A.PU39` |
 | `reference/ground_state_deformation_moller.dat` | `Aux files/B2MOLLER.ANA` |
