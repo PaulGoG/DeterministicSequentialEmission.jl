@@ -41,7 +41,11 @@ for legibility; [data/README.md](../data/README.md) lists the whole retrieval. T
 the `⟨ε⟩(A)` figure below are drawn over each run's own mass window, the masses where its `Y(A)`
 holds at least 0.01 % of the fissions, and their ordinate limits ignore error bars wider than
 0.5 neutrons (`ν`) or 0.3 MeV (`⟨ε⟩`), so the bars of poorly measured edge points may run off the
-frame.
+frame. The ²⁵²Cf comparison holds up to A_H ≈ 169. Beyond it the measured pair sums
+`ν(A) + ν(A₀ − A)` of every set drawn exceed what the split's `Q − TKE` can supply, by 2 to 15 MeV
+at A_H = 170–174 with each set's own `⟨TKE⟩(A)`, and Göök *et al.* (2014) confine their own
+agreement to 80–170 u and attribute the far-asymmetric yields to the acceptance of their detector;
+the window keeps those masses so that the model's fall there stays visible.
 
 | System | Dataset | EXFOR | Reference |
 |---|---|---|---|
