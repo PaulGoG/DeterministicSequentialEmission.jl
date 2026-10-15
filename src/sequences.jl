@@ -45,10 +45,11 @@ The full sequential emission from one initial fragment at one `(A, Z, TKE)`, cha
 two distinct counts.
 
 # Fields
-- `possible`: `n`, the number of prompt neutrons emitted. The chain continues while the
-  residual can afford a separation energy once the kinetic energy carried away by the neutrons
-  already emitted is returned. `n` is an integer, so the post-neutron fragment mass
-  `A_p = A − n` is an integer without rounding.
+- `possible`: `n`, the number of energetically possible emissions. The chain continues
+  while the residual can afford a separation energy once the kinetic energy carried away by
+  the neutrons already emitted is returned. `n` is an integer, so every product mass
+  `A − 1 … A − n` is an integer without rounding. The multiplicity is `ν = (n+1)/2`, not
+  `n`; see [`neutron_multiplicity`](@ref).
 - `solved`: `k_max ≤ n`, the number of sequences whose equation admits an acceptable
   temperature. `T`, `Ē_r` and `⟨ε⟩` are averaged over these `k_max` sequences only.
 """
