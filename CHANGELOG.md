@@ -9,6 +9,8 @@ here.
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-10-15
+
 ### Added
 
 - `yield_within_domain` in `totals.dat` and in the run metadata: the share of the input yield
@@ -287,7 +289,8 @@ No configuration key and no output table is renamed or removed, and a configurat
 - Post-emission distributions are not yet ported.
 - Only the low-energy Wahl branch is implemented, so multiple-chance fission is not covered.
 
-[Unreleased]: https://github.com/PaulGoG/DeterministicSequentialEmission.jl/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/PaulGoG/DeterministicSequentialEmission.jl/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/PaulGoG/DeterministicSequentialEmission.jl/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/PaulGoG/DeterministicSequentialEmission.jl/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/PaulGoG/DeterministicSequentialEmission.jl/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/PaulGoG/DeterministicSequentialEmission.jl/releases/tag/v0.1.0
