@@ -33,7 +33,7 @@ subdirectory = "Cf252_sf/temperature_ratio"                                  # r
 curve_label = "systematic_trend"                            # required by "temperature_ratio": which [[segmented_curve]] of its manifest to take
 
 [yield]
-mass_energy_yield_file = "Cf252_sf/Y_vs_A_TKE/relative/23268002_A.Goeoek_2014.dat"  # A TKE Y [uncertainty]; Göök (2014), counts on 1-MeV bin centres
+mass_energy_yield_file = "Cf252_sf/Y_vs_A_TKE/relative/23268002_A.Goeoek_2014.dat"  # A TKE Y [uncertainty]
 total = 200.0                                                                       # percent the yield sums to, above 0
 symmetrize = true                                                                   # impose Y, ⟨TKE⟩, σ_TKE equal at A and A₀ − A (pre-neutron identity)
 kinetic_energy_limit = "physical"                                                   # one of: "physical" | "grid"; P(TKE|A,Z) cut at TKE < Q + E*_CN, or on the grid with TXE ≤ 0 dropped

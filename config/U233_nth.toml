@@ -33,9 +33,9 @@ subdirectory = "U233_nth/temperature_ratio"                                  # r
 curve_label = "systematic_trend"                            # required by "temperature_ratio": which [[segmented_curve]] of its manifest to take
 
 [yield]
-mass_yield_file = "U233_nth/Y_vs_A/21981005_P.Geltenbort_1985.dat"                   # A Y [uncertainty], pre-neutron, EXFOR via ExforFissionData.jl v0.6.0
-mean_kinetic_energy_file = "U233_nth/TKE_vs_A/21981008_P.Geltenbort_1985.dat"        # A TKE [uncertainty], MeV, the same experiment as the yield
-kinetic_energy_dispersion_file = "U233_nth/sigma_TKE_vs_A/23014002_H.Baba_1997.dat"  # A sigma_TKE, MeV; borrowed from Baba (1997); Geltenbort reports none
+mass_yield_file = "U233_nth/Y_vs_A/21981005_P.Geltenbort_1985.dat"                   # A Y [uncertainty], pre-neutron
+mean_kinetic_energy_file = "U233_nth/TKE_vs_A/21981008_P.Geltenbort_1985.dat"        # A TKE [uncertainty], MeV
+kinetic_energy_dispersion_file = "U233_nth/sigma_TKE_vs_A/23014002_H.Baba_1997.dat"  # A sigma_TKE, MeV
 total = 200.0                                                                        # percent the yield sums to, above 0
 symmetrize = true                                                                    # impose Y, ⟨TKE⟩, σ_TKE equal at A and A₀ − A (pre-neutron identity)
 kinetic_energy_limit = "physical"                                                    # one of: "physical" | "grid"; P(TKE|A,Z) cut at TKE < Q + E*_CN, or on the grid with TXE ≤ 0 dropped

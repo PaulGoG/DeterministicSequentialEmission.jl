@@ -199,14 +199,17 @@ data/
 │   ├── shell_corrections_gilbert_cameron.dat
 │   ├── s_wave_resonances_ripl3.dat
 │   └── ground_state_deformation_moller.dat
-└── <system>/                       Cf252_sf, U235_nth, U235_nres, U233_nth, Pu239_nth
-    ├── charge_distribution_vs_A.dat
-    ├── E_def_vs_A_Z.dat
-    ├── temperature_ratio/          one staged FissionTemperatureRatio.jl run
-    ├── Y_vs_A_TKE.dat
-    └── <observable>/               a retrieved quantity: nu_vs_A, Y_vs_A, TKE_vs_A, spectrum_vs_E, …
-        ├── retrieval.toml          what the retrieval kept and excluded, with the reason
-        └── <accession>_<Author>_<year>.dat
+├── <system>/                       Cf252_sf, U235_nth, U235_nres, U233_nth, Pu239_nth
+│   ├── charge_distribution_vs_A.dat
+│   ├── temperature_ratio/          one staged FissionTemperatureRatio.jl run
+│   ├── Y_vs_A_TKE.dat
+│   └── <observable>/               a retrieved quantity: nu_vs_A, Y_vs_A, TKE_vs_A, spectrum_vs_E, …
+│       ├── retrieval.toml          what the retrieval kept and excluded, with the reason
+│       └── <accession>_<Author>_<year>.dat
+├── U235_nth/
+│   └── E_def_vs_A_Z.dat            ΔE_def for the scission-modelling partition, this system only
+└── Pu240_sf/                       not a shipped system: the width ²³⁹Pu(n_th,f) borrows
+    └── sigma_TKE_vs_A/
 ```
 
 One directory per system, one file per quantity, and a subdirectory where a quantity was measured

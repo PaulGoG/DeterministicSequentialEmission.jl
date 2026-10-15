@@ -13,7 +13,8 @@ here.
 
 - `yield_within_domain` in `totals.dat` and in the run metadata: the share of the input yield
   whose fragment masses lie in the mass domain, recorded because what lies outside it is
-  renormalised away without a trace (0.009 % for the shipped ²⁵²Cf input).
+  renormalised away without a trace: of the shipped inputs, 0.60 % of the ²³⁹Pu yield, beyond
+  `A_H = 159`, 0.034 % of ²³⁵U, 0.009 % of ²⁵²Cf and none of ²³³U.
 
 ### Changed
 
@@ -27,8 +28,9 @@ here.
   the row-by-row limits of 0.6.0, which admits eight post-neutron yield sets the earlier versions
   refused on the kind of their first row: the independent yields of Dubey 2020 (²³⁵U, ²³⁹Pu) and
   the chain yields of Erdal 1969 (²³⁵U) enter the product figures, the other five hold no point on
-  the elements drawn. The FTR manifests record `zero_polarization_at_symmetry`. The skip reasons of the prompt-γ energy figure name the
-  two Billnert 2013 measurements the entry of Oberstedt 2015 reprints.
+  the elements drawn. The FissionTemperatureRatio.jl manifests record
+  `zero_polarization_at_symmetry`. The skip reasons of the prompt-γ energy figure name the two
+  Billnert 2013 measurements the entry of Oberstedt 2015 reprints.
 
 ## [0.2.0] - 2026-10-15
 
@@ -75,7 +77,8 @@ No configuration key and no output table is renamed or removed, and a configurat
   against fragment mass, `E_gamma_vs_A.dat`, and summed over the two fragments of a split against
   the mass of either and against TKE, `E_gamma_tot_vs_A.dat` and `E_gamma_tot_vs_TKE.dat`, the
   names ExforFissionData.jl gives the measured quantities; `E_gamma_per_fragment` and
-  `E_gamma_per_fission` go to `totals.dat` and the run metadata.
+  `E_gamma_per_fission` go to `totals.dat`, and the second to the run metadata as
+  `E_gamma_per_fission_MeV`.
 - `[yield] kinetic_energy_limit` and `kinetic_energy_moments`: `"physical"` bounds each
   `P(TKE|A,Z)` at `TKE < Q + E*_CN` and restores the measured moments over the retained cells,
   `"mean"` the mean, `"mean_and_width"` `σ_TKE(A)` too and `"none"` neither, through
@@ -283,3 +286,8 @@ No configuration key and no output table is renamed or removed, and a configurat
   under `sequence_weighting = "uniform"`, and `⟨ε⟩` falls too steeply with TKE at fixed mass.
 - Post-emission distributions are not yet ported.
 - Only the low-energy Wahl branch is implemented, so multiple-chance fission is not covered.
+
+[Unreleased]: https://github.com/PaulGoG/DeterministicSequentialEmission.jl/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/PaulGoG/DeterministicSequentialEmission.jl/compare/v0.1.1...v0.2.0
+[0.1.1]: https://github.com/PaulGoG/DeterministicSequentialEmission.jl/compare/v0.1.0...v0.1.1
+[0.1.0]: https://github.com/PaulGoG/DeterministicSequentialEmission.jl/releases/tag/v0.1.0

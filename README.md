@@ -38,7 +38,7 @@ DeterministicSequentialEmission.jl/
 ├── data/                 input data — see data/README.md; none of it ships
 │   └── sims/             written by a run, data/sims/<system>/<run> — not tracked
 ├── results/              the model against measurement and evaluation: figures, sidecars, README
-├── formatter/            pinned JuliaFormatter, so the gate cannot drift
+├── formatter/            version-bounded JuliaFormatter, so the gate cannot drift
 ├── check.jl              the gate: format, then test
 ├── activate.jl           activates and instantiates the root environment
 └── Project.toml
@@ -89,10 +89,11 @@ DeterministicSequentialEmission.jl/
 │   ├── prompt_gamma_energy_per_fission, prompt_gamma_energy_cf252
 │   │                         each as .pdf, .png and a .toml sidecar, tracked
 │   └── residual_quantities, charge_distribution    diagnostics, not tracked
-├── formatter/                activate.jl, Project.toml — pinned JuliaFormatter
+├── formatter/                activate.jl, Project.toml — version-bounded JuliaFormatter
 ├── .github/                  CI workflow and Dependabot configuration
 ├── .JuliaFormatter.toml
 ├── .gitattributes
+├── .gitignore
 ├── activate.jl
 ├── check.jl
 ├── CHANGELOG.md
@@ -117,8 +118,8 @@ julia docs/activate.jl                 # documentation environment
 julia plotting/activate.jl             # plotting environment
 ```
 
-Run the gate, formatting against `.JuliaFormatter.toml` with the pinned formatter and then the
-test suite with its static analysis:
+Run the gate, formatting against `.JuliaFormatter.toml` with the version-bounded JuliaFormatter
+and then the test suite with its static analysis:
 
 ```
 julia check.jl --check    # fail on formatting differences without rewriting, then test
@@ -293,9 +294,9 @@ multiplicities — so nothing is scaled to anything. Each fragmentation enters t
 yield times its multiplicity, so every emitted neutron counts once, as it does in a measurement.
 Within a fragment the `k`-th neutron of a chain of `n` counts with `(n+1−k)/n`, its probability
 of emission under `ν = (n+1)/2`. The mean laboratory energy of ²⁵²Cf(sf) is 2.16 MeV against 2.13
-measured, and those of the three thermal systems lie 1.3 to 2.6 % below the measured values. The
-²⁵²Cf spectrum follows the measured shape between 0.3 and 5 MeV, lies below the data under
-0.3 MeV and above them beyond 6 MeV. In the ratios to ²⁵²Cf the offset at low energy is the
+measured, and those of the three thermal systems are 1.95, 2.04 and 2.00 MeV for ²³⁵U, ²³⁹Pu and
+²³³U. The ²⁵²Cf spectrum follows the measured shape between 0.3 and 5 MeV, lies below the data
+under 0.3 MeV and above them beyond 6 MeV. In the ratios to ²⁵²Cf the offset at low energy is the
 multiplicity error of the pair — `ν̄/ν̄_Cf` is 0.707 for ²³⁵U against 0.642 evaluated — and the
 fall with energy, the thermal spectrum being the softer, is reproduced for the two uranium
 isotopes and is too steep beyond 5 MeV for ²³⁹Pu. The uniform average over the sequences of
@@ -340,8 +341,9 @@ configurations; a run does not write them.
   `totals.dat`, against 6.8 (Nifenecker *et al.*, doi:10.1016/0375-9474(72)90296-5). The prompt-γ
   measurements retrieved with ExforFissionData.jl v0.6.0 show the same from the other side: the
   energy the neutrons leave falls with TKE at −0.17 MeV per MeV against −0.063 measured for
-  ²⁵²Cf (Mehta *et al.*, doi:10.1103/PhysRevC.7.373), and lies 3.3 to 3.7 MeV above the measured
-  totals per fission ([results/README.md](results/README.md)).
+  ²⁵²Cf (Mehta *et al.*, doi:10.1103/PhysRevC.7.373), and lies 1.3 MeV above the total per
+  fission of Bowman (1958) and 3.3 to 3.7 MeV above the other five measured totals
+  ([results/README.md](results/README.md)).
 - The spectra of the thermal systems relative to that of ²⁵²Cf are reproduced less well than
   under the uniform average, χ²/N of 2.5 to 5.1 against 1.9 to 4.1: the softness of the
   uniform average is nearly common to the four systems and cancels in a ratio, and the residual
@@ -366,7 +368,7 @@ what the comment says — a configuration that cannot be honoured fails on load,
 | ²⁵²Cf(sf) | `Cf252_sf.toml` | the system of my thesis calculation |
 | ²³⁵U(nth,f) | `U235_nth.toml` | |
 | ²³⁹Pu(nth,f) | `Pu239_nth.toml` | |
-| ²³³U(nth,f) | `U233_nth.toml` | no joint `Y(A,TKE)` exists, so it is reconstructed from two marginals and a borrowed width |
+| ²³³U(nth,f) | `U233_nth.toml` | |
 | ²³⁵U(nres,f) at 580 eV | `U235_nres.toml` | the resonance-region beam the GELINA measurements use |
 
 A system is named `<ElementSymbol><A>_<entrance channel>` — the channel as the field spells it, not
@@ -375,8 +377,9 @@ the output tree under `data/sims/`. It is also what separates the thermal run of
 resonance one, which the reaction code `n,f` alone cannot.
 
 Every fragment yield comes from EXFOR through ExforFissionData.jl v0.6.0. ²⁵²Cf takes the measured
-`Y(A,TKE)` matrix of Göök et al. (2014). For the thermal systems the archive holds no matrix, so
-the yield is reconstructed from one experiment's `Y(A)` and `⟨TKE⟩(A)`:
+`Y(A,TKE)` matrix of Göök et al. (2014). For the three thermal systems no joint `Y(A,TKE)`
+exists in the archive, so the yield is reconstructed from one experiment's `Y(A)` and
+`⟨TKE⟩(A)`:
 - Al-Adili et al. (2016) for ²³⁵U;
 - Wagemans et al. (1984) for ²³⁹Pu;
 - Geltenbort (1985) for ²³³U.
@@ -391,10 +394,11 @@ experiment's matrix against its own marginals. The spread in TKE smooths the dis
 thresholds, which matters most at the low excitation of thermal fission.
 
 The resonance case exists to establish a null result. At 580 eV the compound excitation is
-5.8 × 10⁻⁴ MeV above thermal out of 6.5 MeV, and `ν(A)` moves by at most 5 × 10⁻⁴ neutrons, the
-total by 10⁻⁷. Below the second-chance fission threshold the model is flat in incident energy, so
-a measurement made on a resonance beam is directly comparable with a thermal one. Above that
-threshold multiple-chance fission opens, which this model does not treat.
+5.8 × 10⁻⁴ MeV above thermal out of 6.5 MeV. `ν(A)` moves by at most 9 × 10⁻³ neutrons, at
+`A = 111`, where one configuration more clears the physical bound of the TKE distribution, and
+the total by 6 × 10⁻⁶. Below the second-chance fission threshold the model is flat in incident
+energy, so a measurement made on a resonance beam is directly comparable with a thermal one. Above
+that threshold multiple-chance fission opens, which this model does not treat.
 
 ## Input data
 
@@ -440,7 +444,8 @@ short is refused, the error naming the least `kinetic_energy_max` that suffices.
 matrix is not checked, being cut where its own data end; the share of its yield a run reaches is
 `yield_reached` in `totals.dat`. The share of the input yield whose masses lie in the domain
 `heavy_mass_min`–`heavy_mass_max` (with their complements) is `yield_within_domain`; what lies
-outside is renormalised away, 0.009 % of the ²⁵²Cf yield beyond `A_H = 174` on the shipped input.
+outside is renormalised away. Of the shipped inputs that is 0.60 % of the ²³⁹Pu yield, beyond
+`A_H = 159`, 0.034 % of the ²³⁵U yield, 0.009 % of the ²⁵²Cf yield and none of the ²³³U yield.
 `kinetic_energy_limit = "grid"` reproduces the 0.1.x results: a
 Gaussian normalised over the grid, the configurations at `TXE ≤ 0` dropped, which put the solved
 `⟨TKE⟩` of the thermal systems 0.12–0.22 MeV below the measured one. Every run records the solved
