@@ -5,7 +5,7 @@ under `data/sims/`, with nothing solved again and nothing fitted to the data sho
 is exported as PDF and PNG beside a `.toml` sidecar naming, per system, the run drawn, the commit
 its metadata records, the measured files and the retrieved sets left out, so every panel traces
 to a configuration and a commit. The measured side comes from EXFOR through ExforFissionData.jl
-v0.5.2, laid out as [data/README.md](../data/README.md) describes, and a dataset is drawn as its
+v0.6.0, laid out as [data/README.md](../data/README.md) describes, and a dataset is drawn as its
 `retrieval.toml` records it; the temperature ratios the runs were solved with are the
 FissionTemperatureRatio.jl v0.4.1 trends staged beside them. The two diagnostic panels the
 script also writes here, the residual quantities and the charge distribution, have no measured
@@ -157,7 +157,7 @@ Isomeric states are summed and uncertainties added in quadrature; JEFF-3.3's ter
 are left out.
 
 The markers are the measured post-neutron mass yields of EXFOR, retrieved by
-ExforFissionData.jl v0.5.2. A set coded `MASS,SEC,FY`, the yield against the mass of the
+ExforFissionData.jl v0.6.0. A set coded `MASS,SEC,FY`, the yield against the mass of the
 products after neutron emission, is drawn under its author and year. A set coded
 `MASS,CHN,FY`, a chain yield, enters one muted series per system, *Chain yields (N sets)*: β
 decay conserves `A`, so the yield of a mass chain is the post-neutron mass yield of that mass up
@@ -175,7 +175,7 @@ evaluations and the model are in per cent. Each retrieved table is converted fro
 
 Open markers are sets the archive qualifies `SPA`, averaged over a neutron spectrum other than
 the thermal one they are filed under, or `DERIV`, derived from other data rather than
-measured. 31 of the 65 chain-yield sets drawn carry `SPA`, and so does the ²³⁵U set of Romano
+measured. 31 of the 66 chain-yield sets drawn carry `SPA`, and so does the ²³⁵U set of Romano
 (2010). The three ²³⁹Pu tables of Schillebeeckx (1992) carry `DERIV`: they are the measured
 pre-neutron yield carried to the products with two published `ν(A)`. Two retrieved sets
 are not drawn: Bail (2009, ²³⁹Pu, 22985005), which its record marks superseded by Gupta (2017,
@@ -231,6 +231,7 @@ that mark a set. Tables of one EXFOR entry under one author share a row and a se
 | ²³⁵U(n_th,f) | Bunney 1965 | 13213003 | CHN | J. Inorg. Nucl. Chem. **27**, 273 (1965), doi:10.1016/0022-1902(65)80338-4 |
 | ²³⁵U(n_th,f) | Strom 1966 | 13073004 | CHN, SPA | Phys. Rev. **144**, 984 (1966), doi:10.1103/PhysRev.144.984 |
 | ²³⁵U(n_th,f) | del Marmol 1967 | 23708003 | CHN | J. Inorg. Nucl. Chem. **29**, 273 (1967) |
+| ²³⁵U(n_th,f) | Erdal 1969 | 13244004 | CHN | J. Inorg. Nucl. Chem. **31**, 2993 (1969), doi:10.1016/0022-1902(69)80080-1 |
 | ²³⁵U(n_th,f) | Lisman 1970 | 13270003, 13270004, 13270005 | CHN, SPA | Nucl. Sci. Eng. **42**, 191 (1970), doi:10.13182/NSE70-A19500 |
 | ²³⁵U(n_th,f) | Birgul 1971 | 23706004 | CHN, SPA | Radiochim. Acta **16**, 103 (1971) |
 | ²³⁵U(n_th,f) | Fowler 1974 | 13319003 | CHN | J. Inorg. Nucl. Chem. **36**, 1201 (1974) |
@@ -323,7 +324,7 @@ by its own number of neutrons, washes it out. The far wings, below 0.01 %, are w
 libraries part from each other as well.
 
 The diamonds are the measured independent yields of EXFOR, retrieved by ExforFissionData.jl
-v0.5.2: every set coded `ELEM/MASS,IND,FY` with a point on the elements shown, pooled into one
+v0.6.0: every set coded `ELEM/MASS,IND,FY` with a point on the elements shown, pooled into one
 family, open where the set is qualified `SPA` or `DERIV`, and converted to per cent from the
 unit its record states, as for the mass yield. Yields below 0.001 % are not drawn. A nuclide the
 archive reports in several isomeric states is drawn as the retrieval writes it: the archive's
@@ -373,6 +374,7 @@ The sets with a point on the elements drawn; `Code` as for the mass yield.
 | ²³⁵U(n_th,f) | Naik 1993 | 33030005 | IND | Radiochim. Acta **62**, 1 (1993) |
 | ²³⁵U(n_th,f) | Galy 1997 | 22488002 | IND | Conf. Nuclear Data for Science and Technology, Trieste 1997, vol. 1, p. 673 |
 | ²³⁵U(n_th,f) | Tipnis 1998 | 13600002 | IND | Phys. Rev. C **58**, 905 (1998), doi:10.1103/PhysRevC.58.905 |
+| ²³⁵U(n_th,f) | Dubey 2020 | 237630022 | IND | Phys. Rev. C **102**, 044602 (2020), doi:10.1103/PhysRevC.102.044602 |
 | ²³⁵U(n_th,f) | Naik 2023 | 33186004, 33186005 | IND, SPA | Nucl. Sci. Eng. **197**, 485 (2023) |
 | ²³⁹Pu(n_th,f) | Fritze 1958 | 13484003 | IND, SPA | Conf. Peaceful Uses of Atomic Energy, Geneva 1958, vol. 15, p. 436 |
 | ²³⁹Pu(n_th,f) | Günther 1972 | 23558006 | IND | Nucl. Phys. A **196**, 401 (1972) |
@@ -383,6 +385,7 @@ The sets with a point on the elements drawn; `Code` as for the mass yield.
 | ²³⁹Pu(n_th,f) | Naik 1993 | 33030007 | IND | Radiochim. Acta **62**, 1 (1993) |
 | ²³⁹Pu(n_th,f) | Gundorin 1994 | 41198002 | IND, PRELM | Conf. Nuclear Data for Science and Technology, Gatlinburg 1994, p. 139 |
 | ²³⁹Pu(n_th,f) | Bail 2009 | 22985008, 22985018 | IND | Thesis (2009); Phys. Rev. C **84**, 034605 (2011), doi:10.1103/PhysRevC.84.034605 |
+| ²³⁹Pu(n_th,f) | Dubey 2020 | 237630052 | IND | Phys. Rev. C **102**, 044602 (2020), doi:10.1103/PhysRevC.102.044602 |
 | ²³⁹Pu(n_th,f) | Naik 2022 | 33178004, 33178005 | IND, SPA | Nucl. Sci. Eng. **196**, 824 (2022) |
 | ²³³U(n_th,f) | Brissot 1975 | 21550005 | IND | Nucl. Phys. A **255**, 461 (1975) |
 | ²³³U(n_th,f) | Flynn 1975 | 10517002 | IND | J. Inorg. Nucl. Chem. **37**, 869 (1975), doi:10.1016/0022-1902(75)80664-6 |
@@ -426,7 +429,7 @@ fragment's energy, and the curve is the guide moved down by 1 to 2 % and to lowe
 multiplicity. Masses whose product yield is below 0.01 % are not drawn.
 
 The markers are the measured post-neutron kinetic energies of EXFOR, `MASS,SEC,KE`, retrieved
-by ExforFissionData.jl v0.5.2 and drawn in MeV as the retrieval writes them, `unit_written =
+by ExforFissionData.jl v0.6.0 and drawn in MeV as the retrieval writes them, `unit_written =
 "MEV"` in every record: nine sets for ²³⁵U, five for ²³⁹Pu and two for ²³³U. The archive holds
 none for ²⁵²Cf(sf), and its panel says so. ²³⁵U has more sets than the figure can tell apart: the
 four with the most masses, Asghar (1977, 1978), Wagemans (1981) and Geltenbort (1985), are
