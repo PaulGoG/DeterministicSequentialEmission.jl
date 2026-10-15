@@ -15,9 +15,12 @@ relation between them. `Data` as a suffix carries nothing. `err` names a differe
 the one it was used for — an error is not an uncertainty. And a name that is relative to a moment
 ages: a table with no header line is `HEADERLESS_MASS_EXCESS_SPEC`, not a legacy one.
 
-This page is the vocabulary as this package applies it. The retrieval that supplies its
-experimental input and the extraction that supplies its temperature ratio share the quantity table
-and the file layout, so a name learned here is the name there.
+This page is the vocabulary as this package applies it.
+[ExforFissionData.jl](https://github.com/PaulGoG/ExforFissionData.jl), which retrieves its
+experimental input, and
+[FissionTemperatureRatio.jl](https://github.com/PaulGoG/FissionTemperatureRatio.jl), which
+extracts its temperature ratio, share the quantity table and the file layout, so a name learned
+here is the name there.
 
 ## Two registers
 
@@ -78,9 +81,6 @@ apart: a yield is in per cent per fission here and in the evaluations, and in fr
 fission where the retrieval writes it, as its record states. The product neutron number has no
 token there and keeps `N_p`.
 
-`rms` is retired. It named a root-mean-square of nothing stated; the quantity is the Gaussian
-dispersion of the isobaric charge distribution, and the field writes σ_Z.
-
 A yield type is named by its **index space**, which is the distinction that matters when more than
 one is in scope: [`MassEnergyYield`](@ref) is the measured *Y*(*A*, TKE) and
 [`FragmentYield`](@ref) the model weight *Y*(*A*, *Z*, TKE). Neither `y` nor `Y` may stand for the
@@ -126,14 +126,15 @@ dropped input is an [`Exclusion`](@ref). `Table` survives only where the thing g
 lookup table keyed by nucleon number: [`MassExcessTable`](@ref),
 [`ShellCorrectionTable`](@ref).
 
-One word may not carry two meanings in one module. [`Configuration`](@ref) is the validated TOML
-and is shared with the codes upstream; a quantity tabulated over fission configurations
-(*A*, *Z*, TKE) is a [`FragmentQuantity`](@ref). "Fission configuration" survives in prose for the
-triple, where it is unambiguous.
+One word may not carry two meanings in one module. [`Configuration`](@ref) is the validated TOML,
+as it is in ExforFissionData.jl and FissionTemperatureRatio.jl; a quantity tabulated over fission
+configurations (*A*, *Z*, TKE) is a [`FragmentQuantity`](@ref). "Fission configuration" survives
+in prose for the triple, where it is unambiguous.
 
 The result type of a package is `<Verb>Result`, **one per package**. Here it is
-[`RunResult`](@ref): this package runs a model. The codes upstream name theirs for what they do,
-so `using` any pair of them collides on nothing.
+[`RunResult`](@ref): this package runs a model. ExforFissionData.jl names its own
+`RetrievalResult` and FissionTemperatureRatio.jl its `ExtractionResult`, so `using` any pair of
+them collides on nothing.
 
 Abbreviations are permitted only where the field itself uses them — `TKE`, `TXE`, `Q`, `BSFG`,
 `GC`, `EXFOR`, `AME`, `RIPL`, `sf` — and never as `err`, `param`, `calc`, `val`, `idx`, `num`,
@@ -161,16 +162,15 @@ key when it refuses.
 the entrance channel through [`CHANNEL_REACTION`](@ref), so it is not written down; the compound
 nucleus follows from the target and the channel through [`REACTIONS`](@ref), so it is not written
 down either. Nor is the output directory: it is [`system_label`](@ref) of the system the file
-already declares. It existed as `[output] subdirectory` only because two runs of one target could
-not otherwise be told apart, and the channel is what tells them apart now.
+already declares.
 
 `subdirectory` names a folder under a root; `directory` only ever names a root path. So every
 input key in a configuration is a path under the data root, and the root itself is an argument to
 [`load_configuration`](@ref).
 
-`significant_digits` is significant figures, and has always been so here. It is not decimal
-places, and the distinction is not cosmetic: a multiplicity near 3 and a yield near `10⁻⁴⁰` appear
-in the same run, and a fixed number of decimals cannot carry both to the same meaning.
+`significant_digits` is significant figures. It is not decimal places, and the distinction is
+not cosmetic: a multiplicity near 3 and a yield near `10⁻⁴⁰` appear in the same run, and a fixed
+number of decimals cannot carry both to the same meaning.
 
 ## The system identifier
 
@@ -182,9 +182,10 @@ output directory:
 ```
 
 with the channel spelled as the field spells it and not as a reaction code writes it — `Cf252_sf`,
-`U235_nth`, `U235_nres`, `U233_nth`, `Pu239_nth`. `0f` is a reaction code, not a name, and it
-belongs in the run record where the reaction code already is. The channel is also what
-distinguishes a thermal from a resonance run of one target, which `n,f` alone cannot.
+`U235_nth`, `U235_nres`, `U233_nth`, `Pu239_nth`. EXFOR codes spontaneous fission `0,F`; that is
+a reaction code, not a name, and it belongs in the run record, where the reaction code already
+is. The channel is also what distinguishes a thermal from a resonance run of one target, which
+`n,f` alone cannot.
 
 [`system_label`](@ref) returns that token. The typeset form for a figure or a caption —
 `²⁵²Cf(sf)`, `²³³U(nth,f)` — is [`system_notation`](@ref), a separate function: one name may not
@@ -238,9 +239,11 @@ A nu nu_uncertainty
 A_H,R_T,R_T_uncertainty
 ```
 
-**No column is named `value`, and no uncertainty column is named `uncertainty`.** Naming a column
-for its quantity is what frees the reader from having to know the file name to know what the file
-is holding, and it matters most for the files that cross a package boundary. This binds a
+**No column of a tabulated quantity is named `value`, and no uncertainty column is named
+`uncertainty`.** The one exception is `totals.dat`, a list of named scalars, whose two columns
+are `quantity value`. Naming a column for its quantity is what frees the reader from having to
+know the file name to know what the file is holding, and it matters most for the files that cross
+a package boundary. This binds a
 `TableSpec`'s own column symbols as much as a header on disk: a spec reading `[:A_H, :value]`
 states nothing, which is why there are two curve specs — [`TEMPERATURE_RATIO_CURVE_SPEC`](@ref)
 and [`EXCITATION_RATIO_CURVE_SPEC`](@ref) — rather than one that could not name its ordinate.
