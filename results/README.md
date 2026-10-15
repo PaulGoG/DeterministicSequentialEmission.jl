@@ -5,10 +5,11 @@ under `data/sims/`, with nothing solved again and nothing fitted to the data sho
 is exported as PDF and PNG beside a `.toml` sidecar naming, per system, the run drawn, the commit
 its metadata records, the measured files and the retrieved sets left out, so every panel traces
 to a configuration and a commit. The measured side comes from EXFOR through ExforFissionData.jl
-v0.5.0, laid out as `data/README.md` describes, and a dataset is drawn as its `retrieval.toml` records it; the temperature ratios the
-runs were solved with are the FissionTemperatureRatio.jl v0.4.0 trends staged beside them. The
-two diagnostic panels the script also writes here, the residual quantities and the charge
-distribution, have no measured counterpart and are not tracked.
+v0.5.0, laid out as [data/README.md](../data/README.md) describes, and a dataset is drawn as its
+`retrieval.toml` records it; the temperature ratios the runs were solved with are the
+FissionTemperatureRatio.jl v0.4.0 trends staged beside them. The two diagnostic panels the
+script also writes here, the residual quantities and the charge distribution, have no measured
+counterpart and are not tracked.
 
 ```
 julia scripts/run.jl config/<system>.toml    # one run per system, under data/sims/
@@ -33,10 +34,10 @@ below give the publication, which for conference proceedings can be a later year
 
 The sawtooth is the signature observable and it is not fitted: the total excitation energy is
 shared between the fragments by a temperature ratio `R_T(A_H)` extracted from measured `ν(A)`
-by the companion package, the emission chain is solved configuration by configuration, and the
+by FissionTemperatureRatio.jl, the emission chain is solved configuration by configuration, and the
 result is contracted against the measured fragment yield `Y(A, TKE)`. Each panel states the
 total multiplicity against the evaluated value. The sets drawn are a fixed selection per system,
-for legibility; `data/README.md` lists the whole retrieval.
+for legibility; [data/README.md](../data/README.md) lists the whole retrieval.
 
 | System | Dataset | EXFOR | Reference |
 |---|---|---|---|
@@ -305,10 +306,9 @@ three decades. The valley is where it departs: for ²⁵²Cf the model gives the
 ![Isotopic distributions of the four most abundant light and heavy elements, 239-Pu(nth,f)](product_independent_yield_Pu239_nth.png)
 ![Isotopic distributions of the four most abundant light and heavy elements, 233-U(nth,f)](product_independent_yield_U233_nth.png)
 
-One figure per system: in a 2 × 2 grid of systems the eight panels of one system would be some
-140 px wide at the 1200 px of the grid, too narrow for their tick labels. Each panel is `Y(Z, A_p)` at fixed `Z` against `A_p`,
-for the four light and the four heavy elements of largest evaluated yield, the mean of the two
-libraries, so that the choice does not move with the model. The model is the line, the
+One figure per system. Each panel is `Y(Z, A_p)` at fixed `Z` against `A_p`, for the four light
+and the four heavy elements of largest evaluated yield, the mean of the two libraries, so that
+the choice does not move with the model. The model is the line, the
 evaluations are markers: circles ENDF/B-VIII.0, squares JEFF-3.3. The model places the centroid
 and the width of every distribution drawn and follows the evaluations over three decades. Its
 distributions are smooth where the evaluations stagger from one isotope to the next: Wahl's
@@ -459,9 +459,8 @@ sets, from 1.3 MeV below them to 1.7 MeV above.
 
 ![Mean kinetic energy of the post-neutron products against product charge, four fissioning systems](product_kinetic_energy_by_charge.png)
 
-`E_K_p(Z)`, the same mean over the products of charge `Z`, in a figure of its own: it would
-share the cell of each system with `E_K_p(A_p)` only with a second abscissa and its labels in
-every cell. It has no measured or evaluated counterpart here.
+`E_K_p(Z)`, the same mean over the products of charge `Z`. It has no measured or evaluated
+counterpart here.
 
 ## Total kinetic energy of the products
 
@@ -528,9 +527,10 @@ The runs write more than the figures show, and the retrieval holds measurements 
 not yet use. Each of these enters this file with its figure and its dataset table when it is
 ready.
 
-- The neutron number distribution `P(ν)`, against the retrieved `P_vs_nu` sets; the model's is
-  known to be too broad in all four systems.
-- `ν(TKE)` and `⟨ε⟩(TKE)`, which the runs write and the retrieval holds as `nu_vs_A_TKE` and
-  `eps_vs_A_TKE` matrices for ²⁵²Cf and ²³³U.
+- `ν(TKE)` and `E*(TKE)`, which the runs write as `nu_vs_TKE.dat` and `E_star_vs_TKE.dat`. The
+  retrieval holds `ν(A, TKE)` as `nu_vs_A_TKE` for the four systems and `⟨ε⟩(A, TKE)` as
+  `eps_vs_A_TKE` for ²⁵²Cf and ²³³U; a run writes neither.
+- The prompt neutron multiplicity distribution `P(ν)`, against the retrieved `P_vs_nu` sets of
+  the four systems; a run does not write it yet.
 - The thermal systems' spectra as ratios to a Maxwellian, which the retrieval holds for all
   three.
