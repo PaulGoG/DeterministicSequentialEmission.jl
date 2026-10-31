@@ -79,7 +79,7 @@ product_masses(chain::EmissionChain, ::SequenceCount) = [(post_neutron_mass(chai
 
 Contract the emission chains of a run into the post-neutron product distributions under the
 [`ProductCount`](@ref) `count`. `chains` is the list [`run_pipeline`](@ref) builds, one
-`(fragmentation, TKE, light, heavy, split)` per solved configuration; `weights` the yield
+`SolvedConfiguration` per solved configuration; `weights` the yield
 weights keyed by `(A, Z, TKE)`; `compound_mass` `A₀`.
 
 Each fragment configuration `(A, Z, TKE)` with a chain and a weight `w` contributes once, through
@@ -118,7 +118,8 @@ function _product_distributions(
     # replaces the chain but keeps the place, so the sums run in a fixed order.
     position = Dict{Tuple{Int, Int, Float64}, Int}()
     fragments = Tuple{Tuple{Int, Int, Float64}, EmissionChain}[]
-    for (entry, TKE, light, heavy, _) in chains
+    for record in chains
+        (; entry, TKE, light, heavy) = record
         for (fragment, chain) in ((entry.light, light), (entry.heavy, heavy))
             key = (fragment.A, fragment.Z, Float64(TKE))
             index = get(position, key, 0)
@@ -160,7 +161,8 @@ function _product_distributions(
     energy_by_heavy_mass = Dict{Int, NTuple{2, Float64}}()
     pair_sum = 0.0
     pair_energy = 0.0
-    for (entry, TKE, light, heavy, _) in chains
+    for record in chains
+        (; entry, TKE, light, heavy) = record
         raw = get(weights.values, (entry.heavy.A, entry.heavy.Z, Float64(TKE)), nothing)
         raw === nothing && continue
         w = _pair_weight(entry, Float64(value(raw)))

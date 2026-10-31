@@ -36,7 +36,7 @@ using SHA: sha256
 using TOML: TOML
 using p7zip_jll: p7zip
 
-const usage = """
+const USAGE = """
 usage: julia scripts/stage_product_yields.jl [data directory]
            [--library ENDF-B-VIII.0|JEFF-3.3] [--system Cf252_sf|U235_nth|Pu239_nth|U233_nth]
            [--file <library>=<path>] [--downloads <directory>]
@@ -44,14 +44,14 @@ usage: julia scripts/stage_product_yields.jl [data directory]
 library's archive or tape and may be repeated."""
 
 # The thermal point of an evaluated yield file, in eV.
-const thermal_energy = 0.0253
+const THERMAL_ENERGY = 0.0253
 # Products lighter than this are ternary particles. JEFF-3.3 lists light nuclei up to A_p = 21
 # beside the binary products, whose lightest mass in the four materials is 50.
-const ternary_mass_limit = 40
+const TERNARY_MASS_LIMIT = 40
 # An ENDF-6 field holds at most 7 significant digits in exponent form; the per-cent sums are
 # written to 10, which keeps every digit the file states and drops the binary residue of the
 # scaling.
-const significant_digits = 10
+const SIGNIFICANT_DIGITS = 10
 
 # A fissioning system as the data tree names it: the token, the target nuclide, its standard
 # ENDF-6 material number, and whether the fission is spontaneous or induced by thermal neutrons.
@@ -64,7 +64,7 @@ struct FissioningSystem
     spontaneous::Bool
 end
 
-const systems = (
+const SYSTEMS = (
     FissioningSystem("Cf252_sf", 98, 252, "Cf", 9861, true),
     FissioningSystem("U235_nth", 92, 235, "U", 9228, false),
     FissioningSystem("Pu239_nth", 94, 239, "Pu", 9437, false),
@@ -78,7 +78,7 @@ sublibrary(system::FissioningSystem) = system.spontaneous ? "sfy" : "nfy"
 # yields.
 sublibrary_number(system::FissioningSystem) = system.spontaneous ? 5 : 11
 
-const libraries = (
+const LIBRARIES = (
     (
         token = "ENDF-B-VIII.0",
         name = "ENDF/B-VIII.0",
@@ -127,16 +127,20 @@ utc(time::Dates.DateTime) = string(round(time, Dates.Second)) * "Z"
 function retrieve(library, url::AbstractString, directory::AbstractString)
     path = joinpath(directory, archive_name(url))
     try
-        Downloads.download(url, path)
+        # Seconds; a stalled server otherwise holds the run indefinitely.
+        Downloads.download(url, path; timeout = 300)
     catch exception
         exception isa Downloads.RequestError || rethrow()
-        detail = isempty(exception.message) ? "" : " ($(exception.message))"
-        throw(
-            SourceError(
-                "$(url): HTTP status $(exception.response.status)$(detail); fetch it in a \
-                 browser and pass --file $(library.token)=<path>",
-            ),
-        )
+        status = exception.response.status
+        # Status 0 means no HTTP response arrived: the connection itself failed.
+        failure = if status == 0
+            "connection failed ($(exception.message))"
+        else
+            detail = isempty(exception.message) ? "" : " ($(exception.message))"
+            "HTTP status $(status)$(detail)"
+        end
+        throw(SourceError("$(url): $(failure); fetch it in a browser and pass \
+                 --file $(library.token)=<path>"))
     end
     return (
         path = path,
@@ -277,7 +281,7 @@ function select_point(points, system::FissioningSystem)
             throw(ArgumentError("spontaneous fission with energy points $(energies) eV"))
         return only(points)
     end
-    index = findfirst(E -> isapprox(E, thermal_energy; rtol = 1e-6), energies)
+    index = findfirst(E -> isapprox(E, THERMAL_ENERGY; rtol = 1e-6), energies)
     index === nothing &&
         throw(ArgumentError("no thermal point among the energy points $(energies) eV"))
     return points[index]
@@ -295,7 +299,7 @@ function charge_resolved(products)
             throw(ArgumentError("ZAFP = $(ZAFP), FPS = $(FPS) is not a nuclide state"))
         Z, A = divrem(Int(ZAFP), 1000)
         1 <= Z <= A || throw(ArgumentError("ZAFP = $(ZAFP) is not a nuclide"))
-        if A < ternary_mass_limit
+        if A < TERNARY_MASS_LIMIT
             ternary_entries += 1
             ternary_yield += YI
             continue
@@ -334,7 +338,7 @@ function mean_masses(masses, A₀::Int)
 end
 
 format(x::Integer) = string(x)
-format(x::Real) = string(round(x; sigdigits = significant_digits))
+format(x::Real) = string(round(x; sigdigits = SIGNIFICANT_DIGITS))
 
 function table_text(header::AbstractString, rows)
     return join([header; [join(map(format, row), ' ') for row in rows]], '\n') * '\n'
@@ -435,13 +439,13 @@ function stage(data::AbstractString, library, system::FissioningSystem, obtained
         "isomer_handling" => "the isomeric states (FPS) of each (Z, A_p) are summed, their \
                               uncertainties added in quadrature",
         "isomeric_entries_summed" => charges.isomeric,
-        "ternary_handling" => "products with A_p < $(ternary_mass_limit) are ternary \
+        "ternary_handling" => "products with A_p < $(TERNARY_MASS_LIMIT) are ternary \
                                particles and are not written",
         "ternary_entries_excluded" => charges.ternary_entries,
         "ternary_Y_excluded" =>
-            round(charges.ternary_yield; sigdigits = significant_digits),
+            round(charges.ternary_yield; sigdigits = SIGNIFICANT_DIGITS),
         "units" => "per cent per fission, 200 over both products",
-        "sum_Y" => round(total; sigdigits = significant_digits),
+        "sum_Y" => round(total; sigdigits = SIGNIFICANT_DIGITS),
         "citation" => library.citation,
         "doi" => library.doi,
         "script" => relpath(@__FILE__, projectdir()),
@@ -529,8 +533,8 @@ function parse_arguments(arguments::Vector{String})
     selected_systems = String[]
     files = Dict{String, Vector{String}}()
     downloads = nothing
-    library_tokens = [library.token for library in libraries]
-    system_tokens = [system.token for system in systems]
+    library_tokens = [library.token for library in LIBRARIES]
+    system_tokens = [system.token for system in SYSTEMS]
     index = 1
     while index <= length(arguments)
         argument = arguments[index]
@@ -572,8 +576,8 @@ function parse_arguments(arguments::Vector{String})
     end
     return (
         data = something(data, datadir()),
-        libraries = chosen(libraries, selected_libraries),
-        systems = chosen(systems, selected_systems),
+        libraries = chosen(LIBRARIES, selected_libraries),
+        systems = chosen(SYSTEMS, selected_systems),
         files = files,
         downloads = downloads,
     )
@@ -585,11 +589,11 @@ function main(arguments::Vector{String})
     catch exception
         exception isa ArgumentError || rethrow()
         println(stderr, exception.msg)
-        println(stderr, usage)
+        println(stderr, USAGE)
         return 1
     end
     if options === nothing
-        println(usage)
+        println(USAGE)
         return 0
     end
     downloads = if options.downloads === nothing

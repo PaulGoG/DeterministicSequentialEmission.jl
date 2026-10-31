@@ -5,7 +5,7 @@
 # does not carry the package either.
 using Pkg
 Pkg.activate(@__DIR__; io = devnull)
-# Resolve before instantiating: the package's own [compat] changes as it grows, and a manifest
-# resolved against an older one would otherwise fail to load rather than update itself.
+# Resolve before instantiating: a dependency added to Project.toml by hand leaves the manifest
+# stale, and instantiating that manifest would fail rather than update it.
 Pkg.resolve(; io = devnull)
 Pkg.instantiate(; io = devnull)

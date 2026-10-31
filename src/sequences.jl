@@ -36,6 +36,11 @@ struct EmissionSequence
     end
 end
 
+"""
+    is_solved(sequence) -> Bool
+
+Whether the sequential equation of `sequence` admitted an acceptable temperature.
+"""
 is_solved(sequence::EmissionSequence) = sequence.temperature !== nothing
 
 """

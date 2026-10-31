@@ -125,14 +125,21 @@ function chain_spectrum(
     E::Real,
     weighting::SequenceWeighting,
 )
+    return _sequence_mean(chain, weighting) do α, T
+        laboratory_spectrum(cross_section, α, T, E_f, E)
+    end
+end
+
+# Weighted mean of `kernel(α_k, T_k)` over the solved sequences of `chain`, the residual's α
+# and the sequence temperature as arguments; `0` for a chain that solved nothing.
+function _sequence_mean(kernel, chain::EmissionChain, weighting::SequenceWeighting)
     total = 0.0
     norm = 0.0
     for sequence in chain.sequences
         is_solved(sequence) || continue
         weight = sequence_weight(weighting, chain, sequence)
         α = alpha_parameter(chain.fragment.A - sequence.index)
-        total +=
-            weight * laboratory_spectrum(cross_section, α, sequence.temperature, E_f, E)
+        total += weight * kernel(α, sequence.temperature)
         norm += weight
     end
     return norm > 0 ? total / norm : 0.0
@@ -163,16 +170,9 @@ function chain_centre_of_mass_spectrum(
     ε::Real,
     weighting::SequenceWeighting,
 )
-    total = 0.0
-    norm = 0.0
-    for sequence in chain.sequences
-        is_solved(sequence) || continue
-        weight = sequence_weight(weighting, chain, sequence)
-        α = alpha_parameter(chain.fragment.A - sequence.index)
-        total += weight * centre_of_mass_spectrum(cross_section, α, sequence.temperature, ε)
-        norm += weight
+    return _sequence_mean(chain, weighting) do α, T
+        centre_of_mass_spectrum(cross_section, α, T, ε)
     end
-    return norm > 0 ? total / norm : 0.0
 end
 
 chain_centre_of_mass_spectrum(

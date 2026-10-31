@@ -85,10 +85,9 @@ function move_aside(directory::AbstractString)
     return nothing
 end
 
-# The provenance record: what the library knows about the run, the identifier and the paths,
+# The provenance record: the library's part of the run record, the identifier and the paths,
 # the commit through DrWatson's tag!, and the platform, written as metadata.toml; beside it,
-# copies of the configuration and of the resolved Manifest. A result then traces to
-# configuration, commit, environment and hardware from its own directory.
+# copies of the configuration and of the resolved Manifest.
 function write_provenance(
     directory::AbstractString,
     result::RunResult,

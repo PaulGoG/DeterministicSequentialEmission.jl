@@ -27,7 +27,7 @@
 # Y_vs_Z_A_p/ are staged by scripts/stage_product_yields.jl as <library>.dat with a
 # provenance.toml beside them, next to the retrieved sets. The retrieval writes its yields in
 # fragments per fission and the evaluations are in per cent; each retrieved table is converted
-# from the unit its record states, and a unit the script does not know stops it. The pre-neutron
+# from the unit its record states, and a unit outside the script's table stops it. The pre-neutron
 # mean total kinetic energy a run was solved with is read from the input its configuration.toml
 # names, under the same data directory. Columns are taken by position, not by header text. Both
 # directories default to data/ under the project and neither is version-controlled.
@@ -45,6 +45,7 @@ using TOML
 set_theme!(PUBLICATION_THEME)
 
 const ROOT = dirname(@__DIR__)
+# Read from ARGS when the file is included, not when main runs.
 const RUNS = length(ARGS) >= 1 ? ARGS[1] : joinpath(ROOT, "data", "sims")
 const MEASURED = length(ARGS) >= 2 ? ARGS[2] : joinpath(ROOT, "data")
 const FIGURES = length(ARGS) >= 3 ? ARGS[3] : joinpath(ROOT, "results")
@@ -99,7 +100,10 @@ const NEUTRON_ENERGY_BAR_LIMIT = 0.3
 # thresholds, above it by counting statistics in the tail.
 const ENERGY_WINDOW = (0.08, 11.0)
 
-# Measured mean laboratory energy of the 252-Cf prompt fission neutron spectrum [MeV].
+# Mean energy of the evaluated 252-Cf(sf) standard spectrum of Mannhart (IAEA-TECDOC-410, 1987)
+# [MeV], 3/2 of the 1.42 MeV Maxwellian temperature the same evaluation recommends
+# (`FALLBACK_MAXWELLIAN_TEMPERATURE`); the 2025 re-evaluation reproduces it
+# (doi:10.1051/epjn/2025061).
 const MEASURED_MEAN_ENERGY = 2.13
 
 # Maxwellian temperature taken when a run's configuration records none [MeV].
@@ -256,11 +260,11 @@ function run_directory(case::Case)
     return last(sort(runs; by = mtime))
 end
 
-"The totals a run wrote, by name."
+"The totals a run wrote, by name; throws an `ArgumentError` where the run wrote no `totals.dat`."
 function read_totals(directory::AbstractString)
     path = joinpath(directory, "totals.dat")
+    isfile(path) || throw(ArgumentError("no totals.dat under $directory"))
     totals = Dict{String, Float64}()
-    isfile(path) || return totals
     for (index, line) in enumerate(eachline(path))
         index == 1 && continue
         fields = split(strip(line))
@@ -268,6 +272,17 @@ function read_totals(directory::AbstractString)
         totals[fields[1]] = parse(Float64, fields[2])
     end
     return totals
+end
+
+"The total `name` of `totals`, read under `directory`; an `ArgumentError` where it is absent."
+function total(
+    totals::Dict{String, Float64},
+    name::AbstractString,
+    directory::AbstractString,
+)
+    haskey(totals, name) ||
+        throw(ArgumentError("$name absent from totals.dat under $directory"))
+    return totals[name]
 end
 
 """
@@ -858,8 +873,19 @@ end
 
 function export_figure(figure::Figure, name::AbstractString, systems::Dict{String, Any})
     path = joinpath(FIGURES, name)
-    save(path * ".pdf", figure)
-    save(path * ".png", figure; px_per_unit = 4)
+    # Cairo stamps /CreationDate into the PDF, so every redraw changed every PDF in git, while the
+    # PNG is deterministic. Both are rendered aside and copied only when the PNG's bytes differ.
+    staging = mktempdir()
+    save(joinpath(staging, name * ".pdf"), figure)
+    save(joinpath(staging, name * ".png"), figure; px_per_unit = 4)
+    rendered = joinpath(staging, name * ".png")
+    if isfile(path * ".png") && read(path * ".png") == read(rendered)
+        println("unchanged ", path, ".pdf")
+    else
+        cp(joinpath(staging, name * ".pdf"), path * ".pdf"; force = true)
+        cp(rendered, path * ".png"; force = true)
+        println("wrote ", path, ".pdf")
+    end
     open(path * ".toml", "w") do io
         TOML.print(
             io,
@@ -867,7 +893,6 @@ function export_figure(figure::Figure, name::AbstractString, systems::Dict{Strin
             sorted = true,
         )
     end
-    println("wrote ", path, ".pdf")
     return nothing
 end
 
@@ -1097,7 +1122,7 @@ the system, ⟨ν⟩ and the evaluated value.
 function figure_multiplicity(drawable::Vector{Case})
     panels = mass_panels(drawable, "nu_vs_A.dat", "nu_vs_A")
     function annotate(p::SystemPanel)
-        modelled = get(read_totals(p.directory), "nu_per_fission", NaN)
+        modelled = total(read_totals(p.directory), "nu_per_fission", p.directory)
         evaluated = p.case.evaluated
         deviation = 100 * (modelled - evaluated) / evaluated
         @printf(
@@ -1200,7 +1225,7 @@ function figure_spectra(drawable::Vector{Case})
     let case = drawable[reference], directory = reference_directory
         E, N = reference_spectrum
         T_M = maxwellian_temperature(directory)
-        mean_E = get(read_totals(directory), "mean_E", NaN)
+        mean_E = total(read_totals(directory), "mean_E", directory)
         @printf("  ⟨E⟩ = %.4f MeV against a Maxwellian at T_M = %.2f MeV\n", mean_E, T_M)
         inside = low .<= E .<= high
         ratio = N[inside] ./ maxwellian.(E[inside], T_M)
@@ -1245,10 +1270,10 @@ function figure_spectra(drawable::Vector{Case})
         # The measured ratios are of the spectra per fission, ν̄ N(E), so the model's are too,
         # with its own multiplicities: nothing is scaled to the measurement.
         totals = read_totals(directory)
-        mean_E = get(totals, "mean_E", NaN)
+        mean_E = total(totals, "mean_E", directory)
         multiplicity_ratio =
-            get(totals, "nu_per_fission", NaN) /
-            get(read_totals(reference_directory), "nu_per_fission", NaN)
+            total(totals, "nu_per_fission", directory) /
+            total(read_totals(reference_directory), "nu_per_fission", reference_directory)
         ratio = multiplicity_ratio .* N[inside] ./ denominator
         @printf(
             "  %-10s ⟨E⟩ = %.4f MeV, ν̄/ν̄(%s) = %.3f, drawn as the per-fission ratio\n",
@@ -1383,14 +1408,20 @@ function figure_product_yield(drawable::Vector{Case})
     for case in drawable
         directory = run_directory(case)
         path = joinpath(directory, "Y_vs_A_p.dat")
-        isfile(path) || continue
+        if !isfile(path)
+            @warn "no Y_vs_A_p.dat to draw" directory
+            continue
+        end
         window = yield_window(directory)
         A_p, Y_p, _ = read_columns(path)
         A, Y, _ = read_columns(joinpath(directory, "Y_vs_A.dat"))
         evaluated = []
         for library in EVALUATED_YIELDS
             file = joinpath(MEASURED, case.label, "Y_vs_A_p", library.file)
-            isfile(file) || continue
+            if !isfile(file)
+                @warn "no $(library.label) independent yields to draw" expected = file
+                continue
+            end
             x, y, σ = read_columns(file)
             keep = first(window) .<= x .<= last(window)
             push!(evaluated, (library, file, x[keep], y[keep], σ[keep]))
@@ -2249,13 +2280,13 @@ function figure_product_total_kinetic_energy(drawable::Vector{Case})
             MathText(
                 @sprintf(
                     "\$\\langle \\mathrm{TKE}_p \\rangle = %.1f\$ MeV",
-                    get(totals, "mean_TKE_p", NaN)
+                    total(totals, "mean_TKE_p", p.directory)
                 )
             ),
             MathText(
                 @sprintf(
                     "\$\\langle \\mathrm{TKE} \\rangle = %.1f\$ MeV",
-                    get(totals, "mean_TKE", NaN)
+                    total(totals, "mean_TKE", p.directory)
                 )
             ),
         ]
@@ -2746,8 +2777,7 @@ function figure_gamma_energy_per_fission(drawable::Vector{Case})
         Tuple{Case, String, Float64, Vector{GammaValue}, Vector{Pair{String, String}}}[]
     for case in drawable
         directory = run_directory(case)
-        modelled = get(read_totals(directory), "E_gamma_per_fission", NaN)
-        isfinite(modelled) || continue
+        modelled = total(read_totals(directory), "E_gamma_per_fission", directory)
         values, excluded = gamma_values(case)
         isempty(values) && continue
         push!(groups, (case, directory, modelled, values, excluded))
@@ -2993,7 +3023,20 @@ function figure_gamma_energy_cf252(drawable::Vector{Case})
     return nothing
 end
 
-function main()
+"""
+    main(arguments) -> Int
+
+Draw every figure and return the exit status: 1, after a usage line, for more than three
+arguments or a first argument `-h` or `--help`, 0 otherwise. The directories are not taken from
+`arguments`: `RUNS`, `MEASURED` and `FIGURES` are read from `ARGS` when the file is included.
+"""
+function main(arguments::Vector{String})
+    if length(arguments) > 3 ||
+       (!isempty(arguments) && first(arguments) in ("-h", "--help"))
+        println("usage: julia plotting/figures.jl \
+            [runs directory] [data directory] [figures directory]")
+        return 1
+    end
     mkpath(FIGURES)
     isdir(RUNS) || @warn """
         no runs directory; solve the systems first with \
@@ -3018,7 +3061,9 @@ function main()
     figure_charge_distribution(drawable)
     figure_gamma_energy_per_fission(drawable)
     figure_gamma_energy_cf252(drawable)
-    return nothing
+    return 0
 end
 
-main()
+if abspath(PROGRAM_FILE) == @__FILE__
+    exit(main(ARGS))
+end

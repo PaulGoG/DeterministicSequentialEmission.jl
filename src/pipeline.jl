@@ -173,66 +173,19 @@ function run_pipeline(configuration::Configuration)
         configuration.fragment_yield === nothing ? 1.0 :
         coverage(configuration.fragment_yield, configuration.kinetic_energies).reached
 
-    ν = FragmentQuantity{Float64}()
-    temperature = FragmentQuantity{Float64}()
-    excitation = FragmentQuantity{Float64}()
-    residual = FragmentQuantity{Float64}()
-    neutron_energy = FragmentQuantity{Float64}()
-    γ = FragmentQuantity{Float64}()
-    γ_pair = FragmentQuantity{Float64}()
-    chains = Vector{
-        Tuple{Fragmentation, Float64, EmissionChain, EmissionChain, ExcitationEnergies},
-    }()
-
-    attempted = 0
-    solved = 0
-    solved_keys = Set{Tuple{Int, Int, Float64}}()
-    for entry in domain.entries, TKE in configuration.kinetic_energies
-        attempted += 1
-        balance =
-            energetics(configuration.mass_excess_table, configuration.system, entry, TKE)
-        balance === nothing && continue
-        split = partition(configuration.method, entry, value(balance.TXE))
-        split === nothing && continue
-        light = emission_chain(
-            configuration.mass_excess_table,
-            configuration.model,
-            configuration.cross_section,
-            entry.light,
-            split.light;
-            maximum_temperature = configuration.maximum_temperature,
-        )
-        heavy = emission_chain(
-            configuration.mass_excess_table,
-            configuration.model,
-            configuration.cross_section,
-            entry.heavy,
-            split.heavy;
-            maximum_temperature = configuration.maximum_temperature,
-        )
-        solved += 1
-        # The energy the two fragments' neutrons leave, booked against either fragment so that a
-        # contraction over the mass of one gives the sum per split.
-        pair_gamma = gamma_energy(light, split.light) + gamma_energy(heavy, split.heavy)
-        for (fragment, energy, chain) in
-            ((entry.light, split.light, light), (entry.heavy, split.heavy, heavy))
-            key = (fragment.A, fragment.Z, Float64(TKE))
-            push!(solved_keys, key)
-            ν[key] = neutron_multiplicity(chain)
-            γ[key] = gamma_energy(chain, energy)
-            γ_pair[key] = pair_gamma
-            excitation[key] = energy
-            for (store, quantity, weighting) in (
-                (temperature, :temperature, UniformSequenceWeighting()),
-                (residual, :residual_energy, UniformSequenceWeighting()),
-                (neutron_energy, :mean_neutron_energy, configuration.sequence_weighting),
-            )
-                averaged = sequence_average(chain, quantity, weighting)
-                averaged === nothing || (store[key] = averaged)
-            end
-        end
-        push!(chains, (entry, Float64(TKE), light, heavy, split))
-    end
+    sweep = _sweep(
+        domain,
+        configuration.kinetic_energies,
+        configuration.method,
+        configuration.model,
+        configuration.cross_section,
+        configuration.sequence_weighting,
+        configuration.mass_excess_table,
+        configuration.system,
+        configuration.maximum_temperature,
+    )
+    (; ν, temperature, excitation, residual, neutron_energy, γ, γ_pair) = sweep
+    (; chains, attempted, solved, solved_keys) = sweep
 
     solved > 0 || throw(
         ArgumentError(
@@ -323,6 +276,104 @@ function run_pipeline(configuration::Configuration)
     return result
 end
 
+"""
+    SolvedConfiguration
+
+One configuration the sweep solved: the fragmentation, its `TKE`, the two chains and the split.
+"""
+struct SolvedConfiguration
+    entry::Fragmentation
+    TKE::Float64
+    light::EmissionChain
+    heavy::EmissionChain
+    split::ExcitationEnergies
+end
+
+# The sweep of `run_pipeline`. The abstract fields of `Configuration` arrive as arguments, so the
+# loop is compiled for their concrete types.
+function _sweep(
+    domain,
+    kinetic_energies,
+    method::PartitionMethod,
+    model::LevelDensityModel,
+    cross_section::EvaporationCrossSection,
+    sequence_weighting::SequenceWeighting,
+    mass_excess_table::MassExcessTable,
+    system::FissioningSystem,
+    maximum_temperature::Float64,
+)
+    ν = FragmentQuantity{Float64}()
+    temperature = FragmentQuantity{Float64}()
+    excitation = FragmentQuantity{Float64}()
+    residual = FragmentQuantity{Float64}()
+    neutron_energy = FragmentQuantity{Float64}()
+    γ = FragmentQuantity{Float64}()
+    γ_pair = FragmentQuantity{Float64}()
+    chains = SolvedConfiguration[]
+
+    attempted = 0
+    solved = 0
+    solved_keys = Set{Tuple{Int, Int, Float64}}()
+    for entry in domain.entries, TKE in kinetic_energies
+        attempted += 1
+        balance = energetics(mass_excess_table, system, entry, TKE)
+        balance === nothing && continue
+        split = partition(method, entry, value(balance.TXE))
+        split === nothing && continue
+        light = emission_chain(
+            mass_excess_table,
+            model,
+            cross_section,
+            entry.light,
+            split.light;
+            maximum_temperature = maximum_temperature,
+        )
+        heavy = emission_chain(
+            mass_excess_table,
+            model,
+            cross_section,
+            entry.heavy,
+            split.heavy;
+            maximum_temperature = maximum_temperature,
+        )
+        solved += 1
+        # The energy the two fragments' neutrons leave, booked against either fragment so that a
+        # contraction over the mass of one gives the sum per split.
+        pair_gamma = gamma_energy(light, split.light) + gamma_energy(heavy, split.heavy)
+        for (fragment, energy, chain) in
+            ((entry.light, split.light, light), (entry.heavy, split.heavy, heavy))
+            key = (fragment.A, fragment.Z, Float64(TKE))
+            push!(solved_keys, key)
+            ν[key] = neutron_multiplicity(chain)
+            γ[key] = gamma_energy(chain, energy)
+            γ_pair[key] = pair_gamma
+            excitation[key] = energy
+            for (store, quantity, weighting) in (
+                (temperature, :temperature, UniformSequenceWeighting()),
+                (residual, :residual_energy, UniformSequenceWeighting()),
+                (neutron_energy, :mean_neutron_energy, sequence_weighting),
+            )
+                averaged = sequence_average(chain, quantity, weighting)
+                averaged === nothing || (store[key] = averaged)
+            end
+        end
+        push!(chains, SolvedConfiguration(entry, Float64(TKE), light, heavy, split))
+    end
+    return (;
+        ν,
+        temperature,
+        excitation,
+        residual,
+        neutron_energy,
+        γ,
+        γ_pair,
+        chains,
+        attempted,
+        solved,
+        solved_keys,
+    )
+end
+
 # Mean TKE and pooled within-mass standard deviation of TKE over the solved fragment cells,
 # weighted as `_mean_kinetic_energy` weights every cell: the moments the run's averages carry.
 function _solved_kinetic_energy(
@@ -407,7 +458,8 @@ function _run_spectrum(
         Float64,
     }[]
     total = 0.0
-    for (entry, TKE, light, heavy, split) in chains
+    for record in chains
+        (; entry, TKE, light, heavy, split) = record
         weight = get(weights.values, (entry.heavy.A, entry.heavy.Z, TKE), nothing)
         weight === nothing && continue
         w = _pair_weight(entry, Float64(value(weight)))
@@ -421,39 +473,43 @@ function _run_spectrum(
     end
     isempty(records) && return Curve(), NaN
 
-    function spectrum(E)
-        accumulated = 0.0
-        for (w, light, heavy, share, E_light, E_heavy) in records
-            accumulated +=
-                w * (
-                    share[1] * chain_spectrum(
-                        light,
-                        configuration.cross_section,
-                        E_light,
-                        E,
-                        configuration.sequence_weighting,
-                    ) +
-                    share[2] * chain_spectrum(
-                        heavy,
-                        configuration.cross_section,
-                        E_heavy,
-                        E,
-                        configuration.sequence_weighting,
-                    )
-                )
-        end
-        return accumulated / total
-    end
-
-    values = Curve(undef, length(grid))
-    for (index, E) in pairs(grid)
-        values[index] = (E, spectrum(E))
-    end
+    values = _tabulate_spectrum(
+        grid,
+        records,
+        configuration.cross_section,
+        configuration.sequence_weighting,
+        total,
+    )
     # First moment over the tabulated grid, not the half-line, so it is reproducible from the
     # written file.
     norm = _trapezoid(values, (E, N) -> N)
     mean = norm > 0 ? _trapezoid(values, (E, N) -> E * N) / norm : NaN
     return values, mean
+end
+
+# The spectrum on `grid`, the sum over the pair records divided by their total weight. The cross
+# section and the sequence weighting arrive as arguments, so the loop is compiled for their
+# concrete types.
+function _tabulate_spectrum(
+    grid::Vector{Float64},
+    records,
+    cross_section::EvaporationCrossSection,
+    weighting::SequenceWeighting,
+    total::Float64,
+)
+    values = Curve(undef, length(grid))
+    for (index, E) in pairs(grid)
+        accumulated = 0.0
+        for (w, light, heavy, share, E_light, E_heavy) in records
+            accumulated +=
+                w * (
+                    share[1] * chain_spectrum(light, cross_section, E_light, E, weighting) +
+                    share[2] * chain_spectrum(heavy, cross_section, E_heavy, E, weighting)
+                )
+        end
+        values[index] = (E, accumulated / total)
+    end
+    return values
 end
 
 function _trapezoid(values::Curve, integrand)
@@ -535,7 +591,7 @@ function run_parameters(configuration::Configuration)
         "kinetic_energy_min" => first(configuration.kinetic_energies),
         "kinetic_energy_max" => last(configuration.kinetic_energies),
         "kinetic_energy_step" => step(configuration.kinetic_energies),
-        "model" => _model_token(configuration.model),
+        "model" => level_density_label(configuration.model),
         "cross_section" => _cross_section_token(configuration.cross_section),
         "maximum_temperature" => configuration.maximum_temperature,
         "method" => _method_token(configuration.method),
@@ -601,21 +657,18 @@ _token(x::AbstractString) = String(x)
 # Integer-valued reals are written without a decimal part, so one grid has one spelling.
 _token(x::Real) = isinteger(x) ? string(Int(round(x))) : string(x)
 
-_model_token(::BackShiftedFermiGas) = "BSFG"
-_model_token(::GilbertCameron) = "GC"
-_cross_section_token(::VariableCrossSection) = "variable"
-_cross_section_token(::ConstantCrossSection) = "constant"
-_method_token(::TemperatureRatio) = "temperature_ratio"
-_method_token(::ExcitationEnergyRatio) = "excitation_ratio"
-_method_token(::ScissionModelling) = "scission"
-_pair_weighting_token(::MultiplicityWeighting) = "multiplicity"
-_pair_weighting_token(::ExcitationWeighting) = "excitation"
-_average_token(::PerFissionAverage) = "per_fission"
-_average_token(::PerNeutronAverage) = "per_neutron"
-_sequence_weighting_token(::UniformSequenceWeighting) = "uniform"
-_sequence_weighting_token(::EmissionProbabilityWeighting) = "emission_probability"
-_product_count_token(::EmissionProbabilityCount) = "emission_probability"
-_product_count_token(::SequenceCount) = "sequence_count"
+# The configuration spelling of a choice, the reverse of the lookup the parser makes.
+_label(table, choice) = first(only(entry for entry in table if last(entry) === choice))
+
+_cross_section_token(cross_section::EvaporationCrossSection) =
+    _label(CROSS_SECTIONS, cross_section)
+_method_token(method::PartitionMethod) =
+    first(only(entry for entry in PARTITION_METHODS if method isa last(entry)))
+_pair_weighting_token(weighting::SpectrumWeighting) = _label(PAIR_WEIGHTINGS, weighting)
+_average_token(average::SpectrumAverage) = _label(SPECTRUM_AVERAGES, average)
+_sequence_weighting_token(weighting::SequenceWeighting) =
+    _label(SEQUENCE_WEIGHTINGS, weighting)
+_product_count_token(count::ProductCount) = _label(PRODUCT_COUNTS, count)
 
 """
     write_results(result, directory) -> String
@@ -883,10 +936,10 @@ end
 """
     run_metadata(result) -> Dict{String, Any}
 
-What the library knows about a run, as nested tables ready for `TOML.print`: `"system"`, the
+The library's part of the run record, as nested tables ready for `TOML.print`: `"system"`, the
 fissioning system; `"model"`, every modelling choice and input the configuration resolved;
-`"result"`, the totals. The caller adds what only it knows — the run identifier, the paths,
-the commit, the platform — and writes the whole; `scripts/run.jl` does.
+`"result"`, the totals. `scripts/run.jl` adds the run identifier, the paths, the commit and the
+platform, and writes the whole.
 """
 function run_metadata(result::RunResult)
     configuration = result.configuration
@@ -991,8 +1044,6 @@ function _bound_summary(bounds::Vector{KineticEnergyBound}, fragment_yield::Frag
     )
 end
 
-_curve_source(method::TemperatureRatio) =
-    isempty(method.curve.source) ? "supplied in memory" : method.curve.source
-_curve_source(method::ExcitationEnergyRatio) =
+_curve_source(method::Union{ExcitationEnergyRatio, TemperatureRatio}) =
     isempty(method.curve.source) ? "supplied in memory" : method.curve.source
 _curve_source(::ScissionModelling) = "none; the partition is modelled at scission"

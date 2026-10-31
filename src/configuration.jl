@@ -133,6 +133,33 @@ function _reject_unknown_keys(document::AbstractDict)
     return nothing
 end
 
+# The string switches of a configuration, each spelling paired with the choice it selects. The
+# parser accepts the spellings and looks the choice up; the run record spells a choice by the
+# reverse lookup. A partition method carries inputs, so its table pairs the spelling with a type.
+const CROSS_SECTIONS =
+    ("variable" => VariableCrossSection(), "constant" => ConstantCrossSection())
+const PARTITION_METHODS = (
+    "temperature_ratio" => TemperatureRatio,
+    "excitation_ratio" => ExcitationEnergyRatio,
+    "scission" => ScissionModelling,
+)
+const PAIR_WEIGHTINGS =
+    ("multiplicity" => MultiplicityWeighting(), "excitation" => ExcitationWeighting())
+const SPECTRUM_AVERAGES =
+    ("per_fission" => PerFissionAverage(), "per_neutron" => PerNeutronAverage())
+const SEQUENCE_WEIGHTINGS = (
+    "emission_probability" => EmissionProbabilityWeighting(),
+    "uniform" => UniformSequenceWeighting(),
+)
+const PRODUCT_COUNTS = (
+    "emission_probability" => EmissionProbabilityCount(),
+    "sequence_count" => SequenceCount(),
+)
+
+# The choice a switch table pairs with `spelling`.
+_lookup(table, spelling::AbstractString) =
+    last(only(entry for entry in table if first(entry) == spelling))
+
 # Reading one key with its type, its bounds and its allowed values, so that a malformed
 # configuration names the offending key rather than failing somewhere downstream.
 
@@ -144,6 +171,10 @@ function _section(document::AbstractDict, name::AbstractString)
         throw(ArgumentError("[$name] must be a table, got $(typeof(section))"))
     return section
 end
+
+# An optional section; an absent one reads as an empty table, so its keys take their defaults.
+_optional_section(document::AbstractDict, name::AbstractString) =
+    haskey(document, name) ? _section(document, name) : Dict{String, Any}()
 
 function _value(
     section::AbstractDict,
@@ -461,7 +492,7 @@ function _load_evaporation(document::AbstractDict)
     kind = _choice(
         section,
         "cross_section",
-        ("variable", "constant"),
+        first.(CROSS_SECTIONS),
         "evaporation.cross_section",
         "variable",
     )
@@ -480,8 +511,7 @@ function _load_evaporation(document::AbstractDict)
             exclusive_min = true,
         ),
     )
-    cross_section = kind == "variable" ? VariableCrossSection() : ConstantCrossSection()
-    return cross_section, maximum_temperature
+    return _lookup(CROSS_SECTIONS, kind), maximum_temperature
 end
 
 function _load_partition(
@@ -493,12 +523,7 @@ function _load_partition(
     mass_excess_table::MassExcessTable,
 )
     section = _section(document, "partition")
-    method = _choice(
-        section,
-        "method",
-        ("temperature_ratio", "excitation_ratio", "scission"),
-        "partition.method",
-    )
+    method = _choice(section, "method", first.(PARTITION_METHODS), "partition.method")
     if method == "scission"
         deformation = read_extra_deformation(
             _input(
@@ -562,7 +587,7 @@ end
 # An R_T(A_H) curve inverts the partition on the domain it was extracted on. Where the run
 # record says which domain that was, a different one here is refused: the curve would be applied
 # to fragmentations, level densities or masses it was not derived from. A record written before
-# the [domain] table existed can only be taken on trust.
+# the [domain] table existed can only be accepted unchecked.
 function _check_manifest_domain(
     manifest::TemperatureRatioManifest,
     model::LevelDensityModel,
@@ -595,7 +620,7 @@ function _check_manifest_domain(
     end
     # This package centres the symmetric split's charge window on the charge model's own ΔZ, so a
     # curve extracted with ΔZ = 0 imposed there was inverted on a different window. A record
-    # without the key leaves the choice unknown and is taken on trust.
+    # without the key leaves the choice unknown and is accepted unchecked.
     domain.zero_polarization_at_symmetry === true && throw(
         ArgumentError(
             "partition.subdirectory: $(manifest.source) was extracted with [domain] \
@@ -710,24 +735,16 @@ function _load_yield(
     inputs = Dict{String, Any}()
     bounded = nothing
     measured = if joint
-        table = read_mass_energy_yield(
-            _input(
-                data_directory,
-                _value(
-                    section,
-                    "mass_energy_yield_file",
-                    String,
-                    "yield.mass_energy_yield_file",
-                ),
-                "yield.mass_energy_yield_file",
-            ),
-        )
-        inputs["mass_energy_yield_file"] = _value(
+        joint_file = _value(
             section,
             "mass_energy_yield_file",
             String,
             "yield.mass_energy_yield_file",
         )
+        table = read_mass_energy_yield(
+            _input(data_directory, joint_file, "yield.mass_energy_yield_file"),
+        )
+        inputs["mass_energy_yield_file"] = joint_file
         symmetrize ? symmetrized_yield(table, system.compound.A) : table
     else
         # The width of P(TKE|A) is the one the experiment that measured ⟨TKE⟩(A) reported, in
@@ -749,16 +766,19 @@ function _load_yield(
                     exclusive_min = true,
                 ),
             ) : nothing
-        dispersion = if haskey(section, "kinetic_energy_dispersion_file")
+        dispersion_file =
+            haskey(section, "kinetic_energy_dispersion_file") ?
+            _value(
+                section,
+                "kinetic_energy_dispersion_file",
+                String,
+                "yield.kinetic_energy_dispersion_file",
+            ) : nothing
+        dispersion = if dispersion_file !== nothing
             read_kinetic_energy_dispersion(
                 _input(
                     data_directory,
-                    _value(
-                        section,
-                        "kinetic_energy_dispersion_file",
-                        String,
-                        "yield.kinetic_energy_dispersion_file",
-                    ),
+                    dispersion_file,
                     "yield.kinetic_energy_dispersion_file",
                 );
                 default = stated,
@@ -768,29 +788,18 @@ function _load_yield(
         else
             nothing
         end
-        mass_path = _input(
-            data_directory,
-            _value(section, "mass_yield_file", String, "yield.mass_yield_file"),
-            "yield.mass_yield_file",
-        )
-        energy_path = _input(
-            data_directory,
-            _value(
-                section,
-                "mean_kinetic_energy_file",
-                String,
-                "yield.mean_kinetic_energy_file",
-            ),
-            "yield.mean_kinetic_energy_file",
-        )
-        inputs["mass_yield_file"] =
-            _value(section, "mass_yield_file", String, "yield.mass_yield_file")
-        inputs["mean_kinetic_energy_file"] = _value(
+        mass_file = _value(section, "mass_yield_file", String, "yield.mass_yield_file")
+        mass_path = _input(data_directory, mass_file, "yield.mass_yield_file")
+        energy_file = _value(
             section,
             "mean_kinetic_energy_file",
             String,
             "yield.mean_kinetic_energy_file",
         )
+        energy_path =
+            _input(data_directory, energy_file, "yield.mean_kinetic_energy_file")
+        inputs["mass_yield_file"] = mass_file
+        inputs["mean_kinetic_energy_file"] = energy_file
         reconstructed = factorized_yield(
             mass_path,
             energy_path,
@@ -805,12 +814,7 @@ function _load_yield(
         elseif dispersion.source == "uniform"
             "stated"
         else
-            inputs["kinetic_energy_dispersion_file"] = _value(
-                section,
-                "kinetic_energy_dispersion_file",
-                String,
-                "yield.kinetic_energy_dispersion_file",
-            )
+            inputs["kinetic_energy_dispersion_file"] = dispersion_file
             inputs["masses_without_width"] = _masses_without_width(
                 reconstructed,
                 dispersion,
@@ -904,15 +908,10 @@ function _masses_without_width(
     ]
 end
 
+# An absent section takes the defaults and leaves the spectrum disabled.
 function _load_spectrum(document::AbstractDict)
-    haskey(document, "spectrum") || return (
-        nothing,
-        1.42,
-        MultiplicityWeighting(),
-        PerNeutronAverage(),
-        EmissionProbabilityWeighting(),
-    )
-    section = _section(document, "spectrum")
+    present = haskey(document, "spectrum")
+    section = _optional_section(document, "spectrum")
     maxwellian = Float64(
         _bounded(
             _value(
@@ -928,34 +927,37 @@ function _load_spectrum(document::AbstractDict)
             exclusive_min = true,
         ),
     )
-    pair_weighting = _spectrum_pair_weighting(
+    pair_weighting = _lookup(
+        PAIR_WEIGHTINGS,
         _choice(
             section,
             "pair_weighting",
-            ("multiplicity", "excitation"),
+            first.(PAIR_WEIGHTINGS),
             "spectrum.pair_weighting",
             "multiplicity",
         ),
     )
-    average = _spectrum_average(
+    average = _lookup(
+        SPECTRUM_AVERAGES,
         _choice(
             section,
             "average",
-            ("per_fission", "per_neutron"),
+            first.(SPECTRUM_AVERAGES),
             "spectrum.average",
             "per_neutron",
         ),
     )
-    sequence_weighting = _sequence_weighting(
+    sequence_weighting = _lookup(
+        SEQUENCE_WEIGHTINGS,
         _choice(
             section,
             "sequence_weighting",
-            ("emission_probability", "uniform"),
+            first.(SEQUENCE_WEIGHTINGS),
             "spectrum.sequence_weighting",
             "emission_probability",
         ),
     )
-    _value(section, "enabled", Bool, "spectrum.enabled", true) ||
+    _value(section, "enabled", Bool, "spectrum.enabled", present) ||
         return nothing, maxwellian, pair_weighting, average, sequence_weighting
     lower = Float64(
         _bounded(
@@ -991,32 +993,22 @@ function _load_spectrum(document::AbstractDict)
     return grid, maxwellian, pair_weighting, average, sequence_weighting
 end
 
-_spectrum_pair_weighting(kind::String) =
-    kind == "excitation" ? ExcitationWeighting() : MultiplicityWeighting()
-_spectrum_average(kind::String) =
-    kind == "per_neutron" ? PerNeutronAverage() : PerFissionAverage()
-_sequence_weighting(kind::String) =
-    kind == "uniform" ? UniformSequenceWeighting() : EmissionProbabilityWeighting()
-
 # An absent section takes the defaults, so a configuration written before the products existed
 # still loads.
 function _load_products(document::AbstractDict)
-    haskey(document, "products") || return true, EmissionProbabilityCount()
-    section = _section(document, "products")
-    count = _product_count(
+    section = _optional_section(document, "products")
+    count = _lookup(
+        PRODUCT_COUNTS,
         _choice(
             section,
             "count",
-            ("emission_probability", "sequence_count"),
+            first.(PRODUCT_COUNTS),
             "products.count",
             "emission_probability",
         ),
     )
     return _value(section, "enabled", Bool, "products.enabled", true), count
 end
-
-_product_count(kind::String) =
-    kind == "sequence_count" ? SequenceCount() : EmissionProbabilityCount()
 
 function _load_output(document::AbstractDict)
     section = _section(document, "output")

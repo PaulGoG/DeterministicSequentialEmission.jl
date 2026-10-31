@@ -62,7 +62,8 @@ const SYSTEM_STYLE = Dict{String, Tuple{RGBf, Any}}(
     DatasetPalette(colours, markers)
 
 Colour and marker pairs handed to measured datasets in order of first appearance, the slot each
-author–year label has been given, and the slots taken in the panel being drawn.
+author–year label has been given, the slots taken in the panel being drawn, whether that panel
+has run out of slots, and how many datasets beyond the palette's length it has drawn.
 """
 struct DatasetPalette
     colours::Vector{RGBf}
@@ -70,6 +71,7 @@ struct DatasetPalette
     assignment::Dict{String, Int}
     taken::Set{Int}
     exhausted::Base.RefValue{Bool}
+    overflow::Base.RefValue{Int}
 end
 
 function DatasetPalette(colours, markers)
@@ -82,6 +84,7 @@ function DatasetPalette(colours, markers)
         Dict{String, Int}(),
         Set{Int}(),
         Ref(false),
+        Ref(0),
     )
 end
 
@@ -100,9 +103,15 @@ const PRODUCT_PALETTE = DatasetPalette(
     (:circle, :rect, :utriangle, :diamond, :dtriangle, :pentagon),
 )
 
-"Start a new panel: the slots taken within it are free again."
-begin_panel!() =
-    (foreach(p -> empty!(p.taken), (DATASET_PALETTE, PRODUCT_PALETTE)); nothing)
+"Start a new panel: the slots taken within it are free again, and its overflow is cleared."
+function begin_panel!()
+    for palette in (DATASET_PALETTE, PRODUCT_PALETTE)
+        empty!(palette.taken)
+        palette.exhausted[] = false
+        palette.overflow[] = 0
+    end
+    return nothing
+end
 
 """
     dataset_style([palette], author_year) -> (colour, marker)
@@ -111,7 +120,8 @@ The colour and marker of a measured dataset, keyed by its author–year label, f
 `DATASET_PALETTE` by default. Slots are taken per panel, so no two datasets of one panel share a
 pair; a label keeps the slot it was first given wherever that slot is still free, so a dataset
 recurring in another panel looks the same. Beyond the length of the palette in one panel the
-table is reused from the start, with a single warning.
+table is reused from the start, with one warning per panel, and the labels drawn beyond it keep
+the slots they were given elsewhere.
 """
 dataset_style(author_year::String) = dataset_style(DATASET_PALETTE, author_year)
 
@@ -124,11 +134,11 @@ function dataset_style(palette::DatasetPalette, author_year::String)
                 datasets in one panel; colours and markers are reused" dataset =
                 author_year
             palette.exhausted[] = true
-            slot = mod1(length(palette.taken) + 1, length(palette.colours))
+            slot = mod1(palette.overflow[] += 1, length(palette.colours))
         else
             slot = first(free)
+            palette.assignment[author_year] = slot
         end
-        palette.assignment[author_year] = slot
     end
     push!(palette.taken, slot)
     return (palette.colours[slot], palette.markers[slot])

@@ -213,7 +213,7 @@ partition method is consulted.
 function partition(method::ExcitationEnergyRatio, fragmentation::Fragmentation, TXE::Real)
     is_self_complementary(fragmentation) && return _split(TXE, 0.5)
     ratio = method.curve(fragmentation.heavy.A)
-    (ratio === nothing || ratio > 1) && return nothing
+    ratio === nothing && return nothing
     return _split(TXE, ratio)
 end
 
