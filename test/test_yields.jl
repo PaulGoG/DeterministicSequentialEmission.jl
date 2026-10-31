@@ -2,8 +2,9 @@
 # run. The table has no citable origin, so this regression lives with the package that holds it.
 
 guarded(
-    CHARGE_DISTRIBUTION_AVAILABLE && YIELD_AVAILABLE,
     "fragment yields against the archived run",
+    CF252_CHARGE_DISTRIBUTION_FILE,
+    CF252_YIELD_FILE,
 ) do
     @testset "fragment yields against the archived run" begin
         distribution = cf252_charge_distribution()

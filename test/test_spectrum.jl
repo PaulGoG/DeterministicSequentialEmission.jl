@@ -163,15 +163,13 @@ end
 end
 
 @testset "chain spectra average over the solved sequences" begin
-    table = mass_table()
+    table = MASS_TABLE
     model = BackShiftedFermiGas(table)
     cross_section = VariableCrossSection()
 
     fragmentation = fragmentation_at(134, 52)
     balance = energetics(table, CF252, fragmentation, 180.0)
-    method = ExcitationEnergyRatio(
-        SegmentedCurve([(126, 0.5), (130, 0.14), (150, 0.607), (174, 0.865)]),
-    )
+    method = ExcitationEnergyRatio(CF252_EXCITATION_RATIO_CURVE)
     split = partition(method, fragmentation, value(balance.TXE))
     E_light, E_heavy = fragment_energy_per_nucleon(fragmentation, 180.0)
 
@@ -218,15 +216,13 @@ end
 end
 
 @testset "pair weighting" begin
-    table = mass_table()
+    table = MASS_TABLE
     model = BackShiftedFermiGas(table)
     cross_section = VariableCrossSection()
 
     fragmentation = fragmentation_at(140, 54)
     balance = energetics(table, CF252, fragmentation, 175.0)
-    method = ExcitationEnergyRatio(
-        SegmentedCurve([(126, 0.5), (130, 0.14), (150, 0.607), (174, 0.865)]),
-    )
+    method = ExcitationEnergyRatio(CF252_EXCITATION_RATIO_CURVE)
     split = partition(method, fragmentation, value(balance.TXE))
     light = emission_chain(table, model, cross_section, fragmentation.light, split.light)
     heavy = emission_chain(table, model, cross_section, fragmentation.heavy, split.heavy)
@@ -264,14 +260,12 @@ end
 end
 
 @testset "total-spectrum weights" begin
-    table = mass_table()
+    table = MASS_TABLE
     model = BackShiftedFermiGas(table)
     cross_section = VariableCrossSection()
     fragmentation = fragmentation_at(134, 52)
     balance = energetics(table, CF252, fragmentation, 180.0)
-    method = ExcitationEnergyRatio(
-        SegmentedCurve([(126, 0.5), (130, 0.14), (150, 0.607), (174, 0.865)]),
-    )
+    method = ExcitationEnergyRatio(CF252_EXCITATION_RATIO_CURVE)
     split = partition(method, fragmentation, value(balance.TXE))
     light = emission_chain(table, model, cross_section, fragmentation.light, split.light)
     heavy = emission_chain(table, model, cross_section, fragmentation.heavy, split.heavy)
@@ -283,14 +277,12 @@ end
 end
 
 @testset "chain spectra under the emission probability weighting" begin
-    table = mass_table()
+    table = MASS_TABLE
     model = BackShiftedFermiGas(table)
     cross_section = VariableCrossSection()
     fragmentation = fragmentation_at(134, 52)
     balance = energetics(table, CF252, fragmentation, 170.0)
-    method = ExcitationEnergyRatio(
-        SegmentedCurve([(126, 0.5), (130, 0.14), (150, 0.607), (174, 0.865)]),
-    )
+    method = ExcitationEnergyRatio(CF252_EXCITATION_RATIO_CURVE)
     split = partition(method, fragmentation, value(balance.TXE))
     E_light, _ = fragment_energy_per_nucleon(fragmentation, 170.0)
     chain = emission_chain(table, model, cross_section, fragmentation.light, split.light)

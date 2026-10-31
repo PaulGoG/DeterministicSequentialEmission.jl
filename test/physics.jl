@@ -24,7 +24,6 @@ const U235_POLARIZATION_AVAILABLE = isfile(U235_CHARGE_DISTRIBUTION_FILE)
 const SHELL_CORRECTIONS_AVAILABLE = isfile(SHELL_CORRECTION_FILE)
 
 const CF252_YIELD_FILE = joinpath(DATA, "Cf252_sf", "Y_vs_A_TKE.dat")
-const YIELD_AVAILABLE = isfile(CF252_YIELD_FILE)
 
 CHARGE_DISTRIBUTION_AVAILABLE || @warn """
     charge distribution systematics not present; the tests that build a fragmentation domain \
@@ -38,21 +37,37 @@ const RTOL = sqrt(eps(Float64))
 const SKIPPED = String[]
 
 """
-    guarded(flag, name, body)
+    guarded(body, name, files...)
 
-Run `body()` when `flag` holds; otherwise record `name` in `SKIPPED`, so that a testset gated on
-absent input data is reported at the end of the run rather than omitted without trace.
+Run `body()` when every one of `files` exists. Otherwise record `name` in `SKIPPED` and a
+broken entry in a testset `"<name> (needs data/…)"` naming the absent files, so that a testset
+gated on absent input data shows in the summary and is listed at the end of the run rather than
+omitted without trace.
 
-The method taking `body` first serves the `do`-block form, `guarded(flag, name) do … end`.
+`body` comes first to serve the `do`-block form, `guarded(name, files...) do … end`.
 """
-function guarded(flag::Bool, name::AbstractString, body::Function)
-    flag ? body() : push!(SKIPPED, String(name))
+function guarded(body::Function, name::AbstractString, files::AbstractString...)
+    absent = [file for file in files if !isfile(file)]
+    if isempty(absent)
+        body()
+    else
+        push!(SKIPPED, String(name))
+        needed = join(("data/" * relpath(file, DATA) for file in absent), ", ")
+        @testset "$name (needs $needed)" begin
+            @test_skip true
+        end
+    end
     return nothing
 end
 
-guarded(body::Function, flag::Bool, name::AbstractString) = guarded(flag, name, body)
-
 mass_table() = read_mass_excess_table(MASS_EXCESS_FILE)
+
+# Parsed once and shared: the tests read the table and never modify it.
+const MASS_TABLE = mass_table()
+
+# The E*_H/TXE (A_H) parameterization of the archived thesis run, from its provenance header.
+const CF252_EXCITATION_RATIO_CURVE =
+    SegmentedCurve([(126, 0.5), (130, 0.14), (150, 0.607), (174, 0.865)])
 
 cf252_charge_distribution() = read_charge_distribution(CF252_CHARGE_DISTRIBUTION_FILE)
 

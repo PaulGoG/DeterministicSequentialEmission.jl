@@ -1,16 +1,15 @@
 guarded(
-    CHARGE_DISTRIBUTION_AVAILABLE && YIELD_AVAILABLE,
     "averaged quantities against the archived run",
+    CF252_CHARGE_DISTRIBUTION_FILE,
+    CF252_YIELD_FILE,
 ) do
     @testset "averaged quantities against the archived run" begin
-        table = mass_table()
+        table = MASS_TABLE
         distribution = cf252_charge_distribution()
         domain = cf252_domain()
         model = BackShiftedFermiGas(table)
         cross_section = VariableCrossSection()
-        method = ExcitationEnergyRatio(
-            SegmentedCurve([(126, 0.5), (130, 0.14), (150, 0.607), (174, 0.865)]),
-        )
+        method = ExcitationEnergyRatio(CF252_EXCITATION_RATIO_CURVE)
         yields = build_fragment_yield(
             domain,
             distribution,

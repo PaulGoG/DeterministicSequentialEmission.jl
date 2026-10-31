@@ -45,11 +45,12 @@ end
 end
 
 guarded(
-    CHARGE_DISTRIBUTION_AVAILABLE && YIELD_AVAILABLE,
     "post-neutron products against the archived runs",
+    CF252_CHARGE_DISTRIBUTION_FILE,
+    CF252_YIELD_FILE,
 ) do
     @testset "post-neutron products against the archived runs" begin
-        table = mass_table()
+        table = MASS_TABLE
         distribution = cf252_charge_distribution()
         domain = cf252_domain()
         model = BackShiftedFermiGas(table)
@@ -64,9 +65,7 @@ guarded(
 
         for (method, file) in (
             (
-                ExcitationEnergyRatio(
-                    SegmentedCurve([(126, 0.5), (130, 0.14), (150, 0.607), (174, 0.865)]),
-                ),
+                ExcitationEnergyRatio(CF252_EXCITATION_RATIO_CURVE),
                 "Y_vs_A_p_excitation_ratio.dat",
             ),
             (
@@ -86,13 +85,7 @@ guarded(
             ),
         )
             # The sweep of run_pipeline, on the archived grid.
-            chains = Tuple{
-                Fragmentation,
-                Float64,
-                EmissionChain,
-                EmissionChain,
-                ExcitationEnergies,
-            }[]
+            chains = DeterministicSequentialEmission.SolvedConfiguration[]
             ν = FragmentQuantity{Float64}()
             for entry in domain.entries, TKE in CF252_TKE
                 balance = energetics(table, CF252, entry, TKE)
@@ -112,7 +105,16 @@ guarded(
                 )
                 ν[(entry.light.A, entry.light.Z, TKE)] = neutron_multiplicity(light)
                 ν[(entry.heavy.A, entry.heavy.Z, TKE)] = neutron_multiplicity(heavy)
-                push!(chains, (entry, TKE, light, heavy, split))
+                push!(
+                    chains,
+                    DeterministicSequentialEmission.SolvedConfiguration(
+                        entry,
+                        TKE,
+                        light,
+                        heavy,
+                        split,
+                    ),
+                )
             end
             contract(count) = DeterministicSequentialEmission._product_distributions(
                 chains,
@@ -144,8 +146,8 @@ guarded(
 
             # The invariants, under either count.
             solved = Set(
-                (fragment.A, fragment.Z, TKE) for (entry, TKE, _, _, _) in chains for
-                fragment in (entry.light, entry.heavy)
+                (fragment.A, fragment.Z, record.TKE) for record in chains for
+                fragment in (record.entry.light, record.entry.heavy)
             )
             solved_weight = sum(get(weights, key, 0.0) for key in solved)
             max_E_K = maximum(TKE * (A₀ - A) / A₀ for (A, _, TKE) in solved)
@@ -221,7 +223,6 @@ end
             "A_H,excitation_ratio,excitation_ratio_uncertainty\n126,0.5,0.0\n150,0.607,0.0\n\
              174,0.865,0.0\n",
         )
-        isfile(MASS_EXCESS_FILE) || return nothing
         cp(MASS_EXCESS_FILE, joinpath(directory, "MASSES"))
 
         # A configuration without the section loads with the defaults.

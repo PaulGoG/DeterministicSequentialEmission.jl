@@ -1,7 +1,6 @@
 [deps]
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
 DeterministicSequentialEmission = "156d68c7-7ead-4df0-b5ab-777b14fcce37"
-DrWatson = "634d3b9d-ee7a-5ddf-bec9-22491ea816e1"
 FissionFragmentsDomain = "5f94ef1e-7421-42a3-adcf-a45cd611934b"
 ExplicitImports = "7d51a73a-1435-4ff3-83d9-f097790105c7"
 JET = "c3a54625-cd67-489e-a8e7-0a5a0ff4e31b"
@@ -16,8 +15,7 @@ FissionFragmentsDomain = {url = "https://github.com/PaulGoG/FissionFragmentsDoma
 
 [compat]
 Aqua = "0.8"
-DrWatson = "2"
 ExplicitImports = "1.15"
 JET = "0.9.19, 0.10, 0.11, 0.12"
-Measurements = "2.14"
+Measurements = "2"
 QuadGK = "2.11"

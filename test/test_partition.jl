@@ -10,7 +10,7 @@
           ExcitationEnergyRatio
 
     # R_T is a ratio of temperatures, so positive, but it may exceed one.
-    model = BackShiftedFermiGas(mass_table())
+    model = BackShiftedFermiGas(MASS_TABLE)
     @test_throws ArgumentError TemperatureRatio(
         SegmentedCurve([(126, 1.0), (150, -0.3)]),
         model,
@@ -34,9 +34,7 @@ end
     @test report.uncovered == collect(126:129)
     @test report.covered ≈ 45 / 49 rtol = RTOL
 
-    whole = ExcitationEnergyRatio(
-        SegmentedCurve([(126, 0.5), (130, 0.14), (150, 0.607), (174, 0.865)]),
-    )
+    whole = ExcitationEnergyRatio(CF252_EXCITATION_RATIO_CURVE)
     full = segment_coverage(whole, 126:174)
     @test isempty(full.uncovered)
     @test full.covered == 1.0
@@ -44,19 +42,17 @@ end
     # Modelling at scission has no curve; the extra-deformation table sets the reach instead.
     deformation =
         Dict(Nuclide(50, 130) => 1.2, Nuclide(51, 130) => 1.0, Nuclide(52, 132) => 0.8)
-    scission = ScissionModelling(deformation, BackShiftedFermiGas(mass_table()))
+    scission = ScissionModelling(deformation, BackShiftedFermiGas(MASS_TABLE))
     reached = segment_coverage(scission, 130:133)
     @test reached.uncovered == [131, 133]
     @test reached.covered == 0.5
 end
 
 @testset "excitation energy ratio against the archived run" begin
-    table = mass_table()
+    table = MASS_TABLE
 
     # The parameterization the archived run used, transcribed from its own provenance header.
-    method = ExcitationEnergyRatio(
-        SegmentedCurve([(126, 0.5), (130, 0.14), (150, 0.607), (174, 0.865)]),
-    )
+    method = ExcitationEnergyRatio(CF252_EXCITATION_RATIO_CURVE)
 
     reference = read_delimited_table(
         joinpath(REFERENCE, "E_star_vs_A_H_Z_H_TKE_excitation_ratio.dat"),
@@ -85,13 +81,11 @@ end
     @test maximum(abs(s.heavy - E) for (s, E) in zip(splits, expected_heavy)) < 1e-8
 end
 
-guarded(CHARGE_DISTRIBUTION_AVAILABLE, "the partition leaves no fragment negative") do
+guarded("the partition leaves no fragment negative", CF252_CHARGE_DISTRIBUTION_FILE) do
     @testset "the partition leaves no fragment negative" begin
-        table = mass_table()
+        table = MASS_TABLE
         domain = cf252_domain()
-        method = ExcitationEnergyRatio(
-            SegmentedCurve([(126, 0.5), (130, 0.14), (150, 0.607), (174, 0.865)]),
-        )
+        method = ExcitationEnergyRatio(CF252_EXCITATION_RATIO_CURVE)
 
         splits = ExcitationEnergies[]
         for fragmentation in domain.entries[1:20:end]
@@ -107,7 +101,7 @@ guarded(CHARGE_DISTRIBUTION_AVAILABLE, "the partition leaves no fragment negativ
 end
 
 @testset "a split into two copies of one nuclide divides evenly" begin
-    table = mass_table()
+    table = MASS_TABLE
     model = BackShiftedFermiGas(table)
 
     # A_H = A_L = 126 with Z_H = Z_L = 49: the two fragments are the same nuclide, so they have
@@ -151,7 +145,7 @@ end
 end
 
 @testset "temperature ratio against the archived run" begin
-    table = mass_table()
+    table = MASS_TABLE
     model = BackShiftedFermiGas(table)
 
     # The second archived run, whose R_T pivots come from its own provenance header. The
@@ -198,7 +192,7 @@ end
 end
 
 @testset "temperature ratio partition" begin
-    table = mass_table()
+    table = MASS_TABLE
     model = BackShiftedFermiGas(table)
 
     method = TemperatureRatio(
@@ -238,7 +232,7 @@ end
 end
 
 @testset "scission modelling partition" begin
-    table = mass_table()
+    table = MASS_TABLE
     model = BackShiftedFermiGas(table)
     fragmentation = fragmentation_at(134, 52)
 

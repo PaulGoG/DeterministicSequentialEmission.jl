@@ -59,7 +59,6 @@ end
         system = joinpath(root, "U235_nth")
         mkpath(system)
         _manifest(system)
-        isfile(MASS_EXCESS_FILE) || return nothing
         cp(MASS_EXCESS_FILE, joinpath(root, "MASSES"))
 
         text = """
@@ -147,7 +146,6 @@ end
 end
 
 @testset "a curve extracted on another domain is refused" begin
-    isfile(MASS_EXCESS_FILE) || return nothing
     mktempdir() do root
         cp(MASS_EXCESS_FILE, joinpath(root, "MASSES"))
         system = joinpath(root, "U235_nth")

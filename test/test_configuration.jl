@@ -67,245 +67,229 @@ end
 @testset "run configuration" begin
     mktempdir() do directory
         # The two files the fixture names. The curve is the comma-delimited form
-        # read_segmented_curve takes; the mass table is the shipped evaluation where present.
+        # read_segmented_curve takes; the mass table is the shipped evaluation.
         write(
             joinpath(directory, "SEGMENTS"),
             "A_H,excitation_ratio,excitation_ratio_uncertainty\n126,0.5,0.0\n150,0.607,0.0\n\
              174,0.865,0.0\n",
         )
-        if isfile(MASS_EXCESS_FILE)
-            cp(MASS_EXCESS_FILE, joinpath(directory, "MASSES"))
-        else
-            write(
-                joinpath(directory, "MASSES"),
-                "Z A element mass_excess mass_excess_uncertainty\n",
-            )
-        end
+        cp(MASS_EXCESS_FILE, joinpath(directory, "MASSES"))
 
-        if isfile(MASS_EXCESS_FILE)
-            configuration = _configuration(directory)
-            @test configuration isa Configuration
-            @test configuration.system.compound == Nuclide(98, 252)
-            @test is_spontaneous(configuration.system)
-            @test configuration.heavy_masses == 126:174
-            @test configuration.charges_per_mass == 5
-            @test configuration.kinetic_energies == 130.0:10.0:230.0
-            @test configuration.model isa BackShiftedFermiGas
-            @test configuration.cross_section isa VariableCrossSection
-            @test configuration.method isa ExcitationEnergyRatio
-            @test configuration.fragment_yield === nothing        # no [yield] section in the fixture
-            @test configuration.spectrum_grid === nothing  # nor a [spectrum] one
-            @test configuration.significant_digits == 8
-            # The output directory is not a key: it follows from the system section.
-            @test system_label(configuration.system) == "Cf252_sf"
-            @test occursin("probe.toml", configuration.source)
+        configuration = _configuration(directory)
+        @test configuration isa Configuration
+        @test configuration.system.compound == Nuclide(98, 252)
+        @test is_spontaneous(configuration.system)
+        @test configuration.heavy_masses == 126:174
+        @test configuration.charges_per_mass == 5
+        @test configuration.kinetic_energies == 130.0:10.0:230.0
+        @test configuration.model isa BackShiftedFermiGas
+        @test configuration.cross_section isa VariableCrossSection
+        @test configuration.method isa ExcitationEnergyRatio
+        @test configuration.fragment_yield === nothing        # no [yield] section in the fixture
+        @test configuration.spectrum_grid === nothing  # nor a [spectrum] one
+        @test configuration.significant_digits == 8
+        # The output directory is not a key: it follows from the system section.
+        @test system_label(configuration.system) == "Cf252_sf"
+        @test occursin("probe.toml", configuration.source)
 
-            # A yield imposes the pre-neutron identity Y(A) = Y(A₀ − A) unless told otherwise, and
-            # the choice enters the run identifier, since it changes the result.
-            write(
-                joinpath(directory, "YATKE"),
-                "A TKE Y\n126 180.0 1.0\n140 180.0 3.0\n112 180.0 1.0\n",
-            )
-            with_yield(extra) = _configuration(
-                directory,
-                "[output]" => "[yield]\nmass_energy_yield_file = \"YATKE\"\n$(extra)\n[output]",
-            )
-            symmetric = with_yield("")
-            @test symmetric.yield_symmetrized
-            @test run_parameters(symmetric)["Ysym"] == true
-            as_measured = with_yield("symmetrize = false\n")
-            @test !as_measured.yield_symmetrized
-            @test run_identifier(as_measured) != run_identifier(symmetric)
-            @test _rejects(
-                directory,
-                "yield.symmetrize",
-                "[output]" => "[yield]\nmass_energy_yield_file = \"YATKE\"\nsymmetrize = \"yes\"\n[output]",
-            )
+        # A yield imposes the pre-neutron identity Y(A) = Y(A₀ − A) unless told otherwise, and
+        # the choice enters the run identifier, since it changes the result.
+        write(
+            joinpath(directory, "YATKE"),
+            "A TKE Y\n126 180.0 1.0\n140 180.0 3.0\n112 180.0 1.0\n",
+        )
+        with_yield(extra) = _configuration(
+            directory,
+            "[output]" => "[yield]\nmass_energy_yield_file = \"YATKE\"\n$(extra)\n[output]",
+        )
+        symmetric = with_yield("")
+        @test symmetric.yield_symmetrized
+        @test run_parameters(symmetric)["Ysym"] == true
+        as_measured = with_yield("symmetrize = false\n")
+        @test !as_measured.yield_symmetrized
+        @test run_identifier(as_measured) != run_identifier(symmetric)
+        @test _rejects(
+            directory,
+            "yield.symmetrize",
+            "[output]" => "[yield]\nmass_energy_yield_file = \"YATKE\"\nsymmetrize = \"yes\"\n[output]",
+        )
 
-            # Marginals without a width from their experiment place each mass at its mean TKE;
-            # a width is used only when a file supplies it or the configuration states one.
-            write(joinpath(directory, "YA"), "A Y\n126 1.0\n140 3.0\n112 3.0\n")
-            write(joinpath(directory, "TKEA"), "A TKE\n126 180.0\n140 185.3\n")
-            marginal(extra) = _configuration(
-                directory,
-                "[output]" => "[yield]\nmass_yield_file = \"YA\"\nmean_kinetic_energy_file = \"TKEA\"\n$(extra)\n[output]",
-            )
-            @test marginal("").yield_width == "none"
-            # A width is flagged as borrowed when its EXFOR entry is not that of the mean.
-            write(
-                joinpath(directory, "23014002_H.Baba_1997.dat"),
-                "A sigma_TKE\n126 9.0\n140 10.0\n",
-            )
-            write(
-                joinpath(directory, "21981008_P.Geltenbort_1985.dat"),
-                "A TKE\n126 180.0\n140 185.3\n",
-            )
-            write(
-                joinpath(directory, "21981099_P.Geltenbort_1985.dat"),
-                "A sigma_TKE\n126 9.0\n",
-            )
-            geltenbort(width_file) = _configuration(
-                directory,
-                "[output]" => "[yield]\nmass_yield_file = \"YA\"\nmean_kinetic_energy_file = \"21981008_P.Geltenbort_1985.dat\"\nkinetic_energy_dispersion_file = \"$(width_file)\"\n[output]",
-            )
-            borrowed = geltenbort("23014002_H.Baba_1997.dat")
-            @test borrowed.yield_width == "borrowed"
-            @test borrowed.yield_inputs["kinetic_energy_dispersion_file"] ==
-                  "23014002_H.Baba_1997.dat"
-            @test geltenbort("21981099_P.Geltenbort_1985.dat").yield_width ==
-                  "same experiment"
-            # The mass yield reaches 112 and 140; 140 has its width, 126 is A₀/2 with one too.
-            @test borrowed.yield_inputs["masses_without_width"] == Int[]
-            # A yield measured on the light wing alone stands for its complement: 152 takes the
-            # yield of 100, has a mean of its own, and no width reaches it. Without a mean it is
-            # not placed, and so not listed.
-            write(
-                joinpath(directory, "YA_wing"),
-                "A Y\n126 1.0\n140 3.0\n112 3.0\n100 2.0\n",
-            )
-            write(
-                joinpath(directory, "21981007_P.Geltenbort_1985.dat"),
-                "A TKE\n126 180.0\n140 185.3\n152 175.0\n",
-            )
-            wing(energy_file) = _configuration(
-                directory,
-                "[output]" => "[yield]\nmass_yield_file = \"YA_wing\"\nmean_kinetic_energy_file = \"$(energy_file)\"\nkinetic_energy_dispersion_file = \"23014002_H.Baba_1997.dat\"\n[output]",
-            )
-            @test wing("21981007_P.Geltenbort_1985.dat").yield_inputs["masses_without_width"] ==
-                  [152]
-            @test wing("21981008_P.Geltenbort_1985.dat").yield_inputs["masses_without_width"] ==
-                  Int[]
-            @test marginal("kinetic_energy_dispersion = 9.0\n").yield_width == "stated"
-            @test symmetric.yield_width == "joint"
+        # Marginals without a width from their experiment place each mass at its mean TKE;
+        # a width is used only when a file supplies it or the configuration states one.
+        write(joinpath(directory, "YA"), "A Y\n126 1.0\n140 3.0\n112 3.0\n")
+        write(joinpath(directory, "TKEA"), "A TKE\n126 180.0\n140 185.3\n")
+        marginal(extra) = _configuration(
+            directory,
+            "[output]" => "[yield]\nmass_yield_file = \"YA\"\nmean_kinetic_energy_file = \"TKEA\"\n$(extra)\n[output]",
+        )
+        @test marginal("").yield_width == "none"
+        # A width is flagged as borrowed when its EXFOR entry is not that of the mean.
+        write(
+            joinpath(directory, "23014002_H.Baba_1997.dat"),
+            "A sigma_TKE\n126 9.0\n140 10.0\n",
+        )
+        write(
+            joinpath(directory, "21981008_P.Geltenbort_1985.dat"),
+            "A TKE\n126 180.0\n140 185.3\n",
+        )
+        write(
+            joinpath(directory, "21981099_P.Geltenbort_1985.dat"),
+            "A sigma_TKE\n126 9.0\n",
+        )
+        geltenbort(width_file) = _configuration(
+            directory,
+            "[output]" => "[yield]\nmass_yield_file = \"YA\"\nmean_kinetic_energy_file = \"21981008_P.Geltenbort_1985.dat\"\nkinetic_energy_dispersion_file = \"$(width_file)\"\n[output]",
+        )
+        borrowed = geltenbort("23014002_H.Baba_1997.dat")
+        @test borrowed.yield_width == "borrowed"
+        @test borrowed.yield_inputs["kinetic_energy_dispersion_file"] ==
+              "23014002_H.Baba_1997.dat"
+        @test geltenbort("21981099_P.Geltenbort_1985.dat").yield_width == "same experiment"
+        # The mass yield reaches 112 and 140; 140 has its width, 126 is A₀/2 with one too.
+        @test borrowed.yield_inputs["masses_without_width"] == Int[]
+        # A yield measured on the light wing alone stands for its complement: 152 takes the
+        # yield of 100, has a mean of its own, and no width reaches it. Without a mean it is
+        # not placed, and so not listed.
+        write(joinpath(directory, "YA_wing"), "A Y\n126 1.0\n140 3.0\n112 3.0\n100 2.0\n")
+        write(
+            joinpath(directory, "21981007_P.Geltenbort_1985.dat"),
+            "A TKE\n126 180.0\n140 185.3\n152 175.0\n",
+        )
+        wing(energy_file) = _configuration(
+            directory,
+            "[output]" => "[yield]\nmass_yield_file = \"YA_wing\"\nmean_kinetic_energy_file = \"$(energy_file)\"\nkinetic_energy_dispersion_file = \"23014002_H.Baba_1997.dat\"\n[output]",
+        )
+        @test wing("21981007_P.Geltenbort_1985.dat").yield_inputs["masses_without_width"] ==
+              [152]
+        @test wing("21981008_P.Geltenbort_1985.dat").yield_inputs["masses_without_width"] ==
+              Int[]
+        @test marginal("kinetic_energy_dispersion = 9.0\n").yield_width == "stated"
+        @test symmetric.yield_width == "joint"
 
-            # By default the yield is bounded at the physical limit TKE < Q + E*_CN with the
-            # measured mean restored; the grid bound of earlier runs remains a choice. Both keys
-            # enter the run identifier as one token.
-            bounded = marginal("kinetic_energy_dispersion = 9.0\n")
-            @test bounded.yield_kinetic_energy_limit == "physical"
-            @test bounded.yield_kinetic_energy_moments == "mean"
-            @test !isempty(bounded.yield_kinetic_energy_bounds)
-            @test all(
-                abs(b.mean - b.measured_mean) < 1e-9 for
-                b in bounded.yield_kinetic_energy_bounds
-            )
-            @test run_parameters(bounded)["TKEb"] == "mean"
-            plain = marginal(
-                "kinetic_energy_dispersion = 9.0\nkinetic_energy_limit = \"grid\"\n",
-            )
-            @test plain.yield_kinetic_energy_moments == "none"
-            @test isempty(plain.yield_kinetic_energy_bounds)
-            @test run_parameters(plain)["TKEb"] == "grid"
-            @test run_identifier(bounded) != run_identifier(plain)
-            rescaled = marginal(
-                "kinetic_energy_dispersion = 9.0\nkinetic_energy_moments = \"mean_and_width\"\n",
-            )
-            @test run_parameters(rescaled)["TKEb"] == "mean_and_width"
-            # A measured joint distribution keeps its own row moments.
-            @test !isempty(symmetric.yield_kinetic_energy_bounds)
-            @test run_parameters(symmetric)["TKEb"] == "mean"
-            physical_marginal(extra) =
-                "[output]" => "[yield]\nmass_yield_file = \"YA\"\nmean_kinetic_energy_file = \"TKEA\"\n$(extra)\n[output]"
-            @test _rejects(
-                directory,
-                "yield.kinetic_energy_limit",
-                physical_marginal("kinetic_energy_limit = \"measured\"\n"),
-            )
-            @test _rejects(
-                directory,
-                "yield.kinetic_energy_moments",
-                physical_marginal("kinetic_energy_moments = \"median\"\n"),
-            )
-            # The moments to restore only mean something once the bound is physical.
-            @test _rejects(
-                directory,
-                "yield.kinetic_energy_moments",
-                physical_marginal(
-                    "kinetic_energy_limit = \"grid\"\nkinetic_energy_moments = \"mean\"\n",
-                ),
-            )
-            # A grid that stops short of the limit, 236.8 MeV for ¹³⁰Sn + ¹²²Cd, is refused;
-            # the grid bound accepts it.
-            @test _rejects(
-                directory,
-                "energetics.kinetic_energy_max",
-                "kinetic_energy_max = 230.0" => "kinetic_energy_max = 220.0",
-                physical_marginal(""),
-            )
-            @test _configuration(
-                directory,
-                "kinetic_energy_max = 230.0" => "kinetic_energy_max = 220.0",
-                physical_marginal("kinetic_energy_limit = \"grid\"\n"),
-            ).yield_kinetic_energy_limit == "grid"
+        # By default the yield is bounded at the physical limit TKE < Q + E*_CN with the
+        # measured mean restored; the grid bound of earlier runs remains a choice. Both keys
+        # enter the run identifier as one token.
+        bounded = marginal("kinetic_energy_dispersion = 9.0\n")
+        @test bounded.yield_kinetic_energy_limit == "physical"
+        @test bounded.yield_kinetic_energy_moments == "mean"
+        @test !isempty(bounded.yield_kinetic_energy_bounds)
+        @test all(
+            abs(b.mean - b.measured_mean) < 1e-9 for
+            b in bounded.yield_kinetic_energy_bounds
+        )
+        @test run_parameters(bounded)["TKEb"] == "mean"
+        plain =
+            marginal("kinetic_energy_dispersion = 9.0\nkinetic_energy_limit = \"grid\"\n")
+        @test plain.yield_kinetic_energy_moments == "none"
+        @test isempty(plain.yield_kinetic_energy_bounds)
+        @test run_parameters(plain)["TKEb"] == "grid"
+        @test run_identifier(bounded) != run_identifier(plain)
+        rescaled = marginal(
+            "kinetic_energy_dispersion = 9.0\nkinetic_energy_moments = \"mean_and_width\"\n",
+        )
+        @test run_parameters(rescaled)["TKEb"] == "mean_and_width"
+        # A measured joint distribution keeps its own row moments.
+        @test !isempty(symmetric.yield_kinetic_energy_bounds)
+        @test run_parameters(symmetric)["TKEb"] == "mean"
+        physical_marginal(extra) =
+            "[output]" => "[yield]\nmass_yield_file = \"YA\"\nmean_kinetic_energy_file = \"TKEA\"\n$(extra)\n[output]"
+        @test _rejects(
+            directory,
+            "yield.kinetic_energy_limit",
+            physical_marginal("kinetic_energy_limit = \"measured\"\n"),
+        )
+        @test _rejects(
+            directory,
+            "yield.kinetic_energy_moments",
+            physical_marginal("kinetic_energy_moments = \"median\"\n"),
+        )
+        # The moments to restore only mean something once the bound is physical.
+        @test _rejects(
+            directory,
+            "yield.kinetic_energy_moments",
+            physical_marginal(
+                "kinetic_energy_limit = \"grid\"\nkinetic_energy_moments = \"mean\"\n",
+            ),
+        )
+        # A grid that stops short of the limit, 236.8 MeV for ¹³⁰Sn + ¹²²Cd, is refused;
+        # the grid bound accepts it.
+        @test _rejects(
+            directory,
+            "energetics.kinetic_energy_max",
+            "kinetic_energy_max = 230.0" => "kinetic_energy_max = 220.0",
+            physical_marginal(""),
+        )
+        @test _configuration(
+            directory,
+            "kinetic_energy_max = 230.0" => "kinetic_energy_max = 220.0",
+            physical_marginal("kinetic_energy_limit = \"grid\"\n"),
+        ).yield_kinetic_energy_limit == "grid"
 
-            # A spectrum grid is logarithmic and spans exactly what it was asked for.
-            with_spectrum = _configuration(
-                directory,
-                "[output]" => "[spectrum]\nenabled = true\nenergy_min = 0.1\nenergy_max = 10.0\npoints = 64\n\n[output]",
-            )
-            grid = with_spectrum.spectrum_grid
-            @test grid !== nothing
-            @test length(grid) == 64
-            @test first(grid) ≈ 0.1 rtol = RTOL
-            @test last(grid) ≈ 10.0 rtol = RTOL
-            @test issorted(grid)
-            @test grid[2] / grid[1] ≈ grid[end] / grid[end - 1] rtol = RTOL
+        # A spectrum grid is logarithmic and spans exactly what it was asked for.
+        with_spectrum = _configuration(
+            directory,
+            "[output]" => "[spectrum]\nenabled = true\nenergy_min = 0.1\nenergy_max = 10.0\npoints = 64\n\n[output]",
+        )
+        grid = with_spectrum.spectrum_grid
+        @test grid !== nothing
+        @test length(grid) == 64
+        @test first(grid) ≈ 0.1 rtol = RTOL
+        @test last(grid) ≈ 10.0 rtol = RTOL
+        @test issorted(grid)
+        @test grid[2] / grid[1] ≈ grid[end] / grid[end - 1] rtol = RTOL
 
-            # The two spectrum choices default to multiplicity pair weights and the per-neutron
-            # average, and the alternatives are selectable.
-            @test with_spectrum.spectrum_pair_weighting isa MultiplicityWeighting
-            @test with_spectrum.spectrum_average isa PerNeutronAverage
-            chosen = _configuration(
-                directory,
-                "[output]" => "[spectrum]\nenabled = true\npair_weighting = \"excitation\"\naverage = \"per_fission\"\n\n[output]",
-            )
-            @test chosen.spectrum_pair_weighting isa ExcitationWeighting
-            @test chosen.spectrum_average isa PerFissionAverage
-            @test _rejects(
-                directory,
-                "spectrum.average",
-                "[output]" => "[spectrum]\naverage = \"per_event\"\n\n[output]",
-            )
+        # The two spectrum choices default to multiplicity pair weights and the per-neutron
+        # average, and the alternatives are selectable.
+        @test with_spectrum.spectrum_pair_weighting isa MultiplicityWeighting
+        @test with_spectrum.spectrum_average isa PerNeutronAverage
+        chosen = _configuration(
+            directory,
+            "[output]" => "[spectrum]\nenabled = true\npair_weighting = \"excitation\"\naverage = \"per_fission\"\n\n[output]",
+        )
+        @test chosen.spectrum_pair_weighting isa ExcitationWeighting
+        @test chosen.spectrum_average isa PerFissionAverage
+        @test _rejects(
+            directory,
+            "spectrum.average",
+            "[output]" => "[spectrum]\naverage = \"per_event\"\n\n[output]",
+        )
 
-            # The sequences of a fragment are weighted by their emission probability unless
-            # the uniform average is asked for, and the choice names the run.
-            @test with_spectrum.sequence_weighting isa EmissionProbabilityWeighting
-            uniform = _configuration(
-                directory,
-                "[output]" => "[spectrum]\nsequence_weighting = \"uniform\"\n\n[output]",
-            )
-            @test uniform.sequence_weighting isa UniformSequenceWeighting
-            @test run_parameters(with_spectrum)["sw"] == "emission_probability"
-            @test run_parameters(uniform)["sw"] == "uniform"
-            @test run_identifier(uniform) != run_identifier(with_spectrum)
-            @test _rejects(
-                directory,
-                "spectrum.sequence_weighting",
-                "[output]" => "[spectrum]\nsequence_weighting = \"linear\"\n\n[output]",
-            )
+        # The sequences of a fragment are weighted by their emission probability unless
+        # the uniform average is asked for, and the choice names the run.
+        @test with_spectrum.sequence_weighting isa EmissionProbabilityWeighting
+        uniform = _configuration(
+            directory,
+            "[output]" => "[spectrum]\nsequence_weighting = \"uniform\"\n\n[output]",
+        )
+        @test uniform.sequence_weighting isa UniformSequenceWeighting
+        @test run_parameters(with_spectrum)["sw"] == "emission_probability"
+        @test run_parameters(uniform)["sw"] == "uniform"
+        @test run_identifier(uniform) != run_identifier(with_spectrum)
+        @test _rejects(
+            directory,
+            "spectrum.sequence_weighting",
+            "[output]" => "[spectrum]\nsequence_weighting = \"linear\"\n\n[output]",
+        )
 
-            # "wahl" takes Wahl's Zₚ model in place of a table, at the best layer the system
-            # reaches. ²⁵²Cf(sf) is one of the four reactions of the 1988 evaluation, so it reaches
-            # the first, and the model serves the domain directly.
-            systematic = _configuration(
-                directory,
-                "charge_distribution_file = \"mean\"" => "charge_distribution_file = \"wahl\"",
-            )
-            @test systematic.charge_distribution isa Wahl1988
-            @test systematic.charge_distribution.label == "CF252S"
-        end
+        # "wahl" takes Wahl's Zₚ model in place of a table, at the best layer the system
+        # reaches. ²⁵²Cf(sf) is one of the four reactions of the 1988 evaluation, so it reaches
+        # the first, and the model serves the domain directly.
+        systematic = _configuration(
+            directory,
+            "charge_distribution_file = \"mean\"" => "charge_distribution_file = \"wahl\"",
+        )
+        @test systematic.charge_distribution isa Wahl1988
+        @test systematic.charge_distribution.label == "CF252S"
 
         # "gilbert_cameron" takes the table shipped with the domain package, Table III of the 1965
         # paper, so a Gilbert–Cameron configuration needs no file under the data directory.
-        if isfile(MASS_EXCESS_FILE)
-            gilbert = _configuration(
-                directory,
-                "model = \"BSFG\"" => "model = \"GC\"\nshell_correction_file = \"gilbert_cameron\"",
-            )
-            @test gilbert.model isa GilbertCameron
-            @test gilbert.model.deformed_branch
-            @test level_density_parameter(gilbert.model, Nuclide(58, 148)) !== nothing
-        end
+        gilbert = _configuration(
+            directory,
+            "model = \"BSFG\"" => "model = \"GC\"\nshell_correction_file = \"gilbert_cameron\"",
+        )
+        @test gilbert.model isa GilbertCameron
+        @test gilbert.model.deformed_branch
+        @test level_density_parameter(gilbert.model, Nuclide(58, 148)) !== nothing
 
         # Every rejection names its key.
         @test _rejects(
@@ -463,7 +447,6 @@ end
             "A_H,excitation_ratio,excitation_ratio_uncertainty\n126,0.5,0.0\n150,0.607,0.0\n\
              174,0.865,0.0\n",
         )
-        isfile(MASS_EXCESS_FILE) || return nothing
         cp(MASS_EXCESS_FILE, joinpath(directory, "MASSES"))
 
         configuration = _configuration(directory)
@@ -506,4 +489,19 @@ end
         )
         @test run_identifier(slow) != run_identifier(fast)
     end
+end
+
+@testset "FissionFragmentsDomain is pinned alike in every environment" begin
+    # The root, test and docs environments each fetch the domain package from its URL; a tag
+    # bumped in one and not the others tests or documents against a different release.
+    root = dirname(@__DIR__)
+    projects = [
+        TOML.parsefile(joinpath(root, environment..., "Project.toml")) for
+        environment in ((), ("test",), ("docs",))
+    ]
+    revisions =
+        [project["sources"]["FissionFragmentsDomain"]["rev"] for project in projects]
+    @test allequal(revisions)
+    @test chopprefix(first(revisions), "v") ==
+          first(projects)["compat"]["FissionFragmentsDomain"]
 end

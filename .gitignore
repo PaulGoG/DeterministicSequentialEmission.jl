@@ -11,61 +11,20 @@
 
 # Pipeline output. Each run writes its tables and provenance under data/sims/<system>/<run>,
 # which the data/ rule above already ignores. The comparison figures results/README.md shows
-# are tracked with their sidecars; the diagnostic panels a run draws are not.
+# are tracked with their sidecars; the two diagnostic panels a run draws are not.
 /results/*
 !/results/README.md
-!/results/multiplicity_vs_experiment.png
-!/results/multiplicity_vs_experiment.pdf
-!/results/multiplicity_vs_experiment.toml
-!/results/prompt_neutron_spectrum.png
-!/results/prompt_neutron_spectrum.pdf
-!/results/prompt_neutron_spectrum.toml
-!/results/mean_neutron_energy_vs_experiment.png
-!/results/mean_neutron_energy_vs_experiment.pdf
-!/results/mean_neutron_energy_vs_experiment.toml
-!/results/product_mass_yield.png
-!/results/product_mass_yield.pdf
-!/results/product_mass_yield.toml
-!/results/product_charge_yield.png
-!/results/product_charge_yield.pdf
-!/results/product_charge_yield.toml
-!/results/product_independent_yield_Cf252_sf.png
-!/results/product_independent_yield_Cf252_sf.pdf
-!/results/product_independent_yield_Cf252_sf.toml
-!/results/product_independent_yield_U235_nth.png
-!/results/product_independent_yield_U235_nth.pdf
-!/results/product_independent_yield_U235_nth.toml
-!/results/product_independent_yield_Pu239_nth.png
-!/results/product_independent_yield_Pu239_nth.pdf
-!/results/product_independent_yield_Pu239_nth.toml
-!/results/product_independent_yield_U233_nth.png
-!/results/product_independent_yield_U233_nth.pdf
-!/results/product_independent_yield_U233_nth.toml
-!/results/product_neutron_number_yield.png
-!/results/product_neutron_number_yield.pdf
-!/results/product_neutron_number_yield.toml
-!/results/product_kinetic_energy.png
-!/results/product_kinetic_energy.pdf
-!/results/product_kinetic_energy.toml
-!/results/product_kinetic_energy_by_charge.png
-!/results/product_kinetic_energy_by_charge.pdf
-!/results/product_kinetic_energy_by_charge.toml
-!/results/product_total_kinetic_energy.png
-!/results/product_total_kinetic_energy.pdf
-!/results/product_total_kinetic_energy.toml
-!/results/prompt_gamma_energy_per_fission.png
-!/results/prompt_gamma_energy_per_fission.pdf
-!/results/prompt_gamma_energy_per_fission.toml
-!/results/prompt_gamma_energy_cf252.png
-!/results/prompt_gamma_energy_cf252.pdf
-!/results/prompt_gamma_energy_cf252.toml
+!/results/*.png
+!/results/*.pdf
+!/results/*.toml
+/results/residual_quantities.*
+/results/charge_distribution.*
 
 # Libraries do not pin a manifest; each environment resolves against [compat].
 Manifest*.toml
 
 # Julia artifacts
 /docs/build/
-/docs/site/
 *.cov
 *.jl.mem
 LocalPreferences.toml
