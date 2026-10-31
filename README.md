@@ -489,8 +489,8 @@ subdirectory = "U235_nth/temperature_ratio"
 curve_label = "systematic_trend"
 ```
 
-The shipped configurations read the FissionTemperatureRatio.jl v0.4.1 runs on the
-ExforFissionData.jl v0.6.0 retrieval, staged that way for each system;
+The shipped configurations read the FissionTemperatureRatio.jl v0.5.0 runs on the
+ExforFissionData.jl v0.7.0 retrieval of their inputs, staged that way for each system;
 [data/README.md](data/README.md) gives the commands that reproduce them.
 
 The manifest declares what its curves tabulate, and this package refuses one declaring anything

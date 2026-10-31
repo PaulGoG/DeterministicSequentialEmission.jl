@@ -348,14 +348,15 @@ also records the accession of each dataset curve. Copy the whole directory to
 `label`, `"systematic_trend"` for the shipped configurations. Keep one staged run per system —
 two manifests in one directory is refused, because nothing would say which run to take.
 
-The staged runs are those of the configurations FissionTemperatureRatio.jl v0.4.1 ships, on the
-ExforFissionData.jl v0.6.0 retrieval, with each system's primary `Y(A)` and `⟨TKE⟩(A)` as above.
-`U235_nres` reads the thermal run. Each staged directory carries the configuration and the
-metadata of its run. To produce the ²⁵²Cf(sf) run again:
+The staged runs are those of the configurations FissionTemperatureRatio.jl v0.5.0 ships, on the
+ExforFissionData.jl v0.7.0 retrieval of their inputs, with each system's primary `Y(A)` and
+`⟨TKE⟩(A)` as above. The v0.7.0 tables are byte-identical to the v0.6.0 ones staged here; the
+records differ in `[run]` alone. `U235_nres` reads the thermal run. Each staged directory carries
+the configuration and the metadata of its run. To produce the ²⁵²Cf(sf) run again:
 
 ```bash
-git clone --branch v0.6.0 https://github.com/PaulGoG/ExforFissionData.jl
-git clone --branch v0.4.1 https://github.com/PaulGoG/FissionTemperatureRatio.jl
+git clone --branch v0.7.0 https://github.com/PaulGoG/ExforFissionData.jl
+git clone --branch v0.5.0 https://github.com/PaulGoG/FissionTemperatureRatio.jl
 cd ExforFissionData.jl
 julia scripts/retrieve.jl config/Cf252_sf_nu_vs_A.toml ../FissionTemperatureRatio.jl
 julia scripts/retrieve.jl config/Cf252_sf_Y_vs_A.toml ../FissionTemperatureRatio.jl

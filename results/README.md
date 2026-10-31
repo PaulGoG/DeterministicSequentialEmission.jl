@@ -8,7 +8,7 @@ commit; the sidecars of the `ν(A)`, `⟨ε⟩(A)`, product and prompt-γ figure
 retrieved sets left out. The measured side comes from EXFOR through ExforFissionData.jl
 v0.6.0, laid out as [data/README.md](../data/README.md) describes, and a dataset is drawn as its
 `retrieval.toml` records it; the temperature ratios the runs were solved with are the
-FissionTemperatureRatio.jl v0.4.1 trends staged beside them. The two diagnostic panels the
+FissionTemperatureRatio.jl v0.5.0 trends staged beside them. The two diagnostic panels the
 script also writes here, the residual quantities and the charge distribution, have no measured
 counterpart and are not tracked.
 

@@ -9,6 +9,25 @@ here.
 
 ## [Unreleased]
 
+### Changed
+
+- The staged temperature ratios are the FissionTemperatureRatio.jl v0.5.0 runs, on the
+  ExforFissionData.jl v0.7.0 retrieval of their inputs, whose tables are byte-identical to the
+  v0.6.0 retrieval staged here. That release counts the measured fraction of an interpolated
+  ν(A) dataset over every value retrieved, reads it one way in the combination (variance
+  σ²/f + τ², DerSimonian–Laird τ² against k − 1) and imputes the median uncertainty in the fit
+  as in the combination. The systematic trends move within 0.3 σ: ⟨R_T⟩ 1.0821 → 1.0861 for
+  ²⁵²Cf (six segments, four before), 1.1230 → 1.1210 for ²³⁵U (six, five before),
+  1.0389 → 1.0340 for ²³⁹Pu (five, four before), 1.0724 → 1.0657 for ²³³U (three). The curves
+  differ at the ²⁵²Cf peak, which the trend now places at A_H = 129, R_T = 1.88, in place of
+  2.12 at 130, and on the heavy wings beyond A_H ≈ 155 of ²³⁵U and ²³⁹Pu, where each trend gains
+  a breakpoint. The five baselines are re-solved on them: ν̄ moves by −0.09 % at most (²³⁵U),
+  ⟨E⟩ by −0.11 % (²³⁹Pu) and E_γ per fission by +0.19 % (²³⁵U); ν(A) and ⟨ε⟩(A) move by up to
+  0.4 neutrons and 0.25 MeV on the ²⁵²Cf masses 122–134, and by 0.2 neutrons at A = 81 of
+  ²³⁹Pu, low-yield masses in each case. The manifests are unchanged, the run identifiers are
+  `0e8f5274`, `f5fcb8d0`, `853a134e` and `aab3f24b`, and the figures and their sidecars are
+  re-drawn.
+
 ## [0.2.1] - 2026-10-15
 
 ### Added
