@@ -7,8 +7,8 @@ CurrentModule = DeterministicSequentialEmission
 The evaporation cross section, the sequence-by-sequence solution it drives, and the prompt
 neutron spectrum that follows from it. The sequential solution and the sequence average are the
 model of Tudora, Hambsch and Tobosaru [TudoraHambschTobosaru2018](@cite), with the systematics of
-its residual quantities [Tudora2020](@cite); the evaporation spectrum in closed form is Madland
-and Nix [MadlandNix1982](@cite), its laboratory transformation and the probability of emission
+its residual quantities [Tudora2020](@cite). The evaporation spectrum in closed form is Madland
+and Nix [MadlandNix1982](@cite). Its laboratory transformation and the probability of emission
 along a chain follow Terrell [Terrell1959](@cite), Märten and Seeliger [Maerten1984](@cite) and
 Kawano et al. [Kawano2021](@cite), and the weights of the total spectrum are the conventions of
 the evaluated spectra [Capote2016](@cite).
@@ -44,12 +44,12 @@ rounding. What remains to be chosen is how many of the `n` possible neutrons a p
   [TudoraFujio2024](@cite) and ²³³U(n_th,f) [Tudora2025](@cite), and of the code submitted with
   my thesis.
 
-The default departs from the published count, and does so deliberately. Subtracting all `n`
-removes `⟨n⟩ ≈ 2ν − 1` neutrons per fragment on average: 2.50 against `ν = 1.74` in the two
-²⁵²Cf(sf) runs of my thesis, so that the product yields of one run imply 44 % more neutrons per
-fission than its own multiplicity. Without fine-grained excitation-energy input the sequence average
-stands in for the distribution, and a chain that can emit `n` neutrons emits `(n+1)/2` of them on
-average; a product distribution that always removes `n` is that of the hottest ending alone. The
+The default departs from the published count. Subtracting all `n` removes `⟨n⟩ ≈ 2ν − 1`
+neutrons per fragment on average: 2.50 against `ν = 1.74` in the two ²⁵²Cf(sf) runs of my thesis.
+The product yields of one run thus imply 44 % more neutrons per fission than its own
+multiplicity. Without fine-grained excitation-energy input the sequence average stands in for the
+distribution, and a chain that can emit `n` neutrons emits `(n+1)/2` of them on average. A product
+distribution that always removes `n` is that of the hottest ending alone. The
 published count stays one key away, and with it the test suite reproduces the post-neutron mass
 yields of both thesis runs to within 10⁻⁸ relative.
 
@@ -66,7 +66,7 @@ configurations stand for the whole distribution, as they do in the average multi
 leaves the charge alone, so `Y_p(Z)` is the `Y(Z)` of the solved configurations and is not
 written. At `A₀/2` a configuration is the heavy fragment of one labelling of a split and the light
 fragment of the mirror labelling, and the self-complementary nuclide `(A₀/2, Z₀/2)` is both
-fragments of one; each configuration enters once, through the chain its multiplicity is taken
+fragments of one. Each configuration enters once, through the chain its multiplicity is taken
 from, as the input yield counts it once.
 
 The kinetic energies are those of eqs. (6)–(9) of [Tudora2022](@cite),
@@ -78,7 +78,7 @@ E_K = TKE (A₀ − A)/A₀,    E_K_p = E_K A_p/A,    TKE_p = E_K_p,L + E_K_p,H,
 emission isotropic in the fragment frame leaving the fragment velocity unchanged on average.
 `E_K_p(A_p)` and `E_K_p(Z)` are means over `Y P`. `TKE_p` is taken over the two products of a pair,
 independent of each other, with the joint probability `P_L P_H` and the pair weight that halves a
-mass-symmetric split, as in the spectrum; it is written against the heavy product mass. Under the
+mass-symmetric split, as in the spectrum. It is written against the heavy product mass. Under the
 sequence count these are eqs. (8) and (9) of the paper; under the default the mean of `E_K_p` over
 the endings of a chain is its eq. (12).
 

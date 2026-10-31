@@ -11,7 +11,10 @@ The model solves the energy conservation equation of every emission sequence sep
 
 with Weisskopf-Ewing evaporation spectra in the centre-of-mass system and fragment level
 densities in the Fermi-gas regime. Because the number of sequences `n` is an integer at every
-configuration, the post-neutron fragment mass `A_p = A − n` is an integer without rounding.
+configuration, every product mass `A − 1 … A − n` is an integer, and the post-neutron products
+are distributed without rounding: by default a chain ends on each of its `n` residuals with
+probability `1/n`, so that the products lose the multiplicity, and the published count,
+`A_p = A − n`, is an option.
 """
 module DeterministicSequentialEmission
 

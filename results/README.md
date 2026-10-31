@@ -3,14 +3,13 @@
 The figures here are drawn by `plotting/figures.jl` from the tables one run per system wrote
 under `data/sims/`, with nothing solved again and nothing fitted to the data shown. Each figure
 is exported as PDF and PNG beside a `.toml` sidecar naming, per system, the run drawn, the commit
-its metadata records and the measured files, so every panel traces to a configuration and a
-commit; the sidecars of the `ν(A)`, `⟨ε⟩(A)`, product and prompt-γ figures also name the
-retrieved sets left out. The measured side comes from EXFOR through ExforFissionData.jl
-v0.6.0, laid out as [data/README.md](../data/README.md) describes, and a dataset is drawn as its
-`retrieval.toml` records it; the temperature ratios the runs were solved with are the
-FissionTemperatureRatio.jl v0.5.0 trends staged beside them. The two diagnostic panels the
-script also writes here, the residual quantities and the charge distribution, have no measured
-counterpart and are not tracked.
+its metadata records and the measured files; the sidecars of the `ν(A)`, `⟨ε⟩(A)`, product and
+prompt-γ figures also name the retrieved sets left out. The measured side comes from EXFOR
+through ExforFissionData.jl v0.6.0, laid out as [data/README.md](../data/README.md) describes,
+and a dataset is drawn as its `retrieval.toml` records it; the temperature ratios the runs were
+solved with are the FissionTemperatureRatio.jl v0.5.0 trends staged beside them. The two
+diagnostic panels the script also writes here, the residual quantities and the charge
+distribution, have no measured counterpart and are not tracked.
 
 ```
 julia scripts/run.jl config/<system>.toml    # one run per system, under data/sims/
@@ -19,10 +18,10 @@ julia plotting/figures.jl                    # redraws everything here from thos
 
 | System | ⟨ν⟩ | evaluated | | ⟨E⟩ [MeV] | ν̄/ν̄(²⁵²Cf) |
 |---|---|---|---|---|---|
-| ²⁵²Cf(sf) | 3.557 | 3.759 | −5.4 % | 2.164 (measured 2.13) | 1 |
-| ²³⁵U(n_th,f) | 2.513 | 2.414 | +4.1 % | 1.949 | 0.707 (evaluated 0.642) |
-| ²³⁹Pu(n_th,f) | 2.802 | 2.868 | −2.3 % | 2.043 | 0.788 (evaluated 0.763) |
-| ²³³U(n_th,f) | 2.616 | 2.479 | +5.5 % | 2.003 | 0.735 (evaluated 0.659) |
+| ²⁵²Cf(sf) | 3.557 | 3.759 | −5.4 % | 2.165 (measured 2.13) | 1 |
+| ²³⁵U(n_th,f) | 2.511 | 2.414 | +4.0 % | 1.948 | 0.706 (evaluated 0.642) |
+| ²³⁹Pu(n_th,f) | 2.802 | 2.868 | −2.3 % | 2.041 | 0.788 (evaluated 0.763) |
+| ²³³U(n_th,f) | 2.615 | 2.479 | +5.5 % | 2.002 | 0.735 (evaluated 0.659) |
 
 The evaluated multiplicities are the prompt ones, as the model computes: ENDF/B-VIII.0 (Brown
 et al. 2018, doi:10.1016/j.nds.2018.02.001), MF1 MT456 at 0.0253 eV for the induced systems, and
@@ -34,20 +33,20 @@ publication, which for conference proceedings can be a later year.
 
 ![Prompt neutron multiplicity against fragment mass, four fissioning systems](multiplicity_vs_experiment.png)
 
-The sawtooth is the signature observable and it is not fitted: the total excitation energy is
-shared between the fragments by a temperature ratio `R_T(A_H)` extracted from measured `ν(A)`
-by FissionTemperatureRatio.jl, the emission chain is solved configuration by configuration, and the
-result is contracted against the measured fragment yield `Y(A, TKE)`. Each panel states the
-total multiplicity against the evaluated value. The sets drawn are a fixed selection per system,
-for legibility; [data/README.md](../data/README.md) lists the whole retrieval. This figure and
-the `⟨ε⟩(A)` figure below are drawn over each run's own mass window, the masses where its `Y(A)`
-holds at least 0.01 % of the fissions, and their ordinate limits ignore error bars wider than
-0.5 neutrons (`ν`) or 0.3 MeV (`⟨ε⟩`), so the bars of poorly measured edge points may run off the
-frame. The ²⁵²Cf comparison holds up to A_H ≈ 169. The window ends at 171, and the measured
-points at 172–174 lie outside it; where a set reaches 170 and beyond (Vorobiev 2001 ends at 169),
-the energy its pair sums `ν(A) + ν(A₀ − A)` require exceeds the split's `Q − TKE` by 2 to 15 MeV
-with the set's own `⟨TKE⟩(A)`, and Göök *et al.* (2014) confine their own agreement to 80–170 u
-and attribute the far-asymmetric yields to the acceptance of their detector.
+The sawtooth is not fitted: the total excitation energy is shared between the fragments by a
+temperature ratio `R_T(A_H)` extracted from measured `ν(A)` by FissionTemperatureRatio.jl, the
+emission chain is solved configuration by configuration, and the result is contracted against
+the measured fragment yield `Y(A, TKE)`. Each panel states the total multiplicity against the
+evaluated value. The sets drawn are a fixed selection per system, for legibility;
+[data/README.md](../data/README.md) lists the whole retrieval. This figure and the `⟨ε⟩(A)`
+figure below are drawn over each run's own mass window, the masses where its `Y(A)` holds at
+least 0.01 % of the fissions. Their ordinate limits ignore error bars wider than 0.5 neutrons
+(`ν`) or 0.3 MeV (`⟨ε⟩`), so the bars of poorly measured edge points may run off the frame. The
+²⁵²Cf comparison holds up to A_H ≈ 169. The window ends at 171; the measured points at 172–174
+lie outside it. Where a set reaches 170 and beyond (Vorobiev 2001 ends at 169), the energy its
+pair sums `ν(A) + ν(A₀ − A)` require exceeds the split's `Q − TKE` by 2 to 15 MeV with the set's
+own `⟨TKE⟩(A)`. Göök *et al.* (2014) confine their own agreement to 80–170 u and attribute the
+far-asymmetric yields to the acceptance of their detector.
 
 | System | Dataset | EXFOR | Reference |
 |---|---|---|---|
@@ -77,7 +76,7 @@ The ²⁵²Cf(sf) spectrum is drawn as the ratio of the model's unit-area labora
 a Maxwellian at 1.42 MeV, which is how every retrieved set reports it, so model and measurement
 are both absolute. The three thermal systems were measured as the ratio of their spectrum per
 fission to that of ²⁵²Cf(sf) with one detector, and the model is drawn the same way,
-`ν̄ N(E) / ν̄_Cf N_Cf(E)` with its own multiplicities: the offset at low energy is the
+`ν̄ N(E) / ν̄_Cf N_Cf(E)` with its own multiplicities. The offset at low energy is the
 multiplicity error of the pair, stated in each panel, and the fall with energy is the thermal
 spectrum being the softer. Sets tabulated as ²⁵²Cf over the system are inverted, the two energy
 ranges of one entry are joined under one label, and a set its record flags as superseded is
@@ -104,13 +103,14 @@ legibility, as the `ν(A)` figure does with its sets.
 
 Both sides are means in the centre of mass of the emitting fragment, as the retrieval records
 for every set drawn. The model's `⟨ε⟩(A)` is the sequence average the energy balance returns,
-over all neutron energies; the measured means are formed from spectra above a detector
-threshold — 0.52 MeV in the laboratory for Bowman, 0.3 MeV for Budtz-Jørgensen, whose mean is
-the first moment of the form fitted to the spectrum, 0.2 to 0.7 MeV for the others — which
-raises them slightly where the fragment's neutrons are slow. The model follows the measured
-values along both wings and fails in two places: the band `A ≈ 126`–`134` of heavy fragments
-near the `N = 82` closure, which barely emit in the model and whose few neutrons are slow, and
-the lightest fragments, `A < 90`, where it lies below the data.
+over all neutron energies. The measured means are formed from spectra above a detector
+threshold, 0.52 MeV in the laboratory for Bowman, 0.3 MeV for Budtz-Jørgensen and 0.2 to 0.7 MeV
+for the others, which raises them slightly where the fragment's neutrons are slow.
+Budtz-Jørgensen's mean is the first moment of the form fitted to the spectrum. The model follows
+the measured values along both wings and fails in two places. The first is the band
+`A ≈ 126`–`134` of heavy fragments near the `N = 82` closure, which barely emit in the model and
+whose few neutrons are slow. The second is the lightest fragments, `A < 90`, where it lies below
+the data.
 
 | System | Dataset | EXFOR | Reference |
 |---|---|---|---|
@@ -131,15 +131,15 @@ the lightest fragments, `A < 90`, where it lies below the data.
 
 The product mass yield `Y(A_p)` is the pre-neutron yield carried through the emission chains.
 A fragment whose chain allows `n` sequences ends on each of its `n` residuals with probability
-`1/n`, so its products lie on `A − 1 … A − n`, and the mass its products have lost equals its
-multiplicity exactly — 1.78 per fragment for ²⁵²Cf, the ⟨ν⟩ = 3.56 per fission of the sawtooth
-figure. No parameter enters. The evaluated independent yields of ENDF/B-VIII.0 and JEFF-3.3,
-summed over charge, are lines with their uncertainty as a band: they are evaluations, not
-measurements. The run's own pre-neutron `Y(A)`, dotted, shows what the emission did: it moves
-both humps inward by the mass lost, sharpens them, and builds the even-`Z` structure the
-evaluations carry — the peaks at `A_p = 134` and `138` of ²³⁵U, at `134`–`136` of ²³⁹Pu, at
-`136` of ²³³U — out of a pre-neutron yield that has none. The centroids of the two humps agree
-with the evaluations within 0.8 u in every system.
+`1/n`, so its products lie on `A − 1 … A − n`. The mass its products have lost equals its
+multiplicity: 1.78 per fragment for ²⁵²Cf, the ⟨ν⟩ = 3.56 per fission of the sawtooth figure.
+No parameter enters. The evaluated independent yields of ENDF/B-VIII.0 and JEFF-3.3, summed over
+charge, are lines with their uncertainty as a band: they are evaluations, not measurements. The
+run's own pre-neutron `Y(A)`, dotted, shows what the emission did: it moves both humps inward by
+the mass lost, sharpens them, and builds the even-`Z` structure the evaluations carry out of a
+pre-neutron yield that has none. The even-`Z` peaks lie at `A_p = 134` and `138` of ²³⁵U, at
+`134`–`136` of ²³⁹Pu and at `136` of ²³³U. The centroids of the two humps agree with the
+evaluations within 0.8 u in every system.
 
 | System | ⟨A_p⟩ light: model / ENDF/B-VIII.0 / JEFF-3.3 | ⟨A_p⟩ heavy | largest `Y(A_p)`: model / ENDF/B-VIII.0 |
 |---|---|---|---|
@@ -152,7 +152,7 @@ Where it departs: the heavy hump of ²³⁹Pu peaks at 6.9 % against 7.6–7.7 %
 light hump of ²³³U at 7.5 % against 7.0 %, and the outer flank of the heavy hump of ²⁵²Cf falls
 below the evaluations beyond `A_p ≈ 150`. The published prescription of the model, which
 subtracts the full number of possible sequences from every fragment, is one key away,
-`[products] count = "sequence_count"`; for ²⁵²Cf it removes 2.58 neutrons per fragment, 45 %
+`[products] count = "sequence_count"`. For ²⁵²Cf it removes 2.58 neutrons per fragment, 45 %
 more than the multiplicity, and moves the humps a further 0.8 u inward.
 
 | Library | Reference |
@@ -166,37 +166,37 @@ are left out.
 The markers are the measured post-neutron mass yields of EXFOR, retrieved by
 ExforFissionData.jl v0.6.0. A set coded `MASS,SEC,FY`, the yield against the mass of the
 products after neutron emission, is drawn under its author and year. A set coded
-`MASS,CHN,FY`, a chain yield, enters one muted series per system, *Chain yields (N sets)*: β
+`MASS,CHN,FY`, a chain yield, enters one muted series per system, *Chain yields (N sets)*. β
 decay conserves `A`, so the yield of a mass chain is the post-neutron mass yield of that mass up
 to the delayed-neutron transfer between neighbouring chains, below a per cent. Many chain-yield
 sets cover a few masses, each drawn where it was measured; nothing is renormalised. Each system
 is drawn over its own mass window, the masses where the run's `Y(A)` holds at least 0.01 % of
 the fissions (`YIELD_WINDOW_FRACTION` in `plotting/figures.jl`; 81–171 for ²⁵²Cf, 76–160 for
-²³⁵U, 81–159 for ²³⁹Pu, 79–155 for ²³³U), which leaves out the chain yields of Bernas (1991,
-²³⁹Pu, 22257002, `A_p` = 68–73) and Armbruster (1987, ²³⁵U, 23586003, `A_p` = 70–71).
+²³⁵U, 81–159 for ²³⁹Pu, 79–155 for ²³³U). The windows leave out the chain yields of Bernas
+(1991, ²³⁹Pu, 22257002, `A_p` = 68–73) and Armbruster (1987, ²³⁵U, 23586003, `A_p` = 70–71).
 
 The retrieval writes every yield in fragments per fission, 2 over both products, and the
 evaluations and the model are in per cent. Each retrieved table is converted from the unit its
-`retrieval.toml` states as `unit_written`, `PART/FIS` here, by a factor of 100; a unit
-`plotting/figures.jl` does not know stops the script rather than being assumed.
+`retrieval.toml` states as `unit_written`, `PART/FIS` here, by a factor of 100; a unit outside
+the table in `plotting/figures.jl` stops the script.
 
 Open markers are sets the archive qualifies `SPA`, averaged over a neutron spectrum other than
-the thermal one they are filed under, or `DERIV`, derived from other data rather than
-measured. 31 of the 66 chain-yield sets drawn carry `SPA`, and so does the ²³⁵U set of Romano
+the thermal one they are filed under, or `DERIV`, derived from other data. 31 of the 66
+chain-yield sets drawn carry `SPA`, and so does the ²³⁵U set of Romano
 (2010). The three ²³⁹Pu tables of Schillebeeckx (1992) carry `DERIV`: they are the measured
 pre-neutron yield carried to the products with two published `ν(A)`. Two retrieved sets
 are not drawn: Bail (2009, ²³⁹Pu, 22985005), which its record marks superseded by Gupta (2017,
-23342002), and Koblik (2014, ²³⁵U, 31738002), whose heavy-product yields alone sum to 182 % per
-fission, where one side sums to 100 %, with no uncertainty stated.
+23342002), and Koblik (2014, ²³⁵U, 31738002). Koblik's heavy-product yields alone sum to 182 %
+per fission, where one side sums to 100 %, with no uncertainty stated.
 
 On the humps the measured sets scatter about the evaluations by as much as the model departs
 from them. A measurement of the fragment kinematics resolves the mass to within a few units and
-spreads the yield into the valley and the outer wings: at `A_p = 126`–`127` of ²³⁵U the sets of
+spreads the yield into the valley and the outer wings. At `A_p = 126`–`127` of ²³⁵U the sets of
 Derengowski, Romano, Wagemans, Shiraishi and Liu lie three to thirteen times above the
 evaluations. Two ²³⁵U chain-yield sets stand apart from the rest. Nair (1985), 30797007, which
 the archive states is derived from the cumulative yields of 30797006, gives 3.1, 2.1 and 1.4 %
 at `A_p = 107`–`109`, twenty to forty times its companion 30797005 at the same masses, which
-agrees with the evaluations; and the two tables of Ajitanand (1978) reach 1.1 to 2.1 % at
+agrees with the evaluations. The two tables of Ajitanand (1978) reach 1.1 to 2.1 % at
 `A_p = 107`–`108`, against 0.05 to 0.15 % evaluated. Both are drawn as retrieved.
 
 <details>
@@ -332,8 +332,8 @@ libraries part from each other as well.
 
 The diamonds are the measured independent yields of EXFOR, retrieved by ExforFissionData.jl
 v0.6.0: every set coded `ELEM/MASS,IND,FY` with a point on the elements shown, pooled into one
-family, open where the set is qualified `SPA` or `DERIV`, and converted to per cent from the
-unit its record states, as for the mass yield. Yields below 0.001 % are not drawn. A nuclide the
+family. Sets qualified `SPA` or `DERIV` are drawn open, and all are converted to per cent from
+the unit its record states, as for the mass yield. Yields below 0.001 % are not drawn. A nuclide the
 archive reports in several isomeric states is drawn as the retrieval writes it: the archive's
 own total where it gives one, otherwise the states summed. A nuclide reported in one state alone
 carries that state's yield, not the nuclide's; its record names it under
@@ -343,11 +343,10 @@ of Bogdzel (1991, 41179002) is not drawn: its record marks it superseded by Gund
 41198002), a preliminary result the figure draws.
 
 Where several sets measure one nuclide they mostly lie about the model and the evaluations. The
-points far from both come from single sets, drawn as retrieved: among them the
-tellurium yields of Günther (1972), digitised from a figure, which for ²³⁹Pu give 0.05 % at
-`A_p = 131` against 1.1 to 1.3 % evaluated and 0.19 % at `A_p = 139` against 0.001 to
-0.002 %, and the shielded ¹³⁰Xe of Fritze (1958), 0.0055 % for ²³⁹Pu against 4 × 10⁻⁷ to
-3 × 10⁻⁶ % evaluated.
+points far from both come from single sets, drawn as retrieved. Among them are the tellurium
+yields of Günther (1972), digitised from a figure, which for ²³⁹Pu give 0.05 % at `A_p = 131`
+against 1.1 to 1.3 % evaluated and 0.19 % at `A_p = 139` against 0.001 to 0.002 %. The shielded
+¹³⁰Xe of Fritze (1958) is another, 0.0055 % for ²³⁹Pu against 4 × 10⁻⁷ to 3 × 10⁻⁶ % evaluated.
 
 <details>
 <summary>The measured sets of the isotopic distributions</summary>
@@ -441,13 +440,13 @@ by ExforFissionData.jl v0.6.0 and drawn in MeV as the retrieval writes them, `un
 none for ²⁵²Cf(sf), and its panel says so. ²³⁵U has more sets than the figure can tell apart: the
 four with the most masses, Asghar (1977, 1978), Wagemans (1981) and Geltenbort (1985), are
 named, and Konecny (1970, two tables), Günther (1972), Bakhromi (1982) and Aleksandrov (1994)
-are pooled into one grey series. Bakhromi is qualified `SPA` and drawn open. Averaged over the
-masses each set covers, weighted by the model's product yield, the model lies 1.6 to 1.8 MeV
-below the ²³⁵U sets of Asghar (1977, 1978) and Wagemans (1981) over the heavy products and 1.5 MeV
-below Asghar's for ²³⁹Pu, while the three sets of Geltenbort (1985) lie between 0.5 MeV below the
-model and 0.2 MeV above it: the sets that cover the whole heavy hump differ among themselves by as
-much as the model differs from them. The sets covering part of it lie between 6.5 MeV above the
-model and 1.6 MeV below it. Over the light products the model lies within the spread of the
+are pooled into one grey series. Bakhromi is qualified `SPA` and drawn open. Over the heavy
+products, averaged over the masses each set covers and weighted by the model's product yield, the
+model lies 1.6 to 1.8 MeV below the ²³⁵U sets of Asghar (1977, 1978) and Wagemans (1981) and
+1.5 MeV below Asghar's for ²³⁹Pu. The three sets of Geltenbort (1985) lie between 0.5 MeV below
+the model and 0.2 MeV above it, so the sets covering the whole heavy hump differ among themselves
+by as much as the model differs from them. The sets covering part of it lie between 6.5 MeV above
+the model and 1.6 MeV below it. Over the light products the model lies within the spread of the
 sets, from 1.3 MeV below them to 1.7 MeV above.
 
 <details>
@@ -502,16 +501,16 @@ both means over the run: emission takes 1.9 to 2.6 MeV from the total kinetic en
 What the model's neutrons leave of the excitation, `E_γ = E* − Σ_k P(N ≥ k)(Sₙ^(k) + ⟨ε⟩_k)`
 per fragment under the count `ν = (n+1)/2`, summed over the two fragments: 10.3, 7.0, 8.3 and
 7.6 MeV per fission for ²⁵²Cf, ²³⁵U, ²³⁹Pu and ²³³U. It counts everything the neutrons do not
-carry — γ rays, conversion electrons, X-rays, isomers — where a measurement counts γ rays above a
+carry: γ rays, conversion electrons, X-rays, isomers. A measurement counts γ rays above a
 threshold within a time window, which its record states where the entry or its publication does;
 the difference is about half an MeV. Against the measured values the model is high for ²⁵²Cf,
 by 1.3 MeV against Bowman (1958) and by 3.3 to 3.7 MeV against the other five, and for ²³⁹Pu by
-1.5 to 2.0; for ²³⁵U it lies 0.1 MeV above Oberstedt (2013) and 0.6 above Pleasonton (1972), for
+1.5 to 2.0. For ²³⁵U it lies 0.1 MeV above Oberstedt (2013) and 0.6 above Pleasonton (1972), for
 ²³³U 0.9 above Pleasonton. Open markers are the sets the archive codes partial in γ energy
 (`PAR`) or marks preliminary. Left out: Makii (2019), the γ energy between 1 and 6 MeV only; the
 single detectors of Oberstedt (2015) and Gatera (2017), whose averages are drawn; and the two
 measurements of Billnert (2013), 231970023 and 231970033, that the entry of Oberstedt (2015)
-reprints, beside the 2015 total, 231970093, which is the one drawn. The sidecar names them.
+reprints. That entry's 2015 total, 231970093, is the one drawn. The sidecar names them.
 
 ![Prompt γ energy of 252-Cf(sf) against TKE and fragment mass](prompt_gamma_energy_cf252.png)
 
@@ -555,7 +554,7 @@ ready.
 - The retrieved prompt-γ multiplicities and mean photon energies, `M_gamma_bar` and `eps_gamma`
   per fission for the four systems, resolved against fragment mass or TKE for ²⁵²Cf and ²³⁵U
   (`M_gamma_vs_A`, `M_gamma_bar_vs_A`, `M_gamma_bar_vs_TKE`, `eps_gamma_vs_A`), and the total γ
-  energy against the number of neutrons, `E_gamma_tot_vs_nu`, for ²⁵²Cf; a run writes the γ
+  energy against the number of neutrons, `E_gamma_tot_vs_nu`, for ²⁵²Cf. A run writes the γ
   energy alone, and not against `ν`.
 - The effective temperature and exponent of the form fitted to the centre-of-mass spectrum of a
   fragment's neutrons, `T_eff_vs_A` and `lambda_vs_A` for ²⁵²Cf; a comparison needs the model's

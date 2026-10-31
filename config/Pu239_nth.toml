@@ -25,7 +25,7 @@ deformed_branch = true                      # "GC" only: eq. (21), c = 0.120, fo
 
 [evaporation]
 cross_section = "variable"        # one of: "variable" | "constant"
-maximum_temperature = 2.0         # MeV, above 0 to 10; the bracket the temperature is solved in
+maximum_temperature = 2.0         # MeV, above 0 to 10; ceiling on the residual temperature; a root above it ends the solved stage
 
 [partition]
 method = "temperature_ratio"                                          # one of: "temperature_ratio" | "excitation_ratio" | "scission"

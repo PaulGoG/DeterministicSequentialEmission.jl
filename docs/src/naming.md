@@ -4,16 +4,16 @@ CurrentModule = DeterministicSequentialEmission
 
 # Naming
 
-A quantity has exactly one name, and that name is used everywhere it appears: Julia identifier,
+A quantity has one name, and that name is used everywhere it appears: Julia identifier,
 struct field, configuration key, directory name, file name, column header, figure label, prose.
-The spelling changes register between contexts — `charges_per_mass` in a configuration, `Z` in a
-header — but the *quantity* does not.
+The spelling changes register between contexts, `charges_per_mass` in a configuration and `Z` in
+a header, but the *quantity* does not.
 
-The corollary is the rule that decides the hard cases: **a name says what the thing is, not what
-was convenient to type.** `Y_vs_A_TKE` is a statement; `Y_A_TKE` is a list of symbols with no
-relation between them. `Data` as a suffix carries nothing. `err` names a different concept from
-the one it was used for — an error is not an uncertainty. And a name that is relative to a moment
-ages: a table with no header line is `HEADERLESS_MASS_EXCESS_SPEC`, not a legacy one.
+One rule decides the hard cases: a name says what the thing is. `Y_vs_A_TKE` is a statement;
+`Y_A_TKE` is a list of symbols with no relation between them. `Data` as a suffix carries nothing.
+`err` names a different concept from the one it was used for: an error is not an uncertainty. And
+a name that is relative to a moment ages: a table with no header line is
+`HEADERLESS_MASS_EXCESS_SPEC`, not a legacy one.
 
 This page is the vocabulary as this package applies it.
 [ExforFissionData.jl](https://github.com/PaulGoG/ExforFissionData.jl), which retrieves its
@@ -31,8 +31,8 @@ here is the name there.
 
 A configuration is edited by hand and has to explain itself, so it spells a quantity out. A path
 and a header are read at a glance and are the field's own nomenclature, so they carry the symbol.
-This is why the configuration key is `charge_distribution_file` while the file it names is
-`charge_distribution_vs_A.dat` with the header `A dZ sigma_Z`, and why
+So the configuration key is `charge_distribution_file` while the file it names is
+`charge_distribution_vs_A.dat` with the header `A dZ sigma_Z`, and
 [`ChargeDistribution`](@ref) has the fields `ΔZ` and `σ_Z`, mirroring the equations.
 
 ## The quantities
@@ -76,8 +76,8 @@ holds the pre-neutron *Y*(*A*), `Y_vs_A_p.dat` the product *Y*(*A*_p); `TKE_p_vs
 *TKE*_p against the heavy product mass. Where ExforFissionData.jl has a token for a quantity,
 that token is the name here too, and abscissae come in its order, charge before product mass:
 `Y_vs_Z_A_p.dat`, with the columns `Z A_p Y`. A table a run writes under `data/sims/` then reads
-like the directory the retrieval or the staging writes under `data/<system>/`, in one respect
-apart: a yield is in per cent per fission here and in the evaluations, and in fragments per
+like the directory the retrieval or the staging writes under `data/<system>/`, with one
+difference. A yield is in per cent per fission here and in the evaluations, and in fragments per
 fission where the retrieval writes it, as its record states. The product neutron number has no
 token there and keeps `N_p`.
 
@@ -102,29 +102,25 @@ the value inside a `Measurement` instead, so it needs no name of its own.
 | variable, field, keyword | `lowercase_snake_case` | `charges_per_mass`, `significant_digits` |
 | constant | `SCREAMING_SNAKE_CASE` | [`RUN_IDENTIFIER_ABBREVIATIONS`](@ref) |
 
-Unicode is used where an identifier *is* a symbol of the governing equations — `ΔZ`, `σ_Z`, `Zₚ`,
-`Sₙ`, `ε`, `Δ` — and only there, so the implementation reads like the formulation. The exported
-API stays ASCII-typeable: every public function can be called, and every keyword argument of one
-given, without a compose key. That is why [`read_charge_distribution`](@ref) takes
-`default_charge_dispersion` while the field it fills is `default_σ_Z`.
+Unicode identifiers are reserved for the symbols of the governing equations: `ΔZ`, `σ_Z`, `Zₚ`,
+`Sₙ`, `ε`, `Δ`. The keyword of [`read_charge_distribution`](@ref) is
+`default_charge_dispersion`, while the field it fills is `default_σ_Z`.
 
-Verb prefixes are a small closed set — `read_`, `write_`, `build_`, `load_`, `run_`, `is_` — and a
+Verb prefixes are a small closed set: `read_`, `write_`, `build_`, `load_`, `run_`, `is_`. A
 function that fits none of them is named for what it returns. `read_<thing>` must return the type
-named `<Thing>`, which is the rule that decides [`read_mass_excess_table`](@ref) against
-`read_mass_excess`: the type is [`MassExcessTable`](@ref), so the reader carries `table` too, and
-the same rule turns `read_segments` into [`read_segmented_curve`](@ref). `load_<thing>` reads
-*and* validates, which is why the configuration entry point is [`load_configuration`](@ref) and
-not `read_configuration`.
+named `<Thing>`. This rule decides [`read_mass_excess_table`](@ref) against `read_mass_excess`:
+the type is [`MassExcessTable`](@ref), so the reader carries `table` too. The same rule turns
+`read_segments` into [`read_segmented_curve`](@ref). `load_<thing>` reads *and* validates, so the
+configuration entry point is [`load_configuration`](@ref) and not `read_configuration`.
 
-An accessor is named for the quantity it returns, not for the access:
+An accessor is named for the quantity it returns:
 [`charge_polarization`](@extref FissionFragmentsDomain :jl:method:`FissionFragmentsDomain.charge_polarization-Tuple{ChargeDistribution, Integer}`)`(distribution, A)`, not `polarization_at(distribution, A)`.
 
 Type names carry no `Data` suffix and no abstract noun standing in for a description: the
 piecewise-linear curve a partition is read from is a [`SegmentedCurve`](@ref), not a
-`JointedSegments` — "segmented" says how, and a plural of a part is not the name of the whole. A
-dropped input is an [`Exclusion`](@ref). `Table` survives only where the thing genuinely is a
-lookup table keyed by nucleon number: [`MassExcessTable`](@ref),
-[`ShellCorrectionTable`](@ref).
+`JointedSegments`. "Segmented" says how, and a plural of a part is not the name of the whole. A
+dropped input is an [`Exclusion`](@ref). `Table` is kept only for lookup tables keyed by nucleon
+number: [`MassExcessTable`](@ref), [`ShellCorrectionTable`](@ref).
 
 One word may not carry two meanings in one module. [`Configuration`](@ref) is the validated TOML,
 as it is in ExforFissionData.jl and FissionTemperatureRatio.jl; a quantity tabulated over fission
@@ -136,10 +132,10 @@ The result type of a package is `<Verb>Result`, **one per package**. Here it is
 `RetrievalResult` and FissionTemperatureRatio.jl its `ExtractionResult`, so `using` any pair of
 them collides on nothing.
 
-Abbreviations are permitted only where the field itself uses them — `TKE`, `TXE`, `Q`, `BSFG`,
-`GC`, `EXFOR`, `AME`, `RIPL`, `sf` — and never as `err`, `param`, `calc`, `val`, `idx`, `num`,
-`cfg`, `pts`. The one place short forms are unavoidable is a run identifier, and they are
-collected there in a single table; see below.
+Abbreviations are permitted only where the field itself uses them: `TKE`, `TXE`, `Q`, `BSFG`,
+`GC`, `EXFOR`, `AME`, `RIPL`, `sf`. Abbreviations such as `err`, `param`, `calc`, `val`, `idx`,
+`num`, `cfg` and `pts` are not used. Short forms are unavoidable only in a run identifier, and
+they are collected there in a single table; see below.
 
 ## Configuration files
 
@@ -149,17 +145,16 @@ the output directory it writes. A system carrying more than one configuration wo
 declares, so a file cannot drift from what it runs.
 
 Sections are `[system]`, `[fragmentation]`, `[energetics]`, `[level_density]`, `[evaporation]`,
-`[partition]`, `[yield]`, `[spectrum]`, `[products]` and `[output]`, and **a key is never prefixed with its
-section's name**: `[level_density] model`, not `level_density_model`.
+`[partition]`, `[yield]`, `[spectrum]`, `[products]` and `[output]`, and no key is prefixed
+with its section's name: `[level_density] model`, not `level_density_model`.
 
 A key's comment states three things and nothing else: what the key is, in one short line; the
-enumerated choices where it is constrained; and the bounds and the unit. No physics narrative, no
-run rationale — those belong in the documentation. The loader enforces exactly what the comment
-declares, so a run cannot start from a configuration it cannot honour, and it names the offending
-key when it refuses.
+enumerated choices where it is constrained; and the bounds and the unit. Longer explanations
+belong in the documentation. The loader enforces what the comment declares and names the
+offending key.
 
-**A key that can only be redundant or wrong is not in the file.** The reaction code follows from
-the entrance channel through [`CHANNEL_REACTION`](@ref), so it is not written down; the compound
+A key that can only be redundant or wrong is not in the file. The reaction code follows from the
+entrance channel through [`CHANNEL_REACTION`](@ref), so it is not written down. The compound
 nucleus follows from the target and the channel through [`REACTIONS`](@ref), so it is not written
 down either. Nor is the output directory: it is [`system_label`](@ref) of the system the file
 already declares.
@@ -168,8 +163,7 @@ already declares.
 input key in a configuration is a path under the data root, and the root itself is an argument to
 [`load_configuration`](@ref).
 
-`significant_digits` is significant figures. It is not decimal places, and the distinction is
-not cosmetic: a multiplicity near 3 and a yield near `10⁻⁴⁰` appear in the same run, and a fixed
+`significant_digits` is significant figures. It is not decimal places: a multiplicity near 3 and a yield near `10⁻⁴⁰` appear in the same run, and a fixed
 number of decimals cannot carry both to the same meaning.
 
 ## The system identifier
@@ -181,14 +175,13 @@ output directory:
 <ElementSymbol><A>_<entrance channel>
 ```
 
-with the channel spelled as the field spells it and not as a reaction code writes it — `Cf252_sf`,
-`U235_nth`, `U235_nres`, `U233_nth`, `Pu239_nth`. EXFOR codes spontaneous fission `0,F`; that is
-a reaction code, not a name, and it belongs in the run record, where the reaction code already
-is. The channel is also what distinguishes a thermal from a resonance run of one target, which
+with the channel spelled as the field spells it and not as a reaction code writes it: `Cf252_sf`,
+`U235_nth`, `U235_nres`, `U233_nth`, `Pu239_nth`. EXFOR codes spontaneous fission `0,F`. That is
+a reaction code, and it belongs in the run record, where the reaction code already is. The channel is also what distinguishes a thermal from a resonance run of one target, which
 `n,f` alone cannot.
 
-[`system_label`](@ref) returns that token. The typeset form for a figure or a caption —
-`²⁵²Cf(sf)`, `²³³U(nth,f)` — is [`system_notation`](@ref), a separate function: one name may not
+[`system_label`](@ref) returns that token. The typeset form for a figure or a caption, as in
+`²⁵²Cf(sf)` or `²³³U(nth,f)`, is [`system_notation`](@ref), a separate function: one name may not
 mean both.
 
 ## Directories, files and headers
@@ -212,23 +205,21 @@ data/
     └── sigma_TKE_vs_A/
 ```
 
-One directory per system, one file per quantity, and a subdirectory where a quantity was measured
-more than once — there the **directory** carries the quantity and the **file** carries the
-provenance, which is what makes the archive accession number recoverable from a figure legend.
-There is no second axis: a system is one token and one tree, so the yields of a system and its
-multiplicities are not kept apart under different roots.
+Each system has a directory and each quantity a file, with a subdirectory where a quantity was
+measured more than once. There the **directory** carries the quantity and the **file** carries the
+provenance, so the archive accession number is recoverable from a figure legend. A system is one
+token and one tree, so its yields and its multiplicities share one root.
 
-A tabular file is named `<quantity>_vs_<abscissa>[_<abscissa>]`. `vs` is what makes the name a
-statement rather than a list of symbols, and it is precisely what `Y_A_TKE` is missing. Where a
-system holds two tables of one quantity in one index space, the authoritative one takes the plain
-name and the other carries a qualifier, exactly as a generated table does.
+A tabular file is named `<quantity>_vs_<abscissa>[_<abscissa>]`. `vs` makes the name a
+statement; `Y_A_TKE` lacks it. Where a system holds two tables of one quantity in one index
+space, the authoritative one takes the plain name and the other carries a qualifier, as a
+generated table does.
 
 Extensions state a format and nothing else: `.dat` whitespace-separated, `.csv` comma-separated,
-`.toml` metadata. **A file extension never carries a nuclide**, because the nuclide is already in
-the path.
+`.toml` metadata. A file extension carries no nuclide; the nuclide is in the path.
 
-A generated table is marked as generated, in the name and in the header row —
-`charge_distribution_vs_A_wahl_systematics.dat` — so it can never be mistaken for an evaluation.
+A generated table is marked as generated in the name and in the header row, as in
+`charge_distribution_vs_A_wahl_systematics.dat`, so it is not taken for an evaluation.
 Where several generations of one quantity sit beside each other the qualifier names the model that
 produced it and where its parameters came from, not its rank: `_wahl_per_reaction`,
 `_wahl_systematics`, `_mean`.
@@ -242,27 +233,25 @@ A nu nu_uncertainty
 A_H,R_T,R_T_uncertainty
 ```
 
-**No column of a tabulated quantity is named `value`, and no uncertainty column is named
-`uncertainty`.** The one exception is `totals.dat`, a list of named scalars, whose two columns
-are `quantity value`. Naming a column for its quantity is what frees the reader from having to
-know the file name to know what the file is holding, and it matters most for the files that cross
-a package boundary. This binds a
-`TableSpec`'s own column symbols as much as a header on disk: a spec reading `[:A_H, :value]`
-states nothing, which is why there are two curve specs — [`TEMPERATURE_RATIO_CURVE_SPEC`](@ref)
-and [`EXCITATION_RATIO_CURVE_SPEC`](@ref) — rather than one that could not name its ordinate.
+No column of a tabulated quantity is named `value`, and no uncertainty column is named
+`uncertainty`. The one exception is `totals.dat`, a list of named scalars, whose two columns
+are `quantity value`. A column named for its quantity reads without the file name, which matters
+most for the files that cross a package boundary. This binds a `TableSpec`'s own column symbols as
+much as a header on disk: a spec reading `[:A_H, :value]` states nothing. There are therefore two
+curve specs, [`TEMPERATURE_RATIO_CURVE_SPEC`](@ref) and [`EXCITATION_RATIO_CURVE_SPEC`](@ref),
+each naming its ordinate.
 
-**A quantity that crosses a package boundary is taken through the producer's run record, not
-through a path.** `R_T(A_H)` and `r_ν(A_H)` are written side by side, in the same column of two
-files, and are both plausible floats; a configuration naming one of them by hand can select the
-wrong physics and finish without complaint. [`TemperatureRatioManifest`](@ref) is what makes the
-quantity checkable, and [`temperature_ratio_path`](@ref) is the only route from it to a file.
+A quantity that crosses a package boundary is taken through the producer's run record.
+`R_T(A_H)` and `r_ν(A_H)` are written side by side, in the same column of two files, and are both
+plausible floats. A configuration naming one of them by hand can select the wrong physics and
+still complete. [`TemperatureRatioManifest`](@ref) makes the quantity checkable, and
+[`temperature_ratio_path`](@ref) is the only route from it to a file.
 
-Readers take columns **by position**, not by header text. That is what makes a header rename a
-no-op for code, upstream and downstream alike, and it must stay that way: every reader in this
-package says so in its docstring, and nothing may be changed to a lookup by name. The one
+Readers take columns **by position**, not by header text, so a header rename is a no-op for
+code, upstream and downstream alike. Every reader states this in its docstring. The one
 evaluation held as distributed, the s-wave resonance library, keeps its own commented header
 untouched, and [`HEADERLESS_MASS_EXCESS_SPEC`](@ref) reads an atomic mass table with no header line
-at all — the same rule seen from the other side.
+at all.
 
 ## Output files and run identifiers
 
@@ -293,15 +282,14 @@ A run writes to `data/sims/<system>/<run>`, and an output follows the same
 | `configuration.toml` | the configuration the run loaded, copied |
 | `Manifest.toml` | the resolved environment the run executed in, copied |
 
-**A run-identifier token is the configuration key it came from.** Spelling every key out in full
-would put some two hundred characters into every directory name, so the keys are abbreviated — and
-abbreviated in one place, [`RUN_IDENTIFIER_ABBREVIATIONS`](@ref), rather than at the point of use.
-[`run_identifier`](@ref) refuses a key with no entry rather than inventing a token, and the test
-suite asserts that every token it uses has one and that no two keys share a token. One token
+A run-identifier token is the configuration key it came from. Spelling every key out in full
+would put some two hundred characters into every directory name, so the keys are abbreviated, all
+in one place: [`RUN_IDENTIFIER_ABBREVIATIONS`](@ref). [`run_identifier`](@ref) refuses a key
+with no entry, and the test suite asserts that every token it uses has one and that no two keys share a token. One token
 covers two keys: `TKEb` is `grid` where `[yield] kinetic_energy_limit = "grid"`, and otherwise the
 `kinetic_energy_moments` the physical bound restores, since the second key means nothing without
 the first.
 
-The identifier says which keys it covers rather than claiming all of them. What it leaves out — the
-input file paths, the spectrum grid, `significant_digits` — is written in full into the metadata
-beside the result, and [`run_parameters`](@ref) records the reason for each.
+The identifier says which keys it covers. It leaves out the input file paths, the spectrum grid
+and `significant_digits`. These are written in full into the metadata beside the result, and
+[`run_parameters`](@ref) records the reason for each.

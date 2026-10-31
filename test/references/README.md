@@ -41,14 +41,14 @@ produced under is part of its name, because two of them differ in nothing else.
 The two excitation files sample the same configurations — `A_H` ∈ {126, 134, 144, 154, 164,
 174}, all five charge numbers, the whole TKE grid, 1200 rows each — so the partitions can be
 compared row for row. The values are rounded to eight decimals on write, which is why the tests
-assert agreement below `1e-8` rather than to machine precision: `5e-9` is exact agreement.
+assert agreement below `1e-8`: `5e-9` is exact agreement.
 
 Only the header lines were rewritten when the naming convention was applied; every data row is
 byte-identical to what the archived run produced, and `.gitattributes` keeps these files exempt
 from line-ending normalisation so they stay that way. The two post-neutron tables were written
 with CRLF terminators and are kept with LF; their data rows are otherwise the archived ones.
 
-The sample is a regression guard, not the extent of what has been checked. Both partitions have
+The sample is a regression guard. Both partitions have
 been swept over **every** record of their archived run — 9819 and 9788 — and reproduce each one
 to the same `5e-9` MeV.
 
