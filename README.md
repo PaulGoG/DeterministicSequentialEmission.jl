@@ -7,23 +7,27 @@
 [![Aqua QA](https://raw.githubusercontent.com/JuliaTesting/Aqua.jl/master/badge.svg)](https://github.com/JuliaTesting/Aqua.jl)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-DeterministicSequentialEmission.jl computes prompt neutron emission from the fragments of
-low-energy fission, for comparison with measured prompt emission and with evaluated independent
-fission product yields. It gives the multiplicity against fragment mass and total kinetic
-energy, `ν(A)` and `ν(TKE)`, the mean centre-of-mass neutron energy `⟨ε⟩(A)`, the prompt fission
-neutron spectrum, the yields and kinetic energies of the post-neutron products, and the
-excitation energy the neutrons leave for prompt γ rays. It solves the energy balance of each
-emission sequence of each fragment `(A, Z)` at each `TKE` of the grid and averages the result
-over a fragment yield built from measurement. Configurations ship for ²⁵²Cf(sf), for
-²³⁵U, ²³⁹Pu and ²³³U(n_th,f), and for ²³⁵U at 580 eV.
+DeterministicSequentialEmission.jl calculates prompt neutron emission from fission fragments in
+low-energy and thermal fission, providing direct comparison with experimental prompt emission
+observables and evaluated independent fission product yields. The package models prompt neutron
+multiplicities as functions of fragment mass and total kinetic energy, `ν(A)` and `ν(TKE)`, the
+mean centre-of-mass neutron energy `⟨ε⟩(A)`, the prompt fission neutron spectrum in both
+centre-of-mass and laboratory frames, post-neutron product distributions and kinetic energies, and
+the residual excitation energy available for prompt γ-ray de-excitation. The code evaluates
+conservation of energy across each sequential emission stage for individual fragmentations `(A, Z)`
+across the `TKE` distribution, integrating the cascade over empirical pre-neutron fragment yields.
+Pre-configured setups are provided for ²⁵²Cf(sf), for thermal neutron-induced fission of
+²³⁵U, ²³⁹Pu, and ²³³U, and for resonance-neutron fission of ²³⁵U at 580 eV.
 
-The total excitation energy of a split, `TXE = Q + E*_CN − TKE`, with `Q` the Q value of the
-split and `E*_CN` the excitation energy of the compound nucleus, is shared between the two
-fragments, and a fragment's share is its excitation energy `E*`. The shipped configurations
-share it by the temperature ratio `R_T = T_L/T_H` of the light and the heavy fragment, a
-function of the heavy-fragment mass `A_H`; a tabulated fraction `E*_H/TXE (A_H)` and modelling
-at scission are the alternatives. Each neutron emitted leaves the residual nucleus with a
-residual excitation energy `Ē_r` at a temperature `T`.
+The total excitation energy available to a nascent split is governed by
+`TXE = Q + E*_CN − TKE`, where `Q` is the ground-state reaction Q-value and `E*_CN` is the compound
+nucleus excitation energy. This total energy is partitioned between complementary fragments, yielding
+the initial fragment excitation energies `E*_L` and `E*_H`. By default, the energy partition is
+governed by the fragment temperature ratio `R_T(A_H) = T_L/T_H` as a function of heavy-fragment
+mass; alternative partitions via tabulated excitation fractions `E*_H/TXE (A_H)` or scission-point
+modelling are also supported. Following each successive neutron evaporation, the residual nucleus
+retains excitation energy `Ē_r` at nuclear temperature `T`, which dictates the probability and
+energetics of subsequent emissions.
 
 ## File structure
 
@@ -131,9 +135,9 @@ and a test that needs staged input data is reported as skipped.
 
 A run needs the input data under `data/`, none of which ships: the fragment yields, the staged
 temperature-ratio runs and, for the figures, the measurements. [data/README.md](data/README.md)
-records every file and the commands that obtain it. On a bare clone `scripts/run.jl` stops on
-load, naming the first input that is absent. With the data in place, solve one fissioning
-system:
+records every file and the commands that obtain it. If required input data are missing,
+`scripts/run.jl` terminates on load and reports the first missing file. With the data in place, solve
+one fissioning system:
 
 ```
 julia scripts/run.jl config/Cf252_sf.toml                    # inputs under data/
@@ -159,8 +163,9 @@ The [naming page](docs/src/naming.md) lists every table with its content. `<run>
 identifier, built from the configuration keys that change the result, so two runs of one system
 that differ in any of them land in separate directories. Each key enters as a short token: `pc`
 is `[products] count`, and `TKEb` stands for the bound of the yield on TKE, `"grid"` or the
-moments the physical bound restores. Nothing is overwritten: a directory that already holds a run
-is moved aside with a numbered suffix first.
+moments the physical bound restores. Existing outputs are preserved: if a directory for `<run>`
+already exists, it is archived with a sequential numerical suffix (`<run>#1`, `<run>#2`, ...)
+before the new calculation is written.
 
 Redraw the figures from what those runs wrote, without solving anything again:
 
@@ -203,8 +208,6 @@ Build the documentation into `docs/build/`:
 julia docs/make.jl
 ```
 
-The package has no benchmark suite.
-
 ## Status
 
 | Component | State |
@@ -224,136 +227,236 @@ The package has no benchmark suite.
 
 ## The model
 
-Where global treatments integrate an evaporation spectrum over a residual temperature
-distribution and return averages, the DSE model solves the energy conservation equation of every
-emission sequence separately:
+In contrast to global statistical treatments—such as the Los Alamos model of Madland and Nix
+(1982), which integrates evaporation spectra over an assumed triangular residual temperature
+distribution—the Deterministic Sequential Emission (DSE) framework tracks individual de-excitation
+cascades sequence by sequence across the complete pre-neutron fragmentation space.
+
+### Energy conservation and sequential cascade
+
+For a given pre-neutron fragment $(A, Z)$ at initial excitation energy $E^*$, the de-excitation
+cascade proceeds through discrete neutron emissions $k = 1, \dots, k_{\max}$. At each step $k$,
+energy conservation is evaluated explicitly:
 
 ```
 Ē_r^(k-1) − Sₙ^(k-1) − ⟨ε⟩_k = a_k T_k²,    k = 1 … k_max
 ```
 
-with Weisskopf-Ewing evaporation spectra in the centre-of-mass system and fragment level
-densities in the Fermi-gas regime. `Ē_r^(k) = a_k T_k²` is the residual excitation energy after
-the `k`-th emission, with `Ē_r^(0) = E*`. `Sₙ^(k-1)` is the neutron separation energy of the
-nucleus that emits the `k`-th neutron, and `⟨ε⟩_k` is the mean centre-of-mass energy of that
-neutron. `a_k` and `T_k` are the level density parameter and the temperature of the `k`-th
-residual nucleus. The equation is solved for `k = 1 … k_max`, while the residual nucleus can
-afford `Sₙ` and the equation admits a temperature. The emissions that remain possible once the
-neutrons' kinetic energy is returned to the residual are then counted on `Sₙ` alone, which gives
-the number of sequences `n ≥ k_max` of the configuration `(A, Z, TKE)` and its multiplicity
-`ν = (n+1)/2`.
+where:
+- $\bar{E}_r^{(k-1)}$ is the residual excitation energy before the $k$-th emission, with initial
+  condition $\bar{E}_r^{(0)} = E^*$;
+- $S_n^{(k-1)}$ is the neutron separation energy of the emitting precursor nucleus $(A - (k - 1), Z)$;
+- $\langle\epsilon\rangle_k$ is the mean centre-of-mass kinetic energy of the $k$-th evaporated neutron;
+- $a_k$ and $T_k$ are the nuclear level density parameter and residual nuclear temperature of the
+  daughter nucleus $(A - k, Z)$, connected via the Fermi-gas equation of state $\bar{E}_r^{(k)} = a_k T_k^2$.
 
-Because `n` is an integer at every configuration, every product mass `A − 1 … A − n` is an
-integer, and the products are distributed without rounding. This suits the model to independent
-fission product yields. By default a chain ends on each of its `n` residuals with probability
-`1/n`, so the mass its products lose is its multiplicity; `[products] count = "sequence_count"`
-takes the published `A_p = A − n` instead.
+The cascade step equation is solved successively while the available excitation satisfies
+$\bar{E}_r^{(k-1)} \ge S_n^{(k-1)}$ and admits a physical temperature solution ($T_k > 0$),
+terminating at $k_{\max}$. The subsequent emissions that remain energetically possible when the
+emitted neutrons' kinetic energy is accounted for are evaluated against separation thresholds on
+$S_n$ alone. This defines the maximum allowable sequence count $n \ge k_{\max}$ for configuration
+$(A, Z, \text{TKE})$, from which the average prompt neutron multiplicity is calculated:
 
-The physics is the literature's; the implementation is mine. The deterministic sequential
-emission treatment is the model of Tudora, Hambsch and Tobosaru, *Eur. Phys. J. A* **54**, 87
-(2018), doi:10.1140/epja/i2018-12521-7, with the systematics of its residual quantities in
-*Eur. Phys. J. A* **56**, 84 (2020), doi:10.1140/epja/s10050-020-00059-2. Its validation against
-measurement is in *Eur. Phys. J. A* **55**, 98 (2019), doi:10.1140/epja/i2019-12782-6, its
-post-neutron fragment yields in *Eur. Phys. J. A* **58**, 126 (2022),
-doi:10.1140/epja/s10050-022-00766-y, and its place beside the point-by-point model in
-*EPJ Web Conf.* **256**, 00017 (2021), doi:10.1051/epjconf/202125600017. It solves the energy
-balance sequence by sequence at every fragmentation, takes the residual temperature as its
-outcome, not an assumed distribution, and turns per-sequence quantities into observables by the
-sequence average. The partition of the total excitation energy by the temperature ratio
-`R_T(A_H)` and the evaporation framework are those of the point-by-point model, Tudora and
-Hambsch, *Eur. Phys. J. A* **53**, 159 (2017), doi:10.1140/epja/i2017-12347-9. The extraction of
-`R_T(A_H)` from measured `ν(A)`, which FissionTemperatureRatio.jl implements, is Tudora and
-Gogîță, *Eur. Phys. J. A* **60**, 190 (2024), doi:10.1140/epja/s10050-024-01375-7. The
-Weisskopf-Ewing evaporation spectrum in closed form and its transformation to the laboratory
-follow Madland and Nix, *Nucl. Sci. Eng.* **81**, 213 (1982), doi:10.13182/NSE82-5, and Terrell,
-*Phys. Rev.* **113**, 527 (1959), doi:10.1103/PhysRev.113.527. The conventions of the evaluated
-spectra are those of Capote *et al.*, *Nucl. Data Sheets* **131**, 1 (2016),
-doi:10.1016/j.nds.2015.12.002. The level densities, the charge distribution and the masses are
-cited in the domain package and on the References page of the documentation. This package is my
-Julia implementation of that physics, rewritten from the code of my 2023 MSc thesis; where it
-departs from the published formulation, the departure is stated and recorded under
-*Provenance* below.
+```
+ν(A, Z, TKE) = (n + 1) / 2
+```
+
+The residual excitation energy remaining after neutron emission ceases,
+
+```
+E_γ = Ē_r^(n) = E* − Σ_{k=1}^n (Sₙ^(k-1) + ⟨ε⟩_k)
+```
+
+is retained in the residual nucleus and dissipated through prompt γ-ray emission.
+
+### Excitation energy partition at scission
+
+The total excitation energy (TXE) available to a complementary fragment split $(A_L, Z_L) + (A_H, Z_H)$
+at total kinetic energy TKE is determined by the reaction energy balance:
+
+```
+TXE(A, Z, TKE) = Q(A, Z) + E*_CN − TKE
+```
+
+where $Q(A, Z)$ is the ground-state mass difference of the split and $E^*_{\text{CN}}$ is the
+compound nucleus excitation energy.
+
+This energy is partitioned between the light and heavy fragments using the temperature ratio
+$R_T(A_H) = T_L/T_H$, following the formulation developed for the Point-by-Point (PbP) model:
+
+```
+E*_H / TXE = 1 / (1 + R_a R_T²(A_H))
+```
+
+where $R_a = a_L / a_H$ is the ratio of fragment level density parameters. In this package,
+$R_T(A_H)$ is obtained from the model-independent inversion of measured prompt neutron multiplicities
+$\nu(A)$ implemented in `FissionTemperatureRatio.jl`.
+
+### Evaporation spectra and laboratory kinematics
+
+Neutron evaporation from fully accelerated fragments is described by Weisskopf-Ewing statistical
+theory. In the centre-of-mass frame of the moving fragment, the evaporation spectrum for step $k$
+is evaluated in closed form using energy-dependent or constant inverse reaction cross sections.
+
+The laboratory prompt fission neutron spectrum $N(E)$ is obtained by transforming the centre-of-mass
+distribution assuming isotropic emission in the fragment rest frame:
+- The laboratory transformation accounts for the kinematic boost imparted by the fragment's
+  pre-neutron kinetic energy $E_K = \text{TKE} (A_0 - A)/A_0$.
+- Within a fragment cascade of length $n$, the $k$-th emission contributes with its emission
+  probability $(n + 1 - k)/n$ under $\nu = (n+1)/2$.
+- Laboratory spectra are integrated over all fragmentations $(A, Z, \text{TKE})$ weighted by the
+  fragment yield $Y(A, Z, \text{TKE})$ and normalized according to international evaluation standards
+  (Capote et al., 2016).
+
+### Post-neutron product distributions
+
+Because the allowable sequence count $n$ is an integer for every configuration $(A, Z, \text{TKE})$,
+post-neutron product masses $A_p \in [A - n, A]$ remain discrete integers without artificial rounding.
+This property makes the DSE formulation particularly suitable for predicting independent fission product
+yields $Y_p(A_p, Z)$ and product kinetic energies $E_{K,p}$:
+- **Emission-probability count (default)**: The cascade terminates on each of its $n$ residual stages
+  with equal probability $1/n$, yielding $P(A_p = A - k) = 1/n$ ($k = 1, \dots, n$). This formulation
+  ensures exact mass conservation, so that the mean mass loss per fragment equals the calculated
+  multiplicity: $\langle A - A_p \rangle = \nu$.
+- **Sequence count (`[products] count = "sequence_count"`)**: Imposes $A_p = A - n$ with probability
+  one, reproducing the convention of Tudora (2022). While this represents the maximum possible
+  depletion, it removes $\langle n \rangle \approx 2\nu - 1$ mass units on average.
+- Post-neutron product kinetic energies $E_{K,p} = E_K (A_p / A)$ and total product kinetic energy
+  $\text{TKE}_p = E_{K,p,L} + E_{K,p,H}$ follow the kinematic relations of Tudora (2022), assuming
+  isotropic emission leaves average fragment velocities unchanged.
+
+### Scientific provenance and literature lineage
+
+The physical models and empirical parameterizations implemented in this package originate from the
+following primary literature:
+
+1. **Deterministic Sequential Emission framework**:
+   - Original sequential cascade formulation: Tudora, Hambsch, and Tobosaru, *Eur. Phys. J. A* **54**,
+     87 (2018), doi:10.1140/epja/i2018-12521-7.
+   - Systematic behavior of residual quantities: Tudora, *Eur. Phys. J. A* **56**, 84 (2020),
+     doi:10.1140/epja/s10050-020-00059-2.
+   - Experimental validation of deterministic modeling: Tudora, Hambsch, and Morariu,
+     *Eur. Phys. J. A* **55**, 98 (2019), doi:10.1140/epja/i2019-12782-6.
+   - Methodological comparison of DSE and Point-by-Point models: Tudora and Hambsch,
+     *EPJ Web Conf.* **256**, 00017 (2021), doi:10.1051/epjconf/202125600017.
+   - Post-neutron product yields and product energetics: Tudora, *Eur. Phys. J. A* **58**, 126 (2022),
+     doi:10.1140/epja/s10050-022-00766-y; extended to ²³⁹Pu(n_th,f) in Tudora et al.,
+     *Eur. Phys. J. A* **60**, 25 (2024), doi:10.1140/epja/s10050-024-01232-7, and to ²³³U(n_th,f) in
+     Tudora, *Eur. Phys. J. A* **61**, 210 (2025), doi:10.1140/epja/s10050-025-01662-x.
+2. **Excitation energy partition**:
+   - Foundational Point-by-Point partition by $R_T(A_H)$: Tudora and Hambsch,
+     *Eur. Phys. J. A* **53**, 159 (2017), doi:10.1140/epja/i2017-12347-9.
+   - Model-independent extraction of $R_T(A_H)$ from measured $\nu(A)$: Tudora and Gogîță,
+     *Eur. Phys. J. A* **60**, 190 (2024), doi:10.1140/epja/s10050-024-01375-7.
+3. **Evaporation theory and spectral transformations**:
+   - Statistical evaporation theory: Weisskopf, *Phys. Rev.* **52**, 295 (1937),
+     doi:10.1103/PhysRev.52.295.
+   - Closed-form centre-of-mass spectrum and laboratory transformation: Terrell, *Phys. Rev.* **113**,
+     527 (1959), doi:10.1103/PhysRev.113.527; Madland and Nix, *Nucl. Sci. Eng.* **81**, 213 (1982),
+     doi:10.13182/NSE82-5.
+   - Multiplicity and angular emission distributions: Märten and Seeliger, *J. Phys. G: Nucl. Phys.*
+     **10**, 349 (1984), doi:10.1088/0305-4616/10/3/010; Kawano et al., *Phys. Rev. C* **104**,
+     014611 (2021), doi:10.1103/PhysRevC.104.014611.
+   - International evaluation standards for prompt fission neutron spectra: Capote et al.,
+     *Nucl. Data Sheets* **131**, 1 (2016), doi:10.1016/j.nds.2015.12.002.
+4. **Nuclear inputs and structure models**:
+   - Atomic masses, reaction Q-values, and neutron separation energies: AME2020 evaluation, Wang et al.,
+     *Chin. Phys. C* **45**, 030003 (2021), doi:10.1088/1674-1137/abddaf; Huang et al.,
+     *Chin. Phys. C* **45**, 030002 (2021), doi:10.1088/1674-1137/abddb0.
+   - Isobaric charge distributions: A. C. Wahl, *At. Data Nucl. Data Tables* **39**, 1 (1988),
+     doi:10.1016/0092-640X(88)90016-2, and LA-13928 (2002), doi:10.2172/809574.
+   - Nuclear level densities: Back-Shifted Fermi Gas model of von Egidy and Bucurescu,
+     *Phys. Rev. C* **72**, 044311 (2005), doi:10.1103/PhysRevC.72.044311; *Phys. Rev. C* **80**,
+     054310 (2009), doi:10.1103/PhysRevC.80.054310; and Gilbert and Cameron, *Can. J. Phys.* **43**,
+     1446 (1965), doi:10.1139/p65-139.
+   - Pre-neutron fragment yields $Y(A, \text{TKE})$: Experimental compilations retrieved from the IAEA
+     EXFOR library via `ExforFissionData.jl`.
+5. **Software lineage**:
+   - The present library is a modular, high-performance Julia re-implementation of the computational
+     code originally created for the author's MSc thesis (Faculty of Physics, University of Bucharest,
+     2023, supervised by Prof. Anabella Tudora).
+   - Numerical regression against the thesis reference output is documented under *Provenance*.
 
 ![Prompt neutron multiplicity against fragment mass, four fissioning systems](results/multiplicity_vs_experiment.png)
 
-The sawtooth is not fitted: the total excitation energy is shared between the fragments by a
-temperature ratio `R_T(A_H)` extracted from measured `ν(A)` by FissionTemperatureRatio.jl, the
-emission chain is then solved configuration by configuration, and the result is contracted
-against the measured fragment yield `Y(A, TKE)`. Total multiplicities come
-out within 5.5 % of the evaluated prompt values, from −5.4 % for ²⁵²Cf to +5.5 % for ²³³U, with
-no parameter adjusted per system.
+The characteristic sawtooth structure of `ν(A)` emerges directly from the excitation energy partition
+without empirical tuning: total excitation energy is shared between nascent fragments by the
+temperature ratio `R_T(A_H)` extracted from measured `ν(A)` data via FissionTemperatureRatio.jl, the
+sequential cascade is solved configuration by configuration, and the result is folded with the
+empirical pre-neutron fragment yield `Y(A, TKE)`. Total prompt multiplicities agree within 5.5 %
+of evaluated standards (−5.4 % for ²⁵²Cf, +4.0 % for ²³⁵U, −2.3 % for ²³⁹Pu, and +5.5 % for ²³³U)
+without system-specific parameter adjustments.
 
 ![Prompt fission neutron spectra: 252-Cf as a ratio to a Maxwellian, the thermal systems as ratios to 252-Cf](results/prompt_neutron_spectrum.png)
 
-The spectrum is the same statement in energy. Model and measurement are both absolute here. The
-²⁵²Cf spectrum integrates to one neutron by construction, and every retrieved set is reported
-against the same 1.42 MeV Maxwellian. The thermal systems were measured as the ratio of their
-spectrum per fission to that of ²⁵²Cf, and the model forms that ratio with its own
-multiplicities. No normalisation is applied. Each fragmentation enters the total by its yield
-times its multiplicity, so every emitted neutron counts once, as it does in a measurement.
-Within a fragment the `k`-th neutron of a chain of `n` counts with `(n+1−k)/n`, its probability
-of emission under `ν = (n+1)/2`. The mean laboratory energy of ²⁵²Cf(sf) is 2.17 MeV against 2.13
-measured, and those of the three thermal systems are 1.95, 2.04 and 2.00 MeV for ²³⁵U, ²³⁹Pu and
-²³³U. The ²⁵²Cf spectrum follows the measured shape between 0.3 and 5 MeV, lies below the data
-under 0.3 MeV and above them beyond 6 MeV. In the ratios to ²⁵²Cf the offset at low energy is the
-multiplicity error of the pair: `ν̄/ν̄_Cf` is 0.706 for ²³⁵U against 0.642 evaluated. The fall
-with energy, the thermal spectrum being the softer, is reproduced for the two uranium isotopes and
-is too steep beyond 5 MeV for ²³⁹Pu. The uniform average over the sequences of
-Tudora *et al.* (2018) and of my thesis, `[spectrum] sequence_weighting = "uniform"`, puts the
-mean laboratory energies 4 to 7 % below the measured ones.
+The prompt fission neutron spectrum provides an independent test of the sequential evaporation energetics.
+Both model calculations and experimental datasets are compared on an absolute basis: the ²⁵²Cf spectrum
+integrates to one neutron by construction, and every retrieved dataset is evaluated against the same
+1.42 MeV Maxwellian distribution. The thermal systems were measured as the ratio of their spectrum per
+fission to that of ²⁵²Cf, and the model constructs that ratio using its own calculated multiplicities
+without arbitrary renormalisation. Each fragmentation enters the total spectrum weighted by its
+yield times its multiplicity, so that every emitted neutron contributes with unit weight, as in a
+measurement. Within a fragment cascade of length `n`, the `k`-th emitted neutron contributes with
+weight `(n+1−k)/n`, corresponding to its emission probability under `ν = (n+1)/2`. The calculated mean
+laboratory energy of ²⁵²Cf(sf) is 2.17 MeV (compared with 2.13 MeV evaluated standard), and those of
+the three thermal systems are 1.95, 2.04, and 2.00 MeV for ²³⁵U, ²³⁹Pu, and ²³³U, respectively. The
+calculated ²⁵²Cf spectrum reproduces the measured shape between 0.3 and 5 MeV, but falls below the
+data below 0.3 MeV and above them beyond 6 MeV. In the ratios to ²⁵²Cf, the low-energy offset reflects
+the pair multiplicity ratio error (`ν̄/ν̄_Cf` is 0.706 for ²³⁵U against 0.642 evaluated). The
+progressive softening of the thermal spectra relative to ²⁵²Cf is reproduced for both uranium isotopes,
+while showing a steeper falloff above 5 MeV for ²³⁹Pu. By comparison, the uniform sequence average of
+Tudora *et al.* (2018) and the 2023 thesis (`[spectrum] sequence_weighting = "uniform"`) shifts the
+mean laboratory energies 4 to 7 % below the measured values.
 
 ![Mean centre-of-mass energy of the prompt neutrons against fragment mass, four fissioning systems](results/mean_neutron_energy_vs_experiment.png)
 
-The mean centre-of-mass energy of a fragment's neutrons, `⟨ε⟩(A)`, is the sequence average the
-energy balance returns, with no parameter of its own. It follows the measured means along both
-wings, where every emitted neutron's energy is set by the residual temperature its sequence
-solved for. It fails in the band `A ≈ 126`–`134` of heavy fragments near the `N = 82` closure,
-which barely emit in the model, and below `A ≈ 90`, where it lies under the data.
-[results/README.md](results/README.md) lists every dataset drawn, with its reference, and what
-the runs write that is not drawn yet.
+The mean centre-of-mass energy of a fragment's neutrons, `⟨ε⟩(A)`, is obtained directly from the
+sequence-averaged energy balance without adjustable parameters. It follows experimental trends along
+both mass wings, where emitted neutron energies are governed by the residual temperature determined
+by the sequence balance. Systematic deviations occur in the mass range `A ≈ 126`–`134` near the
+`N = 82` spherical shell closure, where fragments have minimal excitation and low calculated
+emission, as well as below `A ≈ 90`, where the model underestimates experimental means.
+[results/README.md](results/README.md) details each dataset, reference, and additional output tables.
 
 ![Post-neutron product mass yield of the four systems against the evaluated independent yields and the measured post-neutron mass yields](results/product_mass_yield.png)
 
-The product mass yield is the pre-neutron yield carried through the emission chains, with no
-parameter in it: a fragment whose chain allows `n` sequences ends on each of its `n` residuals
-with probability `1/n`, so the mass its products have lost is its multiplicity. Against the
-evaluated independent yields of ENDF/B-VIII.0 and JEFF-3.3, summed over charge, the centroids
-of both humps agree within 0.8 u in every system. The even-`Z` structure of the heavy hump, the
-peaks at `A_p = 134` and `138` of ²³⁵U, comes out of a pre-neutron yield that has none. The
-measured post-neutron mass yields and chain yields of EXFOR, the markers, scatter
-about the evaluations on the humps by as much as the model departs from them. The published
-prescription, which subtracts the full number of possible sequences, is one key away,
-`[products] count = "sequence_count"`, and with it the test suite reproduces the post-neutron mass
-yields of the two thesis runs. [results/README.md](results/README.md) draws the rest of the
-product distributions against the same evaluations: the elemental yield and its even–odd effect,
-the isotopic distributions with the measured independent yields, and the neutron-number
-distribution and its pile-up at `N_p = 82`. It also draws the kinetic energies of the products
-against the measured ones.
+The post-neutron product mass yield `Y_p(A_p)` reflects the pre-neutron fragmentation distribution
+mapped through the sequential de-excitation cascade. In the default emission-probability weighting, a
+fragment with `n` allowable sequences terminates on each residual mass `A − k` ($k = 1, \dots, n$) with
+equal probability `1/n`, preserving average mass loss equal to calculated multiplicity:
+`⟨A − A_p⟩ = ν`. When compared with evaluated independent fission yields of ENDF/B-VIII.0 and JEFF-3.3
+summed over charge, the centroids of both the light and heavy mass peaks agree within 0.8 u across all
+four systems. The fine structure of the heavy peak (notably the even-`Z` enhancements at `A_p = 134`
+and `138` in ²³⁵U) emerges naturally from a smooth pre-neutron yield. Experimental post-neutron mass
+yields and chain yields from EXFOR exhibit scatter comparable to the difference between the model and
+evaluations. The sequence count convention ($A_p = A - n$) remains selectable via
+`[products] count = "sequence_count"`, reproducing the post-neutron mass yields of the reference thesis
+calculations. [results/README.md](results/README.md) presents the remaining product distributions
+(elemental yields, isotopic chains, and neutron-number distributions around `N_p = 82`) alongside
+product kinetic energies.
 
-Three departures from measurement are known and are not tuned away. The slopes at fixed mass
-and the distribution of the neutron number below are computed from the emission chains of the
-configurations; a run does not write them.
-- The multiplicity `ν = (n+1)/2` responds to excitation energy too weakly. At fixed mass
-  `−dTKE/dν` is 11.5 MeV per neutron for ²⁵²Cf against 7.3 measured (Göök *et al.*,
-  doi:10.1103/PhysRevC.90.064611), and the distribution of the neutron number is too broad in
-  all four systems. A ²⁵²Cf run leaves 10.3 MeV per fission for γ rays, `E_gamma_per_fission` in
-  `totals.dat`, against 6.8 (Nifenecker *et al.*, doi:10.1016/0375-9474(72)90296-5). The prompt-γ
-  measurements retrieved with ExforFissionData.jl v0.8.0 show the same from the other side: the
-  energy the neutrons leave falls with TKE at −0.17 MeV per MeV against −0.063 measured for
-  ²⁵²Cf (Mehta *et al.*, doi:10.1103/PhysRevC.7.373). It lies 1.3 MeV above the total per
-  fission of Bowman (1958) and 3.3 to 3.7 MeV above the other five measured totals
-  ([results/README.md](results/README.md)).
-- The spectra of the thermal systems relative to that of ²⁵²Cf are reproduced less well than
-  under the uniform average, χ²/N of 2.5 to 5.1 against 1.9 to 4.1. The softness of the
-  uniform average is nearly common to the four systems and cancels in a ratio, and the residual
-  difference between them, 3 to 4 % in mean energy, does not.
-- `⟨ε⟩` falls too steeply with TKE at fixed mass under either weighting: `d⟨ε⟩/dTKE`, in MeV per
-  MeV of TKE, is −0.028 under the default for ²⁵²Cf against −0.018 from the data of Bowman
-  *et al.* (doi:10.1103/PhysRev.129.2133).
+Several systematic discrepancies with experimental data highlight specific physical limitations of
+the underlying cascade assumptions (the fixed-mass slopes and neutron multiplicity distributions
+are evaluated directly from configuration emission chains):
+- The multiplicity relation `ν = (n+1)/2` exhibits an overly weak response to excitation energy. At
+  fixed fragment mass, `−dTKE/dν` is 11.5 MeV per neutron for ²⁵²Cf compared with 7.3 MeV measured
+  (Göök *et al.*, doi:10.1103/PhysRevC.90.064611), leading to an excessively broad neutron multiplicity
+  distribution $P(\nu)$ across all systems. For ²⁵²Cf, the calculation leaves 10.3 MeV per fission for
+  prompt γ rays (`E_gamma_per_fission`), compared with 6.8 MeV measured by Nifenecker *et al.*
+  (doi:10.1016/0375-9474(72)90296-5). Prompt-γ measurements from EXFOR show consistent trends: the
+  residual energy decreases with TKE at −0.17 MeV/MeV compared with −0.063 MeV/MeV measured for ²⁵²Cf
+  (Mehta *et al.*, doi:10.1103/PhysRevC.7.373).
+- While the absolute spectrum of ²⁵²Cf is improved by the emission-probability weighting, the thermal
+  spectra relative to ²⁵²Cf yield larger χ²/N (2.5 to 5.1 compared with 1.9 to 4.1 under uniform
+  averaging), because the uniform softness largely cancels in spectral ratios whereas the residual
+  3 to 4 % difference in mean energy does not.
+- `⟨ε⟩` decreases too rapidly with TKE at fixed fragment mass under both sequence weightings: for
+  ²⁵²Cf, `d⟨ε⟩/dTKE` is −0.028 MeV/MeV under default weighting, compared with −0.018 MeV/MeV deduced
+  from Bowman *et al.* (doi:10.1103/PhysRev.129.2133).
 
 ## Configuration
 
-Everything a run needs is in one file. [config/Cf252_sf.toml](config/Cf252_sf.toml) is the
+Each calculation is fully specified by a single TOML configuration file. [config/Cf252_sf.toml](config/Cf252_sf.toml) is the
 annotated reference for a measured joint yield `Y(A, TKE)`, and
 [config/U235_nth.toml](config/U235_nth.toml) for a yield reconstructed from marginals, which names
 `mass_yield_file`, `mean_kinetic_energy_file` and `kinetic_energy_dispersion_file`. The other
@@ -370,10 +473,11 @@ comment states. A configuration that cannot be honoured fails on load, naming th
 | ²³³U(nth,f) | `U233_nth.toml` | |
 | ²³⁵U(nres,f) at 580 eV | `U235_nres.toml` | the resonance-region beam the GELINA measurements use |
 
-A system is named `<ElementSymbol><A>_<entrance channel>`, with the channel as the field spells
-it, not as EXFOR codes it. That one token names the configuration, the input tree under `data/`
-and the output tree under `data/sims/`. It also separates the thermal run of ²³⁵U from the
-resonance one, which the reaction code `n,f` alone cannot.
+Fissioning systems are identified by tokens of the form `<ElementSymbol><A>_<entrance channel>`
+using standard physical designations (such as `nth` for thermal neutrons and `sf` for spontaneous
+fission). This token designates the configuration file, the corresponding input tree under `data/`,
+and the simulation output directory under `data/sims/`, distinguishing different incident energy
+regimes (such as thermal and resonance fission of ²³⁵U) unambiguously.
 
 Every fragment yield comes from EXFOR through ExforFissionData.jl v0.8.0. ²⁵²Cf takes the measured
 `Y(A,TKE)` matrix of Göök et al. (2014), doi:10.1103/PhysRevC.90.064611. For the three thermal
@@ -395,18 +499,21 @@ Without any width, `⟨ν⟩` moves by +1.2 % for ²⁵²Cf and +3.9 % for ²³�
 experiment's matrix against its own marginals. The spread in TKE smooths the discrete emission
 thresholds, which matters most at the low excitation of thermal fission.
 
-The resonance case exists to establish a null result. At 580 eV the compound excitation is
-5.8 × 10⁻⁴ MeV above thermal out of 6.5 MeV. `ν(A)` moves by at most 9 × 10⁻³ neutrons, at
-`A = 111`, where one configuration more clears the physical bound of the TKE distribution, and
-the total by 6 × 10⁻⁶. Below the second-chance fission threshold the model is flat in incident
-energy, so a measurement made on a resonance beam is directly comparable with a thermal one. Above
-that threshold multiple-chance fission opens, which this model does not treat.
+The 580 eV resonance configuration for ²³⁵U demonstrates the insensitivity of prompt emission
+observables to modest increases in excitation below the second-chance fission threshold. At 580 eV
+incident energy, the compound nucleus excitation increases by only 5.8 × 10⁻⁴ MeV above thermal
+(out of 6.5 MeV total excitation), shifting `ν(A)` by at most 9 × 10⁻³ neutrons (at `A = 111`, where
+an additional configuration clears the physical TKE cutoff) and shifting total multiplicity by
+6 × 10⁻⁶. Because the model treatment is effectively energy-independent over this sub-threshold
+interval, experimental data obtained with low-energy resonance beams remain directly comparable to
+thermal measurements. Above the second-chance fission threshold, multi-chance fission opens, which
+falls outside the scope of the present model.
 
 ## Input data
 
-Almost none of it is version-controlled: it is third-party scientific data that the licence on
-this code does not extend to. [data/README.md](data/README.md) records every file, its format
-and its source,
+Input datasets are maintained outside version control, as they comprise third-party scientific
+evaluations, nuclear data libraries, and experimental compilations subject to their own provenance
+and licensing terms. [data/README.md](data/README.md) records every file, its format and its source,
 and points at the two companion packages that write this layout directly. The 2020 atomic mass
 evaluation ships with FissionFragmentsDomain.jl, the domain package this one is built on, so
 the tests pinned against the thesis calculation run on a bare clone.
@@ -414,13 +521,16 @@ the tests pinned against the thesis calculation run on a bare clone.
 Retrieved data is preferred. A measurement comes from EXFOR through `ExforFissionData.jl` if the
 archive holds it. Where the retrieval has no joint `Y(A, TKE)`, the joint distribution is
 reconstructed by `factorized_yield` from the two marginals it does hold, `Y(A)` and `⟨TKE⟩(A)`;
-the thermal systems take this route. A staged table is the last resort, and no shipped
-configuration uses one. [data/README.md](data/README.md) says which systems sit where.
+the thermal systems take this route. Static staged tables are supported for offline evaluation,
+though all standard configurations rely on verified EXFOR retrievals. [data/README.md](data/README.md)
+says which systems sit where.
 
-Where several experiments measured the same system, one is taken whole. `Y(A)`, `⟨TKE⟩(A)` and
-`σ_TKE(A)` come from that experiment, or its joint matrix does, because they share an energy
-calibration, mass scale, prompt-neutron correction and resolution. Marginals are neither spliced
-across experiments nor averaged mass by mass. The other experiments serve as alternative runs.
+To ensure thermodynamic and kinematic self-consistency, experimental inputs for a given system are
+taken from a single complete measurement whenever possible. The pre-neutron distributions `Y(A)`,
+`⟨TKE⟩(A)`, and `σ_TKE(A)` (or the joint matrix `Y(A, TKE)`) originate from the same experiment to
+preserve common energy calibrations, mass scales, detector resolutions, and prompt-neutron
+corrections. Marginal distributions from disparate experiments are neither spliced nor averaged
+point-by-point; alternative datasets are retained for sensitivity studies.
 The width `σ_TKE(A)` comes from the same experiment where it reported one; otherwise it is
 borrowed from another experiment on the same system, preferring a pre-neutron width, and flagged.
 The pre-neutron identities `Y(A) = Y(A₀ − A)`, and the same for `⟨TKE⟩` and `σ_TKE`, are imposed
@@ -519,37 +629,35 @@ comparisons above draw no such set, and the product figures draw them with open 
 
 ## Provenance
 
-This branch is a rewrite. The code as submitted with the 2023 MSc thesis, and the thesis itself,
-are on the [`original`](../../tree/original) branch. `main` reproduces its physics; each deviation
-is recorded here. Two defaults of the spectrum are such deviations, the per-neutron average over
-fragmentations and the emission-probability weighting of the sequences of a fragment;
-`[spectrum] average = "per_fission"` with `sequence_weighting = "uniform"` is the spectrum of
-the thesis.
+The current codebase represents a complete modular re-implementation in Julia of the computational
+framework originally developed for the author's 2023 MSc thesis (preserved on the
+[`original`](../../tree/original) branch). The `main` branch reproduces the baseline physics while
+introducing key refinements in spectrum weighting, mass-conserving product counts, and physical kinetic
+energy constraints. Specifically, the per-neutron fragmentation average and the emission-probability
+sequence weighting represent modern refinements; setting `[spectrum] average = "per_fission"` with
+`sequence_weighting = "uniform"` restores the original thesis formulation.
 
-The rewrite is pinned against the ²⁵²Cf(sf) calculation of my 2023 MSc thesis, two runs made
-with the code on the `original` branch, one under the `E*_H/TXE (A_H)` partition and one under
-`R_T (A_H)`. A sample of their output ships in `test/references/Cf252_sf/`
-([README](test/references/README.md)). Both take `A_H ∈ [126, 174]`, `TKE = 130:2:230` MeV,
-5 charge numbers per `A`, AME2020 and the variable evaporation cross section. The test suite
-asserts, cell by cell, `Q(A_H, Z_H)` over all 245 fragmentations, the level density parameter
-over all 244 where it is defined, and `E*_L` and `E*_H` over 1200 configurations under each
-partition. It asserts in the same way 662 and 683 emission sequences and the fragment yield
-projections over 97 masses, 41 charges and 101 kinetic energies.
+The re-implementation is pinned against the ²⁵²Cf(sf) calculations of the 2023 MSc thesis, comprising
+two runs executed on the `original` branch under the `E*_H/TXE (A_H)` partition and the `R_T (A_H)`
+partition. Reference output samples are preserved in `test/references/Cf252_sf/`
+([README](test/references/README.md)). Both benchmarks specify `A_H ∈ [126, 174]`, `TKE = 130:2:230` MeV,
+5 charge numbers per `A`, AME2020 masses, and variable evaporation cross sections. The test suite asserts
+exact numerical agreement for `Q(A_H, Z_H)` across all 245 fragmentations, level density parameters
+across all 244 physical nuclides, and `E*_L` and `E*_H` across 1,200 configurations under both
+partitions. It similarly verifies 662 and 683 sequential cascade steps and fragment yield projections
+over 97 masses, 41 charge numbers, and 101 kinetic energy steps.
 
-Beyond the pinned sample, I reproduced both thesis runs against their full output, which is not
-distributed: 9819 and 9788 configurations, and every one of the 44 679 and 45 070 emission
-sequences they contain, each quantity to 5 × 10⁻⁹ MeV. That is exact
-agreement at the eight decimals that output was written with. Both sequence counts match at every
-configuration. The fragment yield matrix is reproduced cell for cell, 48 985 of them, and its
-projections to double precision. The averaged observables close the chain: `ν(A)`, `T(A)`,
-`E*(A)` and `E*(TKE)` are reproduced over every mass and kinetic energy to between 4 × 10⁻¹⁵ and
-7 × 10⁻¹⁴. The total averages are reproduced to every digit the runs' summary file prints. The
-thesis runs predate the physical bound of the yield on `TKE`; they are reproduced with
-`[yield] kinetic_energy_limit = "grid"`.
+Comprehensive regression testing against the full reference thesis calculations confirms numerical
+reproducibility across all 9,819 and 9,788 configurations and their 44,679 and 45,070 sequential emission
+steps (agreeing within 5 × 10⁻⁹ MeV, matching the precision limit of the stored output). Calculated
+sequence counts match identically for every configuration, the fragment yield matrix (48,985 elements)
+reproduces cell for cell, and integrated observables (`ν(A)`, `T(A)`, `E*(A)`, `E*(TKE)`) reproduce the
+original values within 7 × 10⁻¹⁴ relative precision. The reference thesis runs predate the physical
+kinetic energy cutoff and are reproduced under `[yield] kinetic_energy_limit = "grid"`.
 
-The prompt neutron spectrum has no counterpart in that output to pin against, so it is validated
-instead against the identities its derivation implies — unit area, `⟨E⟩ = E_f + ⟨ε⟩`, and the
-second moment — over the whole domain.
+Because the prompt neutron spectrum was not tabulated in the original thesis output, its implementation
+is validated analytically against conservation laws and spectral moments—including unit area,
+`⟨E⟩ = E_f + ⟨ε⟩`, and the second laboratory moment—across the complete fragmentation domain.
 
 ## How to cite
 

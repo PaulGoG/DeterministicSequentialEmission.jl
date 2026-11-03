@@ -1,15 +1,15 @@
 # Results: the model against measurement
 
-The figures here are drawn by `plotting/figures.jl` from the tables one run per system wrote
-under `data/sims/`, with nothing solved again and nothing fitted to the data shown. Each figure
-is exported as PDF and PNG beside a `.toml` sidecar naming, per system, the run drawn, the commit
-its metadata records and the measured files; the sidecars of the `ν(A)`, `⟨ε⟩(A)`, product and
-prompt-γ figures also name the retrieved sets left out. The measured side comes from EXFOR
-through ExforFissionData.jl v0.8.0, laid out as [data/README.md](../data/README.md) describes,
-and a dataset is drawn as its `retrieval.toml` records it; the temperature ratios the runs were
-solved with are the FissionTemperatureRatio.jl v0.5.1 trends staged beside them. The two
-diagnostic panels the script also writes here, the residual quantities and the charge
-distribution, have no measured counterpart and are not tracked.
+The comparison figures presented here are rendered directly from completed simulation tables
+under `data/sims/` using `plotting/figures.jl`, without parameter tuning or post-hoc refitting. Each
+figure is exported as PDF and PNG accompanied by a `.toml` sidecar recording, per system, the run
+drawn, the commit recorded in its metadata, and the referenced experimental files; the sidecars of the
+`ν(A)`, `⟨ε⟩(A)`, product, and prompt-γ figures also record the retrieved datasets not displayed.
+Experimental data are retrieved from EXFOR through ExforFissionData.jl v0.8.0 as described in
+[data/README.md](../data/README.md), each drawn according to its `retrieval.toml` record; the
+underlying excitation partitions use the FissionTemperatureRatio.jl v0.5.1 systematic trends. The
+two internal diagnostic figures (residual quantities and charge distributions) have no experimental
+analogues and are maintained unversioned.
 
 ```
 julia scripts/run.jl config/<system>.toml    # one run per system, under data/sims/
@@ -33,20 +33,21 @@ publication, which for conference proceedings can be a later year.
 
 ![Prompt neutron multiplicity against fragment mass, four fissioning systems](multiplicity_vs_experiment.png)
 
-The sawtooth is not fitted: the total excitation energy is shared between the fragments by a
-temperature ratio `R_T(A_H)` extracted from measured `ν(A)` by FissionTemperatureRatio.jl, the
-emission chain is solved configuration by configuration, and the result is contracted against
-the measured fragment yield `Y(A, TKE)`. Each panel states the total multiplicity against the
-evaluated value. The sets drawn are a fixed selection per system, for legibility;
-[data/README.md](../data/README.md) lists the whole retrieval. This figure and the `⟨ε⟩(A)`
-figure below are drawn over each run's own mass window, the masses where its `Y(A)` holds at
-least 0.01 % of the fissions. Their ordinate limits ignore error bars wider than 0.5 neutrons
-(`ν`) or 0.3 MeV (`⟨ε⟩`), so the bars of poorly measured edge points may run off the frame. The
-²⁵²Cf comparison holds up to A_H ≈ 169. The window ends at 171; the measured points at 172–174
-lie outside it. Where a set reaches 170 and beyond (Vorobiev 2001 ends at 169), the energy its
-pair sums `ν(A) + ν(A₀ − A)` require exceeds the split's `Q − TKE` by 2 to 15 MeV with the set's
-own `⟨TKE⟩(A)`. Göök *et al.* (2014) confine their own agreement to 80–170 u and attribute the
-far-asymmetric yields to the acceptance of their detector.
+The characteristic sawtooth distribution of prompt neutron multiplicity `ν(A)` is reproduced
+without parameter tuning: the total excitation energy is partitioned between nascent fragments via
+the `R_T(A_H)` temperature ratio obtained from experimental `ν(A)` data via FissionTemperatureRatio.jl,
+the sequential cascade is evaluated configuration by configuration, and the results are integrated
+over the empirical pre-neutron fragment yield `Y(A, TKE)`. Each panel states the total multiplicity
+against the evaluated standard. The sets drawn represent a curated selection per system for visual
+clarity; [data/README.md](../data/README.md) catalogues the complete retrieval. This figure and the
+`⟨ε⟩(A)` figure below are drawn over each run's own mass window, corresponding to pre-neutron yields
+exceeding 0.01 % per fission. Ordinate axes exclude error bars exceeding 0.5 neutrons (`ν`) or
+0.3 MeV (`⟨ε⟩`), so that poorly constrained peripheral measurements do not distort the scale. The
+²⁵²Cf comparison extends up to A_H ≈ 169 (the window terminates at 171, excluding peripheral points
+at 172–174). Beyond A = 170 (Vorobiev 2001 ends at 169), the pair sums `ν(A) + ν(A₀ − A)` imply
+energies exceeding the split's `Q − TKE` by 2 to 15 MeV with the experiment's own `⟨TKE⟩(A)`. Göök
+*et al.* (2014) constrain their own experimental validation to 80–170 u, attributing far-asymmetric
+yield departures to detector geometric acceptance.
 
 | System | Dataset | EXFOR | Reference |
 |---|---|---|---|
@@ -72,16 +73,15 @@ far-asymmetric yields to the acceptance of their detector.
 
 ![Prompt fission neutron spectra: 252-Cf as a ratio to a Maxwellian, the thermal systems as ratios to 252-Cf](prompt_neutron_spectrum.png)
 
-The ²⁵²Cf(sf) spectrum is drawn as the ratio of the model's unit-area laboratory spectrum to
-a Maxwellian at 1.42 MeV, which is how every retrieved set reports it, so model and measurement
-are both absolute. The three thermal systems were measured as the ratio of their spectrum per
-fission to that of ²⁵²Cf(sf) with one detector, and the model is drawn the same way,
-`ν̄ N(E) / ν̄_Cf N_Cf(E)` with its own multiplicities. The offset at low energy is the
-multiplicity error of the pair, stated in each panel, and the fall with energy is the thermal
-spectrum being the softer. Sets tabulated as ²⁵²Cf over the system are inverted, the two energy
-ranges of one entry are joined under one label, and a set its record flags as superseded is
-skipped. The ²⁵²Cf panel draws a fixed selection of four of the 28 retrieved ratio sets, for
-legibility, as the `ν(A)` figure does with its sets.
+The ²⁵²Cf(sf) prompt neutron spectrum is evaluated as the ratio of the calculated unit-area laboratory
+spectrum to a standard 1.42 MeV Maxwellian distribution, matching international reporting conventions
+and allowing direct absolute comparisons. The three thermal systems were measured relative to ²⁵²Cf(sf)
+with a single detector arrangement, and the model constructs the corresponding ratio
+`ν̄ N(E) / ν̄_Cf N_Cf(E)` using its own calculated multiplicities. The low-energy offset reflects the pair
+multiplicity ratio error (annotated in each panel), while the high-energy slope captures spectral softening
+relative to ²⁵²Cf. Datasets tabulated as ²⁵²Cf over the system are inverted, multiple energy segments of
+a single entry are concatenated, and records flagged as superseded are omitted. The ²⁵²Cf panel displays
+a representative subset of four of the 28 retrieved ratio sets for visual clarity.
 
 | System | Dataset | EXFOR | Reference |
 |---|---|---|---|
@@ -101,16 +101,15 @@ legibility, as the `ν(A)` figure does with its sets.
 
 ![Mean centre-of-mass energy of the prompt neutrons against fragment mass, four fissioning systems](mean_neutron_energy_vs_experiment.png)
 
-Both sides are means in the centre of mass of the emitting fragment, as the retrieval records
-for every set drawn. The model's `⟨ε⟩(A)` is the sequence average the energy balance returns,
-over all neutron energies. The measured means are formed from spectra above a detector
-threshold, 0.52 MeV in the laboratory for Bowman, 0.3 MeV for Budtz-Jørgensen and 0.2 to 0.7 MeV
-for the others, which raises them slightly where the fragment's neutrons are slow.
-Budtz-Jørgensen's mean is the first moment of the form fitted to the spectrum. The model follows
-the measured values along both wings and fails in two places. The first is the band
-`A ≈ 126`–`134` of heavy fragments near the `N = 82` closure, which barely emit in the model and
-whose few neutrons are slow. The second is the lightest fragments, `A < 90`, where it lies below
-the data.
+Both model and experimental values represent averages evaluated in the centre-of-mass frame of the
+emitting fragment. Calculated `⟨ε⟩(A)` values correspond to the sequence average from the cascade energy
+balance integrated across all neutron energies. In contrast, measured means reflect experimental detector
+thresholds (0.52 MeV in the laboratory for Bowman, 0.3 MeV for Budtz-Jørgensen, and 0.2–0.7 MeV for other
+datasets), slightly elevating empirical values where emitted neutrons are slow. Budtz-Jørgensen's mean is
+the first moment of the parameterized spectral fit. The model reproduces experimental trends along both
+mass wings, but diverges in two specific regimes: near the spherical `N = 82` shell closure (`A ≈ 126`–`134`),
+where fragments possess low excitation energy and emit few, low-energy neutrons, and for the lightest
+fragments (`A < 90`), where the model systematically underestimates measured energies.
 
 | System | Dataset | EXFOR | Reference |
 |---|---|---|---|

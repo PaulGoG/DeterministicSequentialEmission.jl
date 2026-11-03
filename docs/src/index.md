@@ -4,53 +4,128 @@ CurrentModule = DeterministicSequentialEmission
 
 # DeterministicSequentialEmission
 
-Prompt neutron emission from fission fragments, treated sequence by sequence. The literature behind
-the formulation and the input data is listed with DOIs under [References](references.md).
+DeterministicSequentialEmission.jl calculates prompt neutron emission from fission fragments in low-energy
+and thermal fission, tracking de-excitation cascades sequence by sequence across the complete pre-neutron
+fragmentation space. Primary literature citations and data evaluations are catalogued with DOIs under
+[References](references.md).
 
-The model solves the energy conservation equation of every emission sequence separately,
+## Physical framework
+
+In contrast to global statistical treatments—such as the Los Alamos model of Madland and Nix
+[MadlandNix1982](@cite), which integrates evaporation spectra over an assumed triangular residual
+temperature distribution—the Deterministic Sequential Emission (DSE) framework tracks individual cascade
+branches step by step.
+
+### Energy conservation and sequential cascade
+
+For a given pre-neutron fragment $(A, Z)$ at initial excitation energy $E^*$, de-excitation proceeds
+through discrete neutron evaporation stages $k = 1, \dots, k_{\max}$. At each stage $k$, conservation
+of energy is evaluated explicitly:
 
 ```
 Ē_r^(k-1) − Sₙ^(k-1) − ⟨ε⟩_k = a_k T_k²,    k = 1 … k_max
 ```
 
-with Weisskopf-Ewing evaporation spectra in the centre-of-mass system and fragment level
-densities in the Fermi-gas regime. `Ē_r^(k) = a_k T_k²` is the residual excitation energy after
-the `k`-th emission, with `Ē_r^(0) = E*`, the excitation energy of the fragment. `Sₙ^(k-1)` is
-the neutron separation energy of the nucleus that emits the `k`-th neutron, and `⟨ε⟩_k` is the
-mean centre-of-mass energy of that neutron. `a_k` and `T_k` are the level density parameter and
-the temperature of the `k`-th residual nucleus. The equation is solved for `k = 1 … k_max`, while the
-residual nucleus can afford `Sₙ` and the equation admits a temperature. The emissions that remain
-possible once the neutrons' kinetic energy is returned to the residual are then counted on `Sₙ`
-alone, which gives the number of sequences `n ≥ k_max` of the configuration `(A, Z, TKE)` and
-its multiplicity `ν = (n+1)/2`.
+where:
+- $\bar{E}_r^{(k-1)}$ is the residual excitation energy prior to the $k$-th emission, with boundary condition
+  $\bar{E}_r^{(0)} = E^*$;
+- $S_n^{(k-1)}$ is the neutron separation energy of the emitting precursor nucleus $(A - (k - 1), Z)$;
+- $\langle\epsilon\rangle_k$ is the mean centre-of-mass kinetic energy of the $k$-th evaporated neutron;
+- $a_k$ and $T_k$ are the nuclear level density parameter and residual nuclear temperature of the daughter
+  nucleus $(A - k, Z)$, connected via the Fermi-gas equation of state $\bar{E}_r^{(k)} = a_k T_k^2$.
 
-Because `n` is an integer at every configuration, every product mass `A − 1 … A − n` is an
-integer, so the products are distributed without rounding. By default a chain ends on each of
-its `n` residuals with probability `1/n`, so the mass its products lose is its multiplicity.
-`[products] count = "sequence_count"` takes the published `A_p = A − n` [Tudora2022](@cite)
-instead.
+The cascade step equation is solved successively while the available excitation satisfies
+$\bar{E}_r^{(k-1)} \ge S_n^{(k-1)}$ and admits a physical temperature solution ($T_k > 0$), terminating
+at $k_{\max}$. Subsequent emissions that remain energetically possible when the emitted neutrons' kinetic
+energy is accounted for are evaluated against separation thresholds on $S_n$ alone. This defines the
+maximum allowable sequence count $n \ge k_{\max}$ for configuration $(A, Z, \text{TKE})$, yielding an average
+prompt neutron multiplicity:
 
-The physics is from the cited literature, and the implementation is my own. The model is that of
-Tudora, Hambsch and Tobosaru [TudoraHambschTobosaru2018](@cite), with the systematics of its residual quantities
-[Tudora2020](@cite), its validation against measurement [Tudora2019](@cite), its post-neutron
-fragment yields [Tudora2022](@cite) and its place beside the point-by-point model
-[Tudora2021](@cite). The partition of the total excitation energy by the temperature ratio and
-the evaporation framework are those of the point-by-point model [TudoraHambsch2017](@cite). The
-extraction of the temperature ratio from measured multiplicities, which
-[FissionTemperatureRatio.jl](https://github.com/PaulGoG/FissionTemperatureRatio.jl) implements,
-is [TudoraGogita2024](@cite). The evaporation spectrum in closed form and its
-transformation to the laboratory follow Madland and Nix [MadlandNix1982](@cite) and Terrell
-[Terrell1959](@cite), and the conventions of the evaluated spectra are those of Capote et al.
-[Capote2016](@cite). This package is my Julia implementation of that physics.
+```
+ν(A, Z, TKE) = (n + 1) / 2
+```
+
+The residual excitation energy remaining after neutron cascade cessation,
+
+```
+E_γ = Ē_r^(n) = E* − Σ_{k=1}^n (Sₙ^(k-1) + ⟨ε⟩_k)
+```
+
+is retained in the residual nucleus and dissipated via prompt γ-ray cascades.
+
+### Excitation energy partition at scission
+
+The total excitation energy (TXE) available to a complementary fragment split $(A_L, Z_L) + (A_H, Z_H)$ at
+total kinetic energy TKE is governed by the reaction balance:
+
+```
+TXE(A, Z, TKE) = Q(A, Z) + E*_CN − TKE
+```
+
+where $Q(A, Z)$ is the ground-state reaction Q-value and $E^*_{\text{CN}}$ is the compound nucleus excitation
+energy.
+
+This energy is partitioned between light and heavy fragments using the temperature ratio
+$R_T(A_H) = T_L/T_H$, following the Point-by-Point (PbP) formulation of Tudora and Hambsch
+[TudoraHambsch2017](@cite):
+
+```
+E*_H / TXE = 1 / (1 + R_a R_T²(A_H))
+```
+
+where $R_a = a_L / a_H$ is the ratio of fragment level density parameters. In this package, $R_T(A_H)$ is
+obtained from the model-independent inversion of experimental prompt neutron multiplicities $\nu(A)$
+implemented in [FissionTemperatureRatio.jl](https://github.com/PaulGoG/FissionTemperatureRatio.jl)
+[TudoraGogita2024](@cite).
+
+### Evaporation spectra and laboratory kinematics
+
+Neutron evaporation from fully accelerated fragments is modeled using Weisskopf-Ewing statistical theory.
+Closed-form centre-of-mass evaporation spectra and their laboratory transformations follow Terrell
+[Terrell1959](@cite), Madland and Nix [MadlandNix1982](@cite), Märten and Seeliger [Maerten1984](@cite),
+and Kawano et al. [Kawano2021](@cite). Multiplicity weighting and integration across fragmentations follow
+the evaluation standards of Capote et al. [Capote2016](@cite).
+
+### Post-neutron product distributions
+
+Because the allowable sequence count $n$ is an integer for every configuration $(A, Z, \text{TKE})$,
+post-neutron product masses $A_p \in [A - n, A]$ remain discrete integers without artificial rounding.
+- **Emission-probability count (default)**: The cascade terminates on each of its $n$ residual stages
+  with equal probability $1/n$, yielding $P(A_p = A - k) = 1/n$ ($k = 1, \dots, n$). This formulation
+  ensures exact mass conservation, so that the mean mass loss per fragment equals the calculated multiplicity:
+  $\langle A - A_p \rangle = \nu$.
+- **Sequence count (`[products] count = "sequence_count"`)**: Imposes $A_p = A - n$ with probability one,
+  reproducing the convention of Tudora [Tudora2022](@cite), applied to ²³⁹Pu [TudoraFujio2024](@cite) and
+  ²³³U [Tudora2025](@cite). While representing maximum potential depletion, it removes $\langle n \rangle \approx 2\nu - 1$
+  mass units on average.
+- Post-neutron product kinetic energies $E_{K,p} = E_K (A_p / A)$ and total product kinetic energy
+  $\text{TKE}_p = E_{K,p,L} + E_{K,p,H}$ follow the kinematic relations of Tudora [Tudora2022](@cite),
+  assuming isotropic emission leaves average fragment velocities unchanged.
+
+### Provenance and literature lineage
+
+The DSE framework was introduced by Tudora, Hambsch, and Tobosaru [TudoraHambschTobosaru2018](@cite),
+with systematic residual properties established in [Tudora2020](@cite), experimental validations in
+[Tudora2019](@cite), and comparative analysis with Point-by-Point modeling in [Tudora2021](@cite). Nuclear
+masses, reaction Q-values, and separation energies are taken from the AME2020 evaluation [Wang2021AME](@cite),
+[Huang2021AME](@cite). Isobaric charge distributions follow Wahl's $Z_p$ model [Wahl1988](@cite),
+[Wahl2002](@cite). Nuclear level densities are calculated using the Back-Shifted Fermi Gas model of von Egidy
+and Bucurescu [EgidyBucurescu2005](@cite), [EgidyBucurescu2009](@cite) and the composite formula of Gilbert
+and Cameron [GilbertCameron1965](@cite).
+
+This package is a modern, modular Julia re-implementation of the computational code originally developed
+for the author's 2023 MSc thesis (Faculty of Physics, University of Bucharest, supervised by Prof. Anabella Tudora).
+Where current defaults refine earlier formulations (such as mass-conserving emission-probability counts and
+per-neutron spectral weighting), options are provided to reproduce the original thesis results identically.
+
+## Package organization
 
 A run is driven by a TOML configuration and writes its tables; see [Running a case](running.md),
-which also documents the configuration and the pipeline. The vocabulary every name in this
-package is drawn from is set out in [Naming](naming.md). What the model takes from the fragments
-before emission begins lives in the domain package, summarised under
-[The fragmentation domain](domain.md): nuclides and systems, masses, the charge distribution and
-the fragmentation domain, level densities, the energy balance, yields and the temperature-ratio
-run record. The reference of this package follows the order a
-configuration is consumed in: [the excitation-energy partition](energetics.md), then
+which also documents the configuration schema and the simulation pipeline. Standard nomenclature is
+defined in [Naming](naming.md). Auxiliary fragmentation properties (masses, charge distributions,
+level densities, energy balance, and yields) are provided by the companion domain package, summarised in
+[The fragmentation domain](domain.md). Detailed module references cover
+[the excitation-energy partition](energetics.md) and
 [the evaporation, the emission chain and the spectrum](emission.md).
 
 ```@index

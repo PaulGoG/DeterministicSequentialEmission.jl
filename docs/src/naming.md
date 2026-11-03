@@ -9,11 +9,12 @@ struct field, configuration key, directory name, file name, column header, figur
 The spelling changes register between contexts, `charges_per_mass` in a configuration and `Z` in
 a header, but the *quantity* does not.
 
-One rule decides the hard cases: a name says what the thing is. `Y_vs_A_TKE` is a statement;
-`Y_A_TKE` is a list of symbols with no relation between them. `Data` as a suffix carries nothing.
-`err` names a different concept from the one it was used for: an error is not an uncertainty. And
-a name that is relative to a moment ages: a table with no header line is
-`HEADERLESS_MASS_EXCESS_SPEC`, not a legacy one.
+Identifiers follow a consistent naming convention that makes functional dependencies explicit.
+For example, `Y_vs_A_TKE` denotes a dependent observable tabulated against its independent coordinates,
+whereas ambiguous concatenations like `Y_A_TKE` are avoided. Generic suffixes such as `Data` are
+omitted, experimental margins are designated `uncertainty` rather than `err` to reflect experimental
+standard deviations accurately, and file specifications are named for their structural properties
+rather than transient historical origins (e.g., `HEADERLESS_MASS_EXCESS_SPEC`).
 
 This page is the vocabulary as this package applies it.
 [ExforFissionData.jl](https://github.com/PaulGoG/ExforFissionData.jl), which retrieves its
@@ -29,11 +30,11 @@ here is the name there.
 | word | `heavy_mass_max`, `temperature_ratio` | configuration keys and values, prose |
 | symbol | `A_H`, `R_T`, `nu` | directory names, file names, column headers, figure labels, Julia identifiers of the equations |
 
-A configuration is edited by hand and has to explain itself, so it spells a quantity out. A path
-and a header are read at a glance and are the field's own nomenclature, so they carry the symbol.
-So the configuration key is `charge_distribution_file` while the file it names is
-`charge_distribution_vs_A.dat` with the header `A dZ sigma_Z`, and
-[`ChargeDistribution`](@ref) has the fields `ΔZ` and `σ_Z`, mirroring the equations.
+Configuration files employ descriptive word identifiers for human readability, whereas filesystem
+paths, table headers, and mathematical identifiers adopt compact scientific symbols conventional to
+nuclear physics. For example, the configuration key `charge_distribution_file` corresponds to the
+table `charge_distribution_vs_A.dat` with header `A dZ sigma_Z`, while the internal struct
+[`ChargeDistribution`](@ref) exposes fields `ΔZ` and `σ_Z` matching the governing equations.
 
 ## The quantities
 
