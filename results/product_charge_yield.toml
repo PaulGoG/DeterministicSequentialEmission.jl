@@ -3,23 +3,23 @@ figure = "product_charge_yield"
 [systems.Cf252_sf]
 evaluated = ["Cf252_sf/Y_vs_Z_A_p/ENDF-B-VIII.0.dat", "Cf252_sf/Y_vs_Z_A_p/JEFF-3.3.dat"]
 gitcommit = "v0.2.1-1-g1172289"
-measured = []
+measured = ["Cf252_sf/Y_vs_Z/13456005_W.Reisdorf_1971.dat", "Cf252_sf/Y_vs_Z/145390061_H.Nifenecker_1973.dat", "Cf252_sf/Y_vs_Z/14542002_R.J.Lipinski_1977.dat", "Cf252_sf/Y_vs_Z/331200021_M.N.Rao_1990.dat", "Cf252_sf/Y_vs_Z/331200022_M.N.Rao_1990.dat", "Cf252_sf/Y_vs_Z/21743006_G.Mariolopoulos_1981.dat", "Cf252_sf/Y_vs_Z/33028017_H.Naik_1997.dat", "Cf252_sf/Y_vs_Z/13648008_G.M.Ter-akopian_1997.dat"]
 run = "AHmax=174_AHmin=126_En=0_TKEb=mean_TKEmax=229.5_TKEmin=130.5_TKEstep=1_Tmax=2_Ysym=true_Ytot=200_avg=per_neutron_ldm=BSFG_nZ=5_part=temperature_ratio_pc=emission_probability_pw=multiplicity_sigma=variable_sw=emission_probability"
 
 [systems.Pu239_nth]
 evaluated = ["Pu239_nth/Y_vs_Z_A_p/ENDF-B-VIII.0.dat", "Pu239_nth/Y_vs_Z_A_p/JEFF-3.3.dat"]
 gitcommit = "v0.2.1-1-g1172289"
-measured = []
+measured = ["Pu239_nth/Y_vs_Z/13456004_W.Reisdorf_1971.dat", "Pu239_nth/Y_vs_Z/21549010_R.Brissot_1977.dat", "Pu239_nth/Y_vs_Z/23583005_N.Boucheneb_1991.dat", "Pu239_nth/Y_vs_Z/307870052_A.Srivastava_1986.dat"]
 run = "AHmax=159_AHmin=120_En=2.53e-8_TKEb=mean_TKEmax=216_TKEmin=130_TKEstep=1_Tmax=2_Ysym=true_Ytot=200_avg=per_neutron_ldm=BSFG_nZ=5_part=temperature_ratio_pc=emission_probability_pw=multiplicity_sigma=variable_sw=emission_probability"
 
 [systems.U233_nth]
 evaluated = ["U233_nth/Y_vs_Z_A_p/ENDF-B-VIII.0.dat", "U233_nth/Y_vs_Z_A_p/JEFF-3.3.dat"]
 gitcommit = "v0.2.1-1-g1172289"
-measured = []
+measured = ["U233_nth/Y_vs_Z/13456002_W.Reisdorf_1971.dat", "U233_nth/Y_vs_Z/21550011_R.Brissot_1975.dat"]
 run = "AHmax=159_AHmin=117_En=2.53e-8_TKEb=mean_TKEmax=205_TKEmin=100_TKEstep=1_Tmax=2_Ysym=true_Ytot=200_avg=per_neutron_ldm=BSFG_nZ=5_part=temperature_ratio_pc=emission_probability_pw=multiplicity_sigma=variable_sw=emission_probability"
 
 [systems.U235_nth]
 evaluated = ["U235_nth/Y_vs_Z_A_p/ENDF-B-VIII.0.dat", "U235_nth/Y_vs_Z_A_p/JEFF-3.3.dat"]
 gitcommit = "v0.2.1-1-g1172289"
-measured = []
+measured = ["U235_nth/Y_vs_Z/13456003_W.Reisdorf_1971.dat", "U235_nth/Y_vs_Z/210580052_K.L.Kratz_1978.dat", "U235_nth/Y_vs_Z/21550010_R.Brissot_1975.dat", "U235_nth/Y_vs_Z/23586002_P.Armbruster_1987.dat", "U235_nth/Y_vs_Z/30953006_B.Ehrenberg_1972.dat"]
 run = "AHmax=160_AHmin=118_En=2.53e-8_TKEb=mean_TKEmax=205_TKEmin=100_TKEstep=1_Tmax=2_Ysym=true_Ytot=200_avg=per_neutron_ldm=BSFG_nZ=5_part=temperature_ratio_pc=emission_probability_pw=multiplicity_sigma=variable_sw=emission_probability"

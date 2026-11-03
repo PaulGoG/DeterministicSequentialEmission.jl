@@ -9,6 +9,17 @@ here.
 
 ## [Unreleased]
 
+### Added
+
+- The elemental-yield figure draws the measured element yields `Y_vs_Z` against the model, and
+  the total-kinetic-energy figure the measured post-neutron `TKE_p(A_p)` on the heavy side, with
+  Choudhury (1980), 33089002, left out (most probable values against masses not corrected for
+  neutron emission). Neither tests the emission. The charge is conserved through it. On the heavy
+  wing the measured `TKE_p` differ from the model by about as much as the pre-neutron
+  measurements differ from the input, and near symmetry the sets differ as much among
+  themselves. `results/README.md` gives the numbers, and why no measured even–odd effect is
+  stated.
+
 ### Changed
 
 - The staged temperature ratios are the FissionTemperatureRatio.jl v0.5.0 runs, on the
@@ -29,7 +40,7 @@ here.
   their identifiers. The retrieval records change in `[run]`, in the prompt gates of Billnert
   (2013), Oberstedt (2013) and Skarsvåg (1970), and in five rejection reasons. v0.8.0 adds the
   element yield `Y_vs_Z/` and the post-neutron total kinetic energy `TKE_p_vs_A_p/` for the four
-  systems, which no figure draws. Baselines, tables and figures are unchanged.
+  systems. Baselines and tables are unchanged.
 
 - `plotting/figures.jl` copies a figure's PDF and PNG into `results/` only when the PNG's bytes
   change, so a redraw no longer rewrites every PDF for its creation date; it is included behind a

@@ -192,7 +192,8 @@ fetch the file in a browser and pass it with `--file <library>=<path>`. A table 
 the one in place never replaces it; the old one moves aside as `<library>#1.dat`.
 
 **Measured post-neutron products.** ExforFissionData.jl retrieves four post-neutron
-observables. The figures draw the first three as markers against the model and the evaluations.
+observables, which the figures draw as markers against the model and, where there are any, the
+evaluations.
 `Y_vs_A_p/` holds the product mass yields EXFOR codes `MASS,SEC,FY` and the chain yields it codes
 `MASS,CHN,FY`, which β decay, conserving `A`, makes post-neutron mass yields up to the
 delayed-neutron transfer between neighbouring chains. `Y_vs_Z_A_p/` holds the independent yields
@@ -229,7 +230,7 @@ charge, EXFOR `ELEM,CHG,FY`, in fragments per fission, 2 over both fragments: ei
 the element yield is the same before and after it. Three of the sets are read from their
 publications and cover a few elements only: Srivastava (1986), 307870052, Tc; Kratz (1978),
 210580052, Br and I; Ehrenberg (1972), 30953006, Kr and Xe. `element_yield_method` in the record
-states how each was formed. The figures do not draw these sets.
+states how each was formed. The element-yield figure draws them against the model.
 
 ```bash
 julia scripts/retrieve.jl config/<system>_Y_vs_Z.toml

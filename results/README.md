@@ -290,7 +290,7 @@ of them share the evaluations' colours and line styles, and the model is the bla
 
 ## Elemental yield of the products
 
-![Elemental yield of the post-neutron products of the four systems against the evaluated independent yields](product_charge_yield.png)
+![Elemental yield of the post-neutron products of the four systems against the evaluated independent yields and the measured element yields](product_charge_yield.png)
 
 `Y(Z) = Σ_{A_p} Y(Z, A_p)`, on a logarithmic axis down to 0.001 %. Emission leaves the charge
 alone, so the model's `Y(Z)` is the charge distribution of the solved configurations: the `Z_p`
@@ -312,6 +312,28 @@ The model's `Y(Z)` is symmetric about `Z₀/2`, each split giving one light and 
 and the evaluations nearly so. Over both humps the model lies with the two evaluations across
 three decades. The valley is where it departs: for ²⁵²Cf the model gives the symmetric charge
 `Z = 49` ten times the yield of ENDF/B-VIII.0, and for ²³³U a third of it.
+
+The markers are the element yields EXFOR codes `ELEM,CHG,FY`, retrieved by ExforFissionData.jl
+v0.8.0 in fragments per fission and drawn in per cent: eight sets for ²⁵²Cf, five for ²³⁵U, four
+for ²³⁹Pu and two for ²³³U. Where a panel holds more sets than there are marker styles, the four
+with the most charges keep their names and the others are pooled in grey. Like the model's line,
+they test the charge distribution and the pre-neutron yield, not the emission. The sets resolved
+element by element, by radiochemistry, γ–γ coincidences, X-rays or a spectrometer, lie at 0.80
+to 1.13 times the model as a median over their charges; most cover a few elements on one side.
+The exception is Armbruster (1987) on the far wing of ²³⁵U: at `Z = 30` it measures 0.008 %, a
+quarter of the model.
+
+No measured `δ_p` is stated, because the sets that span both humps do not carry one. Reisdorf
+*et al.* unfolded their element yields from fragment K X-ray yields with a smooth charge
+distribution (*Nucl. Phys. A* **177**, 337 (1971), doi:10.1016/0375-9474(71)90297-1, Table 6).
+Their tables for the three thermal systems, and that of Nifenecker (1973) for ²⁵²Cf, EXFOR
+14539, are exact mirror images about `Z₀/2`. For ²³⁵U, Reisdorf's table gives `δ_p` = 2 %,
+against 23 % in the model and 24 and 28 % in the evaluations. Rao *et al.* resolve the charge by
+energy loss (*Nucl. Instrum. Methods B* **51**, 102 (1990), doi:10.1016/0168-583X(90)90509-S). On
+the heavy side their distribution departs from the model and from the X-ray set of Lipinski
+(1977): three times the model at `Z = 59–62`, a fifth of it at `Z = 52`. Their two tables, energy
+loss alone and in coincidence with the X-rays, agree with each other within about 20 % and share
+one marker.
 
 ## Isotopic distributions
 
@@ -479,7 +501,7 @@ counterpart here.
 
 ## Total kinetic energy of the products
 
-![Mean post-neutron total kinetic energy against heavy product mass, four fissioning systems](product_total_kinetic_energy.png)
+![Mean post-neutron total kinetic energy against heavy product mass, four fissioning systems, with the measured post-neutron total kinetic energies](product_total_kinetic_energy.png)
 
 `TKE_p(A_p)`, the mean total kinetic energy of the two products against the heavy product mass,
 with the pre-neutron `⟨TKE⟩(A)` input as a dashed guide against the heavy fragment mass. The
@@ -493,6 +515,24 @@ both means over the run: emission takes 1.9 to 2.6 MeV from the total kinetic en
 | ²³⁵U(n_th,f) | 170.5 | 168.6 |
 | ²³⁹Pu(n_th,f) | 177.7 | 175.6 |
 | ²³³U(n_th,f) | 169.9 | 167.9 |
+
+The markers are the post-neutron total kinetic energies EXFOR codes `MASS,SEC,KE,LF+HF`,
+retrieved by ExforFissionData.jl v0.8.0 in MeV: five sets for ²³⁵U, one for ²³⁹Pu and two for
+²³³U. The archive holds none for ²⁵²Cf(sf), and its panel says so. Only rows at the heavy
+product masses, `2A_p ≥ A₀`, are drawn; Chebboubi (2021) also tabulates the pair against the
+light product. Choudhury (1980), 33089002, is left out: it tabulates the most probable energy,
+not the mean, against masses not corrected for neutron emission. Bakhromi (1982) is coded `SPA`
+and drawn open.
+
+These measurements test the input more than the emission. The model's `TKE_p` is its input
+`⟨TKE⟩(A)` less the recoil loss `E_K ν/A` of each fragment, about 2 MeV in all, which the emission
+sets through `ν(A)`. The measured sets come from other experiments. Over `A = 125–155` the
+pre-neutron `⟨TKE⟩(A)` sets retrieved for the same systems lie between 2.0 MeV below and 2.7 MeV
+above the inputs, as medians per set. Beyond `A_p = 134` the measured `TKE_p` lie 0.8 to 2.8 MeV
+above the model, and Bakhromi 2.5 MeV below it. Near symmetry, below `A_p = 128`, they range from
+3.8 MeV below the model to 7.6 MeV above it, and the sets differ from one another by as much:
+each experiment's mass resolution fills the symmetric dip to its own depth. Neither difference
+exceeds the spread of the inputs by enough to be laid to the emission.
 
 ## Prompt γ energy
 
