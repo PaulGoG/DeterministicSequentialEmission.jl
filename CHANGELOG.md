@@ -23,6 +23,13 @@ here.
   move by up to 0.4 neutrons and 0.25 MeV on the ²⁵²Cf masses 122–134, and by 0.2 neutrons at
   A = 81 of ²³⁹Pu, low-yield masses in each case. The manifests are unchanged; the figures and
   their sidecars are redrawn (runs `0e8f5274`, `f5fcb8d0`, `853a134e`, `aab3f24b`).
+- The staged inputs are the ExforFissionData.jl v0.8.0 retrieval of its 94 configurations and the
+  FissionTemperatureRatio.jl v0.5.1 runs on it. The 1254 tables and stored subentries of the
+  v0.6.0 tree are byte-identical, and so is every table and manifest of the four runs, which keep
+  their identifiers. The retrieval records change in `[run]`, in the prompt gates of Billnert
+  (2013), Oberstedt (2013) and Skarsvåg (1970), and in five rejection reasons. v0.8.0 adds the
+  element yield `Y_vs_Z/` and the post-neutron total kinetic energy `TKE_p_vs_A_p/` for the four
+  systems, which no figure draws. Baselines, tables and figures are unchanged.
 
 - `plotting/figures.jl` copies a figure's PDF and PNG into `results/` only when the PNG's bytes
   change, so a redraw no longer rewrites every PDF for its creation date; it is included behind a

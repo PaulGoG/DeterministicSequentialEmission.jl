@@ -338,7 +338,7 @@ configurations; a run does not write them.
   doi:10.1103/PhysRevC.90.064611), and the distribution of the neutron number is too broad in
   all four systems. A ²⁵²Cf run leaves 10.3 MeV per fission for γ rays, `E_gamma_per_fission` in
   `totals.dat`, against 6.8 (Nifenecker *et al.*, doi:10.1016/0375-9474(72)90296-5). The prompt-γ
-  measurements retrieved with ExforFissionData.jl v0.6.0 show the same from the other side: the
+  measurements retrieved with ExforFissionData.jl v0.8.0 show the same from the other side: the
   energy the neutrons leave falls with TKE at −0.17 MeV per MeV against −0.063 measured for
   ²⁵²Cf (Mehta *et al.*, doi:10.1103/PhysRevC.7.373). It lies 1.3 MeV above the total per
   fission of Bowman (1958) and 3.3 to 3.7 MeV above the other five measured totals
@@ -375,7 +375,7 @@ it, not as EXFOR codes it. That one token names the configuration, the input tre
 and the output tree under `data/sims/`. It also separates the thermal run of ²³⁵U from the
 resonance one, which the reaction code `n,f` alone cannot.
 
-Every fragment yield comes from EXFOR through ExforFissionData.jl v0.6.0. ²⁵²Cf takes the measured
+Every fragment yield comes from EXFOR through ExforFissionData.jl v0.8.0. ²⁵²Cf takes the measured
 `Y(A,TKE)` matrix of Göök et al. (2014), doi:10.1103/PhysRevC.90.064611. For the three thermal
 systems no joint `Y(A,TKE)`
 exists in the archive, so the yield is reconstructed from one experiment's `Y(A)` and
@@ -488,8 +488,8 @@ subdirectory = "U235_nth/temperature_ratio"
 curve_label = "systematic_trend"
 ```
 
-The shipped configurations read the FissionTemperatureRatio.jl v0.5.0 runs on the
-ExforFissionData.jl v0.7.0 retrieval of their inputs, staged that way for each system;
+The shipped configurations read the FissionTemperatureRatio.jl v0.5.1 runs on the
+ExforFissionData.jl v0.8.0 retrieval of their inputs, staged that way for each system;
 [data/README.md](data/README.md) gives the commands that reproduce them.
 
 The manifest declares what its curves tabulate, and this package refuses one declaring anything

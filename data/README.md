@@ -59,6 +59,8 @@ which no configuration reads.
 | `<system>/Y_vs_A_p/*.dat` | measured post-neutron product mass yield, EXFOR `MASS,SEC,FY`, and chain yields `MASS,CHN,FY`, retrieved beside the evaluations | `A_p Y Y_uncertainty`, fragments per fission, 2 over both products |
 | `<system>/Y_vs_Z_A_p/*.dat` | measured independent yields `ELEM/MASS,IND,FY`, isomeric states as the record states | `Z A_p Y Y_uncertainty`, fragments per fission |
 | `<system>/E_K_p_vs_A_p/*.dat` | measured mean kinetic energy of the products against product mass, `MASS,SEC,KE`; none for ²⁵²Cf | `A_p E_K_p E_K_p_uncertainty`, MeV |
+| `<system>/TKE_p_vs_A_p/*.dat` | measured total kinetic energy of the two products against product mass, `MASS,SEC,KE,LF+HF`; none for ²⁵²Cf | `A_p TKE_p [TKE_p_uncertainty]`, MeV |
+| `<system>/Y_vs_Z/*.dat` | measured independent element yield against charge, `ELEM,CHG,FY` | `Z Y [Y_uncertainty]`, fragments per fission, 2 over both fragments |
 | `<system>/M_gamma_bar/`, `E_gamma_tot/`, `eps_gamma/` | measured prompt γ multiplicity, total γ energy and mean photon energy per fission, one row to a file | `M_gamma_bar`, `E_gamma_tot`, `eps_gamma`, each with its uncertainty where one is stated; MeV |
 | `Cf252_sf/` and `U235_nth/`: `E_gamma_vs_A/`, `E_gamma_tot_vs_A/`, `E_gamma_tot_vs_TKE/`, `E_gamma_tot_vs_nu/`, `M_gamma_vs_A/`, `M_gamma_bar_vs_A/`, `M_gamma_bar_vs_TKE/`, `eps_gamma_vs_A/` | the same resolved against fragment mass, TKE or neutron number, per fragment or per fission; *Prompt γ rays* below says which system holds which | abscissa first, e.g. `TKE E_gamma_tot E_gamma_tot_uncertainty`; MeV |
 
@@ -79,7 +81,7 @@ written in floating point. Some of these tables were emitted by a generator and 
 where they mean `118`.
 
 The shipped configurations take their fragment yields from EXFOR through ExforFissionData.jl
-v0.6.0. For each system, `Y(A)` and `⟨TKE⟩(A)` come from one experiment, or its measured matrix
+v0.8.0. For each system, `Y(A)` and `⟨TKE⟩(A)` come from one experiment, or its measured matrix
 does. A width that experiment did not report is borrowed from another on the same system, or on
 the same compound nucleus, and the run record flags it:
 
@@ -126,7 +128,7 @@ second argument; the root of this repository, `julia scripts/retrieve.jl <config
 configurations:
 
 ```bash
-git clone --branch v0.6.0 https://github.com/PaulGoG/ExforFissionData.jl
+git clone --branch v0.8.0 https://github.com/PaulGoG/ExforFissionData.jl
 cd ExforFissionData.jl
 julia scripts/retrieve.jl config/Cf252_sf_Y_vs_A_TKE.toml
 julia scripts/retrieve.jl config/U235_nth_Y_vs_A.toml
@@ -157,14 +159,15 @@ julia scripts/retrieve.jl config/Pu239_nth_spectrum_cf252_ratio_vs_E.toml
 julia scripts/retrieve.jl config/U233_nth_spectrum_cf252_ratio_vs_E.toml
 ```
 
-The tree is the ExforFissionData.jl v0.6.0 retrieval of every configuration that package ships,
-the resonance channel of ²³⁵U and ²⁴⁰Pu(sf) included. Beyond the pre-neutron observables, it
-holds the three post-neutron directories and the prompt-γ directories described below. Its
-records state the unit of every subentry, the sum of a yield table and the handling of isomeric
-states. From the ²⁵²Cf spectrum of Blinov (1980), 40535004, a ratio to a Maxwellian, the line at
-220.9 keV is left out, an archive defect its record states. Four of the configurations, the joint
-`Y(A,TKE)` of ²³⁵U, ²³⁹Pu and ²³³U and the product kinetic energies of ²⁵²Cf, find no dataset in
-the archive.
+The tree is the ExforFissionData.jl v0.8.0 retrieval of every configuration that package ships,
+94 of them, the resonance channel of ²³⁵U and ²⁴⁰Pu(sf) included. Beyond the pre-neutron
+observables, it holds the element yields, the four post-neutron directories and the prompt-γ
+directories described below. Its records state the unit of every subentry, the sum of a yield
+table and the handling of isomeric states. From the ²⁵²Cf spectrum of Blinov (1980), 40535004, a
+ratio to a Maxwellian, the line at 220.9 keV is left out, an archive defect its record states.
+Five of the configurations, the joint `Y(A,TKE)` of ²³⁵U, ²³⁹Pu and ²³³U and the two product
+kinetic energies of ²⁵²Cf, find no dataset in the archive; their directories hold the record and
+`subentries/` and no table.
 
 **Evaluated product yields.** `<system>/Y_vs_A_p/` and `<system>/Y_vs_Z_A_p/` hold the
 independent fission product yields of ENDF/B-VIII.0 (Brown *et al.*, *Nucl. Data Sheets* **148**,
@@ -188,13 +191,16 @@ point. `--library` and `--system` restrict the staging; if a server refuses a sc
 fetch the file in a browser and pass it with `--file <library>=<path>`. A table that differs from
 the one in place never replaces it; the old one moves aside as `<library>#1.dat`.
 
-**Measured post-neutron products.** ExforFissionData.jl retrieves three post-neutron
-observables, which the figures draw as markers against the model and the evaluations.
+**Measured post-neutron products.** ExforFissionData.jl retrieves four post-neutron
+observables. The figures draw the first three as markers against the model and the evaluations.
 `Y_vs_A_p/` holds the product mass yields EXFOR codes `MASS,SEC,FY` and the chain yields it codes
 `MASS,CHN,FY`, which β decay, conserving `A`, makes post-neutron mass yields up to the
 delayed-neutron transfer between neighbouring chains. `Y_vs_Z_A_p/` holds the independent yields
 `ELEM/MASS,IND,FY`, and `E_K_p_vs_A_p/` the mean kinetic energy of the products against their
-mass, `MASS,SEC,KE`, of which the archive holds none for ²⁵²Cf. Each holds
+mass, `MASS,SEC,KE`. `TKE_p_vs_A_p/` holds the total kinetic energy of the two products against
+product mass, `MASS,SEC,KE,LF+HF`; Choudhury (1980), 33089002, tabulates most probable values,
+not means, against provisional masses, as its record states. The archive holds neither kinetic
+energy for ²⁵²Cf. Each holds
 `<accession>_<Author>_<year>.dat` files with the `retrieval.toml` and the `subentries/` of the
 retrieval. The yields are written in fragments per fission, 2 over both products, against the
 per cent of the evaluations. `unit_written` in the record states the unit of each table, from
@@ -202,11 +208,12 @@ which `plotting/figures.jl` converts; a unit outside the script's table stops it
 energies are in MeV.
 
 ```bash
-git clone --branch v0.6.0 https://github.com/PaulGoG/ExforFissionData.jl
+git clone --branch v0.8.0 https://github.com/PaulGoG/ExforFissionData.jl
 cd ExforFissionData.jl
 julia scripts/retrieve.jl config/<system>_Y_vs_A_p.toml
 julia scripts/retrieve.jl config/<system>_Y_vs_Z_A_p.toml
 julia scripts/retrieve.jl config/<system>_E_K_p_vs_A_p.toml
+julia scripts/retrieve.jl config/<system>_TKE_p_vs_A_p.toml
 ```
 
 for each of `Cf252_sf`, `U235_nth`, `Pu239_nth` and `U233_nth`. In `Y_vs_A_p/` and
@@ -216,7 +223,21 @@ retrieval never writes into a directory that exists, and the staging script writ
 files. The two are therefore merged by hand: the contents of the directory the retrieval writes are
 copied into the one holding the evaluations.
 
-**Prompt γ rays.** ExforFissionData.jl v0.6.0 retrieves the prompt γ observables. For the four
+**Measured element yields.** `Y_vs_Z/` holds the independent yield of an element against its
+charge, EXFOR `ELEM,CHG,FY`, in fragments per fission, 2 over both fragments: eight sets for
+²⁵²Cf, five for ²³⁵U, two for ²³³U and four for ²³⁹Pu. Neutron emission conserves the charge, so
+the element yield is the same before and after it. Three of the sets are read from their
+publications and cover a few elements only: Srivastava (1986), 307870052, Tc; Kratz (1978),
+210580052, Br and I; Ehrenberg (1972), 30953006, Kr and Xe. `element_yield_method` in the record
+states how each was formed. The figures do not draw these sets.
+
+```bash
+julia scripts/retrieve.jl config/<system>_Y_vs_Z.toml
+```
+
+for each of the four systems.
+
+**Prompt γ rays.** ExforFissionData.jl v0.8.0 retrieves the prompt γ observables. For the four
 systems these are the multiplicity `M_gamma_bar/`, the total energy `E_gamma_tot/` and the mean
 photon energy `eps_gamma/`, per fission and tabulated against nothing, one row to a file. For
 ²⁵²Cf the retrieval adds the energy of one fragment against its mass, `E_gamma_vs_A/`, and the
@@ -227,7 +248,11 @@ for ²³⁵U `M_gamma_vs_A/`, `M_gamma_bar_vs_A/` and `eps_gamma_vs_A/`. A measu
 defined by its γ-energy range, its time window and its corrections, which differ from set to set
 by more than the stated uncertainties. Each record states them as the entry or its publication
 does and flags a set coded `PAR` (`gamma_range_partial`), and its `[datasets]` warnings name the
-sets whose definition departs. A range-limited set is not a total.
+sets whose definition departs. A range-limited set is not a total. Billnert (2013) and Oberstedt
+(2013) take the ±3 ns prompt gate their authors state (Oberstedt *et al.*, *Eur. Phys. J. A*
+**51**, 178 (2015), doi:10.1140/epja/i2015-15178-8), and Skarsvåg (1970),
+doi:10.1016/0375-9474(70)90757-8, the gate of −10 to 12.5 ns its analysis defines; the record
+states the window, its basis and the evidence for each.
 
 ```bash
 julia scripts/retrieve.jl config/<system>_M_gamma_bar.toml
@@ -344,15 +369,15 @@ also records the accession of each dataset curve. Copy the whole directory to
 `label`, `"systematic_trend"` for the shipped configurations. Keep one staged run per system:
 two manifests in one directory is refused, because nothing would say which run to take.
 
-The staged runs are those of the configurations FissionTemperatureRatio.jl v0.5.0 ships, on the
-ExforFissionData.jl v0.7.0 retrieval of their inputs, with each system's primary `Y(A)` and
-`⟨TKE⟩(A)` as above. The v0.7.0 tables are byte-identical to the v0.6.0 ones staged here; the
-records differ in `[run]` alone. `U235_nres` reads the thermal run. Each staged directory carries
-the configuration and the metadata of its run. To produce the ²⁵²Cf(sf) run again:
+The staged runs are those of the configurations FissionTemperatureRatio.jl v0.5.1 ships, on the
+ExforFissionData.jl v0.8.0 retrieval of their inputs, with each system's primary `Y(A)` and
+`⟨TKE⟩(A)` as above: the same retrieval as the tree staged here. `U235_nres` reads the thermal
+run. Each staged directory carries the configuration and the metadata of its run. To produce the
+²⁵²Cf(sf) run again:
 
 ```bash
-git clone --branch v0.7.0 https://github.com/PaulGoG/ExforFissionData.jl
-git clone --branch v0.5.0 https://github.com/PaulGoG/FissionTemperatureRatio.jl
+git clone --branch v0.8.0 https://github.com/PaulGoG/ExforFissionData.jl
+git clone --branch v0.5.1 https://github.com/PaulGoG/FissionTemperatureRatio.jl
 cd ExforFissionData.jl
 julia scripts/retrieve.jl config/Cf252_sf_nu_vs_A.toml ../FissionTemperatureRatio.jl
 julia scripts/retrieve.jl config/Cf252_sf_Y_vs_A.toml ../FissionTemperatureRatio.jl
