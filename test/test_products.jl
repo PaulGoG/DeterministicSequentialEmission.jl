@@ -205,7 +205,31 @@ guarded(
                 @test all(
                     TKE <= last(CF252_TKE) for (_, TKE) in products.total_kinetic_energy
                 )
+
+                # The heavy product of a pair never exceeds the complement of its light product:
+                # A_H,p = A₀ − A_L − k_H ≤ A₀ − A_L,p.
+                @test !isempty(products.pair_mass)
+                @test all(A_Hp <= A₀ - A_Lp for (A_Lp, A_Hp) in products.pair_mass)
             end
+
+            # Under the published count each fragment ends at A − n, so the pair correspondence
+            # is the pair-weighted mean of A_H − n_H over the pairs with A_L − n_L = A_L,p.
+            sums = Dict{Int, NTuple{2, Float64}}()
+            for record in chains
+                key = (record.entry.heavy.A, record.entry.heavy.Z, Float64(record.TKE))
+                haskey(weights, key) || continue
+                w = DeterministicSequentialEmission._pair_weight(
+                    record.entry,
+                    Float64(value(weights[key])),
+                )
+                A_Lp = post_neutron_mass(record.light)
+                weighted, norm = get(sums, A_Lp, (0.0, 0.0))
+                sums[A_Lp] = (weighted + w * post_neutron_mass(record.heavy), norm + w)
+            end
+            expected = Dict(Float64(A) => s / n for (A, (s, n)) in sums if n > 0)
+            got = Dict(published.pair_mass)
+            @test keys(got) == keys(expected)
+            @test all(isapprox(got[A], expected[A]; rtol = 1e-12) for A in keys(expected))
 
             # Under the default count the products lose exactly the multiplicity; under the
             # published one they lose ⟨n⟩, about 2ν − 1.

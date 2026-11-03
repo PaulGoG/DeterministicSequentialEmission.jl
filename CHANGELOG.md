@@ -11,6 +11,11 @@ here.
 
 ### Added
 
+- A run writes `A_H_p_vs_A_L_p.dat`, the mean heavy product mass of the pairs against their light
+  product mass. It comes from the same chain endings and pair weights as `TKE_p_vs_A_p.dat`, each
+  fragment reduced by its own ending, and is `RunResult.product_pair_mass`. The
+  total-kinetic-energy figure places a measured row tabulated against the light product mass at
+  the heavy product mass of its pair through it.
 - The elemental-yield figure draws the measured element yields `Y_vs_Z` against the model, and
   the total-kinetic-energy figure the measured post-neutron `TKE_p(A_p)` on the heavy side, with
   Choudhury (1980), 33089002, left out (most probable values against masses not corrected for

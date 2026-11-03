@@ -169,6 +169,7 @@
             ("Y_vs_N_p.dat", "N_p Y"),
             ("E_K_p_vs_A_p.dat", "A_p E_K_p"),
             ("E_K_p_vs_Z.dat", "Z E_K_p"),
+            ("A_H_p_vs_A_L_p.dat", "A_L_p A_H_p"),
         )
             path = joinpath(destination, name)
             @test isfile(path)

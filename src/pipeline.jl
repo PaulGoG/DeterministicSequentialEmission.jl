@@ -17,8 +17,10 @@ and the post-neutron product distributions where they were. [`run_pipeline`](@re
 Curves are [`Curve`](@ref)s. The products, empty when `[products]` is disabled, are
 `product_mass_yield` `(A_p, Y)`, `product_yield` `(Z, A_p, Y)` sorted by `Z` and then `A_p`,
 `product_neutron_yield` `(N_p, Y)`, `product_kinetic_energy` `(A_p, E_K_p)`,
-`product_kinetic_energy_by_charge` `(Z, E_K_p)` and `product_total_kinetic_energy`
-`(A_p, TKE_p)` keyed by the heavy product mass; `mean_product_mass_loss`, `⟨A − A_p⟩` per
+`product_kinetic_energy_by_charge` `(Z, E_K_p)`, `product_total_kinetic_energy`
+`(A_p, TKE_p)` keyed by the heavy product mass, and `product_pair_mass` `(A_L,p, ⟨A_H,p⟩)`, the
+mean heavy product mass of the pairs against their light product mass, from the chain endings
+of both fragments; `mean_product_mass_loss`, `⟨A − A_p⟩` per
 fragment, and `mean_product_total_kinetic_energy` are their totals, `NaN` when disabled.
 `solved_mean_kinetic_energy` and `solved_kinetic_energy_dispersion` are the mean and the pooled
 within-mass standard deviation of `TKE` over the configurations the sweep solved, the effective
@@ -51,6 +53,7 @@ struct RunResult
     product_kinetic_energy::Curve
     product_kinetic_energy_by_charge::Curve
     product_total_kinetic_energy::Curve
+    product_pair_mass::Curve
     mean_product_mass_loss::Float64
     mean_product_total_kinetic_energy::Float64
     solved_mean_kinetic_energy::Float64
@@ -85,6 +88,7 @@ struct RunResult
         product_kinetic_energy::Curve,
         product_kinetic_energy_by_charge::Curve,
         product_total_kinetic_energy::Curve,
+        product_pair_mass::Curve,
         mean_product_mass_loss::Real,
         mean_product_total_kinetic_energy::Real,
         solved_mean_kinetic_energy::Real,
@@ -117,6 +121,7 @@ struct RunResult
             product_kinetic_energy,
             product_kinetic_energy_by_charge,
             product_total_kinetic_energy,
+            product_pair_mass,
             Float64(mean_product_mass_loss),
             Float64(mean_product_total_kinetic_energy),
             Float64(solved_mean_kinetic_energy),
@@ -230,6 +235,7 @@ function run_pipeline(configuration::Configuration)
             kinetic_energy = Curve(),
             kinetic_energy_by_charge = Curve(),
             total_kinetic_energy = Curve(),
+            pair_mass = Curve(),
             mass_loss = NaN,
             mean_total_kinetic_energy = NaN,
         )
@@ -264,6 +270,7 @@ function run_pipeline(configuration::Configuration)
         products.kinetic_energy,
         products.kinetic_energy_by_charge,
         products.total_kinetic_energy,
+        products.pair_mass,
         products.mass_loss,
         products.mean_total_kinetic_energy,
         solved_mean,
@@ -707,6 +714,7 @@ function write_results(result::RunResult, directory::AbstractString)
         ("E_K_p_vs_A_p.dat", "A_p E_K_p", result.product_kinetic_energy),
         ("E_K_p_vs_Z.dat", "Z E_K_p", result.product_kinetic_energy_by_charge),
         ("TKE_p_vs_A_p.dat", "A_p TKE_p", result.product_total_kinetic_energy),
+        ("A_H_p_vs_A_L_p.dat", "A_L_p A_H_p", result.product_pair_mass),
         ("E_gamma_vs_A.dat", "A E_gamma", result.gamma_energy),
         ("E_gamma_tot_vs_A.dat", "A E_gamma_tot", result.gamma_energy_total_by_mass),
         ("E_gamma_tot_vs_TKE.dat", "TKE E_gamma_tot", result.gamma_energy_total_by_energy),

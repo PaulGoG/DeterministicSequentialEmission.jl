@@ -273,6 +273,7 @@ A run writes to `data/sims/<system>/<run>`, and an output follows the same
 | `Y_vs_N_p.dat` | product yield against product neutron number |
 | `E_K_p_vs_A_p.dat`, `E_K_p_vs_Z.dat` | mean product kinetic energy against product mass and against charge |
 | `TKE_p_vs_A_p.dat` | mean post-neutron total kinetic energy against the heavy product mass |
+| `A_H_p_vs_A_L_p.dat` | mean heavy product mass of the pairs against their light product mass, from the chain endings of both fragments |
 | `E_gamma_vs_A.dat` | the energy a fragment's neutrons leave, for prompt γ rays, against fragment mass (`gamma_energy`) |
 | `E_gamma_tot_vs_A.dat`, `E_gamma_tot_vs_TKE.dat` | the same summed over the two fragments of a split, per fission, against the mass of either fragment and against TKE |
 | `TKE_bound_vs_A.dat` | with `kinetic_energy_limit = "physical"`, the default: per fragment mass the retained `⟨TKE⟩` and `σ_TKE`, the measured ones, the Gaussian cut (`TKE_parent`, `sigma_TKE_parent`) and the share beyond `Q + E*_CN` removed |

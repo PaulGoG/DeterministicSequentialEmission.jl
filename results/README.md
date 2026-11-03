@@ -518,9 +518,10 @@ both means over the run: emission takes 1.9 to 2.6 MeV from the total kinetic en
 
 The markers are the post-neutron total kinetic energies EXFOR codes `MASS,SEC,KE,LF+HF`,
 retrieved by ExforFissionData.jl v0.8.0 in MeV: five sets for ²³⁵U, one for ²³⁹Pu and two for
-²³³U. The archive holds none for ²⁵²Cf(sf), and its panel says so. Only rows at the heavy
-product masses, `2A_p ≥ A₀`, are drawn; Chebboubi (2021) also tabulates the pair against the
-light product. Choudhury (1980), 33089002, is left out: it tabulates the most probable energy,
+²³³U. The archive holds none for ²⁵²Cf(sf), and its panel says so. Chebboubi (2021) also
+tabulates the pair against the light product mass. Those rows are placed at the heavy product
+mass of their pair through the run's `A_H_p_vs_A_L_p.dat`, the mean heavy product mass of the
+model's pairs with that light product, each fragment reduced by its own chain ending. Choudhury (1980), 33089002, is left out: it tabulates the most probable energy,
 not the mean, against masses not corrected for neutron emission. Bakhromi (1982) is coded `SPA`
 and drawn open.
 

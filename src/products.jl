@@ -99,10 +99,14 @@ The kinetic energies are `E_K = TKE (A₀ − A)/A₀` and `E_K_p = E_K A_p/A`, 
 on average; `E_K_p(A_p)` and `E_K_p(Z)` are means over `w p`. `TKE_p = E_K_p,L + E_K_p,H` is
 taken over the pairs, the two products independent, with weight `w_pair p_L p_H`, `w_pair` the
 heavy fragment's weight halved at mass symmetry (`_pair_weight`), and keyed by the heavy product
-mass. Means with no positive weight are omitted.
+mass. Over the same pairs and weights, `⟨A_H,p⟩(A_L,p)` is the mean heavy product mass of the
+pairs whose light product has mass `A_L,p`, each fragment reduced by its own chain ending: the
+correspondence that places a quantity of the pair tabulated against the light product at the
+heavy product mass. Means with no positive weight are omitted.
 
 Returns `mass_yield`, `yield` (`(Z, A_p, Y)`, sorted), `neutron_yield`, `kinetic_energy`,
-`kinetic_energy_by_charge`, `total_kinetic_energy`, and the totals `mass_loss`, the mean
+`kinetic_energy_by_charge`, `total_kinetic_energy`, `pair_mass` (`(A_L,p, ⟨A_H,p⟩)`), and the
+totals `mass_loss`, the mean
 `⟨A − A_p⟩` per fragment over `w`, and `mean_total_kinetic_energy`, the mean `TKE_p` over the pairs.
 """
 function _product_distributions(
@@ -159,6 +163,7 @@ function _product_distributions(
     end
 
     energy_by_heavy_mass = Dict{Int, NTuple{2, Float64}}()
+    heavy_by_light_mass = Dict{Int, NTuple{2, Float64}}()
     pair_sum = 0.0
     pair_energy = 0.0
     for record in chains
@@ -175,6 +180,7 @@ function _product_distributions(
             share = w * p_L * p_H
             TKE_p = E_K_L * A_pL / A_L + E_K_H * A_pH / A_H
             _accumulate!(energy_by_heavy_mass, A_pH, share, TKE_p)
+            _accumulate!(heavy_by_light_mass, A_pL, share, A_pH)
             pair_sum += share
             pair_energy += share * TKE_p
         end
@@ -189,6 +195,7 @@ function _product_distributions(
         kinetic_energy = _mean_curve(energy_by_mass),
         kinetic_energy_by_charge = _mean_curve(energy_by_charge),
         total_kinetic_energy = _mean_curve(energy_by_heavy_mass),
+        pair_mass = _mean_curve(heavy_by_light_mass),
         mass_loss = weight_sum > 0 ? loss / weight_sum : NaN,
         mean_total_kinetic_energy = pair_sum > 0 ? pair_energy / pair_sum : NaN,
     )

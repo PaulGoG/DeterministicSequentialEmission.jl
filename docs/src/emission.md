@@ -82,8 +82,13 @@ mass-symmetric split, as in the spectrum. It is written against the heavy produc
 sequence count these are eqs. (8) and (9) of the paper; under the default the mean of `E_K_p` over
 the endings of a chain is its eq. (12).
 
+Over the same pairs and weights the run writes the mean heavy product mass against the light
+product mass, `⟨A_H,p⟩(A_L,p)`, each fragment reduced by its own chain ending. A measured
+quantity of the pair tabulated against the light product is placed at the heavy product mass
+through it, without a mean multiplicity.
+
 A run writes `Y_vs_A_p.dat`, the independent yields `Y_vs_Z_A_p.dat`, `Y_vs_N_p.dat`,
-`E_K_p_vs_A_p.dat`, `E_K_p_vs_Z.dat` and `TKE_p_vs_A_p.dat`, and adds `mean_product_mass_loss`,
+`E_K_p_vs_A_p.dat`, `E_K_p_vs_Z.dat`, `TKE_p_vs_A_p.dat` and `A_H_p_vs_A_L_p.dat`, and adds `mean_product_mass_loss`,
 `⟨A − A_p⟩` per fragment, and `mean_TKE_p` to `totals.dat`.
 
 ```@autodocs

@@ -2269,15 +2269,41 @@ function figure_product_kinetic_energy_by_charge(drawable::Vector{Case})
 end
 
 """
+    at_heavy_product_mass(set, correspondence, A₀) -> ProductSet
+
+A retrieved `TKE_p(A_p)` set with every row at the heavy product mass of its pair. Rows at
+`2A_p ≥ A₀` stay where they are. A row tabulated against the light product mass moves to
+`⟨A_H,p⟩`, the mean heavy product mass of the model's pairs with that light product, which a run
+writes as `A_H_p_vs_A_L_p.dat` from the chain endings of both fragments; `correspondence` maps
+`A_L,p` to it. A row at a light product mass the run did not reach is dropped.
+"""
+function at_heavy_product_mass(set::ProductSet, correspondence::AbstractDict, A₀::Integer)
+    x = [2a >= A₀ ? Float64(a) : get(correspondence, round(Int, a), NaN) for a in set.x]
+    moved = ProductSet(
+        set.accession,
+        set.label,
+        set.kind,
+        set.marked,
+        set.path,
+        set.Z,
+        x,
+        set.y,
+        set.σ,
+    )
+    return select_rows(moved, isfinite.(x))
+end
+
+"""
 Draw the mean post-neutron total kinetic energy against the heavy product mass, `TKE_p(A_p)`, of
 every system whose run tabulated it, on the shared grid: the model as the black line, the
 pre-neutron `⟨TKE⟩(A)` of the yield the run was solved with as a dashed guide, over the heavy
 masses, and the retrieved `MASS,SEC,KE,LF+HF` as markers, as [`product_series`](@ref) groups
-them, open where a qualifier in `MARKED_QUALIFIERS` marks the set. Masses whose heavy-product
-yield is below `MEAN_FLOOR` are not drawn, by the model or by a measured set. A measured set may
-tabulate the energy of a pair against either product's mass; only its rows at `2A_p ≥ A₀`, the
-heavy side, are drawn. The annotation states the means of the model and of its input over the
-run.
+them, open where a qualifier in `MARKED_QUALIFIERS` marks the set. `TKE_p` belongs to the pair,
+which the heavy product mass labels: a measured row tabulated against the light product mass is
+placed at the heavy product mass of its pair by [`at_heavy_product_mass`](@ref), through the
+run's own pairing of chain endings. Masses whose heavy-product yield is below `MEAN_FLOOR` are not
+drawn, by the model or by a measured set. The annotation states the means of the model and of its
+input over the run.
 """
 function figure_product_total_kinetic_energy(drawable::Vector{Case})
     panels = []
@@ -2301,9 +2327,20 @@ function figure_product_total_kinetic_energy(drawable::Vector{Case})
             guide = (A[inside], TKE[inside], file)
         end
         products, excluded = load_products(case.label, "TKE_p_vs_A_p")
-        heavy_side =
-            [select_rows(set, 2 .* set.x .>= case.compound_mass) for set in products]
-        series = product_series(heavy_side, extrema(A_p))
+        pairing = joinpath(directory, "A_H_p_vs_A_L_p.dat")
+        correspondence = Dict{Int, Float64}()
+        if isfile(pairing)
+            A_Lp, A_Hp, _ = read_columns(pairing)
+            merge!(correspondence, Dict(round(Int, a) => h for (a, h) in zip(A_Lp, A_Hp)))
+        else
+            @warn "no A_H_p_vs_A_L_p.dat; measured rows against the light product mass are \
+                not drawn" directory
+        end
+        paired = [
+            at_heavy_product_mass(set, correspondence, case.compound_mass) for
+            set in products
+        ]
+        series = product_series(paired, extrema(A_p))
         push!(panels, (; case, directory, A_p, TKE_p, guide, series, excluded))
     end
     isempty(panels) && return nothing
