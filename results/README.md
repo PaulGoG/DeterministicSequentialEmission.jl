@@ -521,7 +521,10 @@ retrieved by ExforFissionData.jl v0.8.0 in MeV: five sets for ²³⁵U, one for 
 ²³³U. The archive holds none for ²⁵²Cf(sf), and its panel says so. Chebboubi (2021) also
 tabulates the pair against the light product mass. Those rows are placed at the heavy product
 mass of their pair through the run's `A_H_p_vs_A_L_p.dat`, the mean heavy product mass of the
-model's pairs with that light product, each fragment reduced by its own chain ending. Choudhury (1980), 33089002, is left out: it tabulates the most probable energy,
+model's pairs with that light product, each fragment reduced by its own chain ending. Of the five
+such rows only `A_L,p = 101` falls inside the drawn masses. It lands at `A_H,p = 131.4` with
+181.7 ± 1.4 MeV, where the set's own row at 131 reads 181.4 ± 3.6 MeV. Choudhury (1980),
+33089002, is left out: it tabulates the most probable energy,
 not the mean, against masses not corrected for neutron emission. Bakhromi (1982) is coded `SPA`
 and drawn open.
 
