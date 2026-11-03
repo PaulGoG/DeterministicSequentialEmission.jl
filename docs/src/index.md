@@ -18,8 +18,8 @@ branches step by step.
 
 ### Energy conservation and sequential cascade
 
-For a given pre-neutron fragment $(A, Z)$ at initial excitation energy $E^*$, de-excitation proceeds
-through discrete neutron evaporation stages $k = 1, \dots, k_{\max}$. At each stage $k$, conservation
+For a given pre-neutron fragment `(A, Z)` at initial excitation energy `E*`, de-excitation proceeds
+through discrete neutron evaporation stages `k = 1 … k_max`. At each stage `k`, conservation
 of energy is evaluated explicitly:
 
 ```
@@ -27,18 +27,18 @@ of energy is evaluated explicitly:
 ```
 
 where:
-- $\bar{E}_r^{(k-1)}$ is the residual excitation energy prior to the $k$-th emission, with boundary condition
-  $\bar{E}_r^{(0)} = E^*$;
-- $S_n^{(k-1)}$ is the neutron separation energy of the emitting precursor nucleus $(A - (k - 1), Z)$;
-- $\langle\epsilon\rangle_k$ is the mean centre-of-mass kinetic energy of the $k$-th evaporated neutron;
-- $a_k$ and $T_k$ are the nuclear level density parameter and residual nuclear temperature of the daughter
-  nucleus $(A - k, Z)$, connected via the Fermi-gas equation of state $\bar{E}_r^{(k)} = a_k T_k^2$.
+- `Ē_r^(k-1)` is the residual excitation energy prior to the `k`-th emission, with boundary condition
+  `Ē_r^(0) = E*`;
+- `Sₙ^(k-1)` is the neutron separation energy of the emitting precursor nucleus `(A − (k − 1), Z)`;
+- `⟨ε⟩_k` is the mean centre-of-mass kinetic energy of the `k`-th evaporated neutron;
+- `a_k` and `T_k` are the nuclear level density parameter and residual nuclear temperature of the daughter
+  nucleus `(A − k, Z)`, connected via the Fermi-gas equation of state `Ē_r^(k) = a_k T_k²`.
 
 The cascade step equation is solved successively while the available excitation satisfies
-$\bar{E}_r^{(k-1)} \ge S_n^{(k-1)}$ and admits a physical temperature solution ($T_k > 0$), terminating
-at $k_{\max}$. Subsequent emissions that remain energetically possible when the emitted neutrons' kinetic
-energy is accounted for are evaluated against separation thresholds on $S_n$ alone. This defines the
-maximum allowable sequence count $n \ge k_{\max}$ for configuration $(A, Z, \text{TKE})$, yielding an average
+`Ē_r^(k-1) ≥ Sₙ^(k-1)` and admits a physical temperature solution (`T_k > 0`), terminating
+at `k_max`. Subsequent emissions that remain energetically possible when the emitted neutrons' kinetic
+energy is accounted for are evaluated against separation thresholds on `Sₙ` alone. This defines the
+maximum allowable sequence count `n ≥ k_max` for configuration `(A, Z, TKE)`, yielding an average
 prompt neutron multiplicity:
 
 ```
@@ -55,26 +55,26 @@ is retained in the residual nucleus and dissipated via prompt γ-ray cascades.
 
 ### Excitation energy partition at scission
 
-The total excitation energy (TXE) available to a complementary fragment split $(A_L, Z_L) + (A_H, Z_H)$ at
-total kinetic energy TKE is governed by the reaction balance:
+The total excitation energy (TXE) available to a complementary fragment split `(A_L, Z_L) + (A_H, Z_H)` at
+total kinetic energy `TKE` is governed by the reaction balance:
 
 ```
 TXE(A, Z, TKE) = Q(A, Z) + E*_CN − TKE
 ```
 
-where $Q(A, Z)$ is the ground-state reaction Q-value and $E^*_{\text{CN}}$ is the compound nucleus excitation
+where `Q(A, Z)` is the ground-state reaction Q-value and `E*_CN` is the compound nucleus excitation
 energy.
 
 This energy is partitioned between light and heavy fragments using the temperature ratio
-$R_T(A_H) = T_L/T_H$, following the Point-by-Point (PbP) formulation of Tudora and Hambsch
+`R_T(A_H) = T_L/T_H`, following the Point-by-Point (PbP) formulation of Tudora and Hambsch
 [TudoraHambsch2017](@cite):
 
 ```
 E*_H / TXE = 1 / (1 + R_a R_T²(A_H))
 ```
 
-where $R_a = a_L / a_H$ is the ratio of fragment level density parameters. In this package, $R_T(A_H)$ is
-obtained from the model-independent inversion of experimental prompt neutron multiplicities $\nu(A)$
+where `R_a = a_L / a_H` is the ratio of fragment level density parameters. In this package, `R_T(A_H)` is
+obtained from the model-independent inversion of experimental prompt neutron multiplicities `ν(A)`
 implemented in [FissionTemperatureRatio.jl](https://github.com/PaulGoG/FissionTemperatureRatio.jl)
 [TudoraGogita2024](@cite).
 
@@ -88,18 +88,18 @@ the evaluation standards of Capote et al. [Capote2016](@cite).
 
 ### Post-neutron product distributions
 
-Because the allowable sequence count $n$ is an integer for every configuration $(A, Z, \text{TKE})$,
-post-neutron product masses $A_p \in [A - n, A]$ remain discrete integers without artificial rounding.
-- **Emission-probability count (default)**: The cascade terminates on each of its $n$ residual stages
-  with equal probability $1/n$, yielding $P(A_p = A - k) = 1/n$ ($k = 1, \dots, n$). This formulation
+Because the allowable sequence count `n` is an integer for every configuration `(A, Z, TKE)`,
+post-neutron product masses `A_p ∈ [A − n, A]` remain discrete integers without artificial rounding.
+- **Emission-probability count (default)**: The cascade terminates on each of its `n` residual stages
+  with equal probability `1/n`, yielding `P(A_p = A − k) = 1/n` (`k = 1 … n`). This formulation
   ensures exact mass conservation, so that the mean mass loss per fragment equals the calculated multiplicity:
-  $\langle A - A_p \rangle = \nu$.
-- **Sequence count (`[products] count = "sequence_count"`)**: Imposes $A_p = A - n$ with probability one,
+  `⟨A − A_p⟩ = ν`.
+- **Sequence count (`[products] count = "sequence_count"`)**: Imposes `A_p = A − n` with probability one,
   reproducing the convention of Tudora [Tudora2022](@cite), applied to ²³⁹Pu [TudoraFujio2024](@cite) and
-  ²³³U [Tudora2025](@cite). While representing maximum potential depletion, it removes $\langle n \rangle \approx 2\nu - 1$
+  ²³³U [Tudora2025](@cite). While representing maximum potential depletion, it removes `⟨n⟩ ≈ 2ν − 1`
   mass units on average.
-- Post-neutron product kinetic energies $E_{K,p} = E_K (A_p / A)$ and total product kinetic energy
-  $\text{TKE}_p = E_{K,p,L} + E_{K,p,H}$ follow the kinematic relations of Tudora [Tudora2022](@cite),
+- Post-neutron product kinetic energies `E_K_p = E_K A_p/A` and total product kinetic energy
+  `TKE_p = E_K_p,L + E_K_p,H` follow the kinematic relations of Tudora [Tudora2022](@cite),
   assuming isotropic emission leaves average fragment velocities unchanged.
 
 ### Provenance and literature lineage
@@ -108,15 +108,15 @@ The DSE framework was introduced by Tudora, Hambsch, and Tobosaru [TudoraHambsch
 with systematic residual properties established in [Tudora2020](@cite), experimental validations in
 [Tudora2019](@cite), and comparative analysis with Point-by-Point modeling in [Tudora2021](@cite). Nuclear
 masses, reaction Q-values, and separation energies are taken from the AME2020 evaluation [Wang2021AME](@cite),
-[Huang2021AME](@cite). Isobaric charge distributions follow Wahl's $Z_p$ model [Wahl1988](@cite),
+[Huang2021AME](@cite). Isobaric charge distributions follow Wahl's `Zₚ` model [Wahl1988](@cite),
 [Wahl2002](@cite). Nuclear level densities are calculated using the Back-Shifted Fermi Gas model of von Egidy
 and Bucurescu [EgidyBucurescu2005](@cite), [EgidyBucurescu2009](@cite) and the composite formula of Gilbert
 and Cameron [GilbertCameron1965](@cite).
 
 This package is a modern, modular Julia re-implementation of the computational code originally developed
-for the author's 2023 MSc thesis (Faculty of Physics, University of Bucharest, supervised by Prof. Anabella Tudora).
+for my 2023 MSc thesis (Faculty of Physics, University of Bucharest, supervised by Prof. Anabella Tudora).
 Where current defaults refine earlier formulations (such as mass-conserving emission-probability counts and
-per-neutron spectral weighting), options are provided to reproduce the original thesis results identically.
+per-neutron spectral weighting), options are provided to reproduce my original thesis results identically.
 
 ## Package organization
 

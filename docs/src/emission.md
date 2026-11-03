@@ -41,18 +41,18 @@ rounding. What remains to be chosen is how many of the `n` possible neutrons a p
   [Tudora2022](@cite) takes for the mean product kinetic energy, applied to the mass as well.
 - `sequence_count`, [`SequenceCount`](@ref). Assumes `A_p = A − n` with probability one, reproducing
   the convention of [Tudora2022](@cite) and its subsequent applications to ²³⁹Pu(n_th,f)
-  [TudoraFujio2024](@cite) and ²³³U(n_th,f) [Tudora2025](@cite), as well as the reference thesis calculations.
+  [TudoraFujio2024](@cite) and ²³³U(n_th,f) [Tudora2025](@cite), as well as in my thesis calculations.
 
 The distinction between these two counting conventions reflects an essential physical tradeoff.
-Subtracting all $n$ allowable neutrons removes $\langle n \rangle \approx 2\nu - 1$ mass units per fragment
-on average (for example, 2.50 mass units compared with $\nu = 1.74$ in the ²⁵²Cf(sf) reference thesis calculations).
+Subtracting all `n` allowable neutrons removes `⟨n⟩ ≈ 2ν − 1` mass units per fragment
+on average (for example, 2.50 mass units compared with `ν = 1.74` in my two ²⁵²Cf(sf) thesis runs).
 Consequently, product yields constructed from the sequence count imply approximately 44 % more evaporated
 neutrons per fission than the calculated prompt multiplicity. In the absence of an explicit continuous
 cascade probability distribution, the sequence average represents the expectation value of the cascade,
-such that a fragment supporting up to $n$ emissions emits $(n + 1)/2$ neutrons on average. Evaluating
-products at $A - n$ alone characterizes the fully exhausted cascade endpoint. Selecting
+such that a fragment supporting up to `n` emissions emits `(n + 1)/2` neutrons on average. Evaluating
+products at `A − n` alone characterizes the fully exhausted cascade endpoint. Selecting
 `[products] count = "sequence_count"` retains the published formulation and reproduces the post-neutron mass
-yields of the reference thesis calculations within $10^{-8}$ relative error.
+yields of my thesis calculations within 10⁻⁸ relative error.
 
 The yields follow from the fragment yield `Y(A, Z, TKE)` and the product probabilities `P`,
 
