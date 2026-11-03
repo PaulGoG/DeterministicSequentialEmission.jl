@@ -524,9 +524,12 @@ light product. Choudhury (1980), 33089002, is left out: it tabulates the most pr
 not the mean, against masses not corrected for neutron emission. Bakhromi (1982) is coded `SPA`
 and drawn open.
 
-These measurements test the input more than the emission. The model's `TKE_p` is its input
-`⟨TKE⟩(A)` less the recoil loss `E_K ν/A` of each fragment, about 2 MeV in all, which the emission
-sets through `ν(A)`. The measured sets come from other experiments. Over `A = 125–155` the
+These measurements test the input more than the emission. The model's `TKE_p` is the sum of the
+two product kinetic energies, `TKE_p = E_K,p,L + E_K,p,H` with `E_K = TKE (A₀ − A)/A₀` and
+`E_K,p = E_K A_p/A`, averaged at the heavy product mass `A_H,p = A_H − n_H`. Each product keeps
+its fragment's velocity, so `TKE_p` falls short of the input `⟨TKE⟩(A)` by `E_K n/A` per fragment,
+about 2 MeV in all; the emission sets only that and the shift of the mass. The measured sets
+come from other experiments. Over `A = 125–155` the
 pre-neutron `⟨TKE⟩(A)` sets retrieved for the same systems lie between 2.0 MeV below and 2.7 MeV
 above the inputs, as medians per set. Beyond `A_p = 134` the measured `TKE_p` lie 0.8 to 2.8 MeV
 above the model, and Bakhromi 2.5 MeV below it. Near symmetry, below `A_p = 128`, they range from
